@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ecosistema Karen - Aplicación Local Back-Office & Caja</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="logo-icon">🏬</div>
+        <div>
+          <h1>Karen Back-Office Local <span class="badge-tag">LAN INTERNAL</span></h1>
+          <p class="subtitle">Gestión de Bodega • Control FEFO • Caja SIACI • Alertas SSE</p>
+        </div>
+      </div>
+      <div class="header-widgets">
+        <div class="widget-card"><span class="widget-label">ROL ACCESO</span><span class="widget-value">BODEGA / CAJA</span></div>
+        <a href="http://localhost:4000/api-docs" target="_blank" class="btn btn-glass">Swagger Docs</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="glass-card margin-bottom-sm">
+      <h2>🖥️ Interfaz Local de Tienda</h2>
+      <p>Esta aplicación está optimizada para la intranet de la tienda física (Personal de Bodega: Nancy/Luis, Cajeros: Ricardo/Guillermo/Karen).</p>
+    </div>
+
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-lots"><span class="tab-icon">📦</span> Lotes e Inventario FEFO</button>
+      <button class="tab-btn" data-tab="tab-caja"><span class="tab-icon">🧾</span> Cobro Reserva en Caja SIACI</button>
+      <button class="tab-btn" data-tab="tab-sse"><span class="tab-icon">🚨</span> Alertas Vencimiento Live</button>
+    </nav>
+  </main>
+</body>
+</html>
