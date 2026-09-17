@@ -41,7 +41,7 @@ export const PRODUCTS_CATALOG: Product[] = [
     stock: 18,
     badge: 'Carnes',
     unit: '1 Kg',
-    image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=600&q=80'
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80'
   },
   {
     id: 'prod-04',
