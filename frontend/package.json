@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npx serve -s . -l 3000",
     "dev": "npx serve -s . -l 3000",
+    "build": "npm run build --prefix portal-web-react",
     "dev:react": "npm run dev --prefix portal-web-react",
     "build:react": "npm run build --prefix portal-web-react",
     "start:mobile": "npm start --prefix portal-mobile-reactnative"
