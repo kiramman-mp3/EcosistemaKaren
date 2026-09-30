@@ -1,17 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ShoppingCart, Check, Plus, AlertCircle } from 'lucide-react';
+import { Search, ShoppingCart, Check, Plus, AlertCircle, RefreshCw } from 'lucide-react';
 import { Product, ProductCategory } from '../types';
 import { PRODUCTS_CATALOG } from '../data/mockData';
 
 interface ProductCatalogProps {
+  products?: Product[];
+  categories?: ProductCategory[];
   selectedCategory: ProductCategory;
   onSelectCategory: (cat: ProductCategory) => void;
   onAddToCart: (prod: Product) => void;
   onOpenCart: () => void;
   cartCount: number;
+  loading?: boolean;
+  onRefresh?: () => void;
 }
 
-const CATEGORY_PILLS: ProductCategory[] = [
+const DEFAULT_CATEGORY_PILLS: ProductCategory[] = [
   'Todos',
   'Carnes',
   'Lácteos',
@@ -22,25 +26,32 @@ const CATEGORY_PILLS: ProductCategory[] = [
 ];
 
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
+  products = PRODUCTS_CATALOG,
+  categories = DEFAULT_CATEGORY_PILLS,
   selectedCategory,
   onSelectCategory,
   onAddToCart,
   onOpenCart,
-  cartCount
+  cartCount,
+  loading = false,
+  onRefresh
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [addedItemIds, setAddedItemIds] = useState<Record<string, boolean>>({});
 
+  const catalogItems = products && products.length > 0 ? products : PRODUCTS_CATALOG;
+  const categoryPills = categories && categories.length > 0 ? categories : DEFAULT_CATEGORY_PILLS;
+
   const filteredProducts = useMemo(() => {
-    return PRODUCTS_CATALOG.filter((p) => {
+    return catalogItems.filter((p) => {
       const matchesCategory =
-        selectedCategory === 'Todos' || p.category === selectedCategory;
+        selectedCategory === 'Todos' || p.category.toLowerCase().includes(selectedCategory.toLowerCase());
       const matchesSearch =
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.category.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [catalogItems, selectedCategory, searchQuery]);
 
   const handleAddClick = (product: Product) => {
     onAddToCart(product);
@@ -54,7 +65,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     <section id="catalogo-section" className="py-12 bg-[#F8FAFC]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header: 'Catálogo de Productos' (9 disp.) + Search bar + Cart button */}
+        {/* Header: 'Catálogo de Productos' + Search bar + Cart button */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200/80">
           
           {/* Title & Count Badge */}
@@ -66,9 +77,18 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-navy/10 text-navy font-mono">
                 {filteredProducts.length} disp.
               </span>
+              {onRefresh && (
+                <button
+                  onClick={onRefresh}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-navy hover:bg-slate-100 transition-colors"
+                  title="Actualizar catálogo desde el servidor"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              )}
             </div>
             <p className="text-sm text-slate-500 mt-1 font-medium">
-              Inventario sincronizado con percha física en tiempo real
+              Inventario en tiempo real sincronizado con el servidor de tienda física
             </p>
           </div>
 
@@ -112,9 +132,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
         </div>
 
-        {/* Filtros Tipo Píldora: [Todos, Carnes, Lácteos, Frutas, Panadería, Verduras, Conservas] */}
+        {/* Filtros Tipo Píldora */}
         <div className="py-6 flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {CATEGORY_PILLS.map((cat) => {
+          {categoryPills.map((cat) => {
             const isActive = selectedCategory === cat;
             return (
               <button
@@ -132,8 +152,22 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           })}
         </div>
 
-        {/* Grid 3x3 de Productos (o estado vacío) */}
-        {filteredProducts.length === 0 ? (
+        {/* Loading Skeleton */}
+        {loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-5 border border-slate-100 space-y-4">
+                <div className="bg-slate-200 rounded-xl aspect-[4/3] w-full"></div>
+                <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                <div className="h-10 bg-slate-200 rounded-xl w-full"></div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Grid 3x3 de Productos */}
+        {!loading && filteredProducts.length === 0 ? (
           <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
             <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-navy">No se encontraron productos</h3>
@@ -151,88 +185,90 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map((product) => {
-              const isAdded = addedItemIds[product.id];
-              return (
-                <div
-                  key={product.id}
-                  className="group bg-white rounded-2xl p-5 border border-slate-100 shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Foto del Producto con ratio elegante */}
-                    <div className="relative rounded-xl overflow-hidden bg-slate-100 aspect-[4/3] mb-4">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                      {/* Categoría: Badge Gris */}
-                      <div className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg">
-                        {product.badge || product.category}
+          !loading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProducts.map((product) => {
+                const isAdded = addedItemIds[product.id];
+                return (
+                  <div
+                    key={product.id}
+                    className="group bg-white rounded-2xl p-5 border border-slate-100 shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Foto del Producto con ratio elegante */}
+                      <div className="relative rounded-xl overflow-hidden bg-slate-100 aspect-[4/3] mb-4">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                        {/* Categoría: Badge Gris */}
+                        <div className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+                          {product.badge || product.category}
+                        </div>
+                      </div>
+
+                      {/* Título de Producto */}
+                      <h3 className="text-base font-bold text-slate-900 line-clamp-2 min-h-[48px] group-hover:text-navy transition-colors">
+                        {product.name}
+                      </h3>
+
+                      {/* Precio en Azul Bold ($X.XX) & Stock con Punto Verde */}
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xl font-display font-black text-navy">
+                            ${product.price.toFixed(2)}
+                          </span>
+                          {product.originalPrice && (
+                            <span className="text-xs text-slate-400 line-through font-medium">
+                              ${product.originalPrice.toFixed(2)}
+                            </span>
+                          )}
+                          {product.unit && (
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              / {product.unit}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Stock Disponible (Punto Verde) */}
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          <span>{product.stock} un.</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Título de Producto */}
-                    <h3 className="text-base font-bold text-slate-900 line-clamp-2 min-h-[48px] group-hover:text-navy transition-colors">
-                      {product.name}
-                    </h3>
-
-                    {/* Precio en Azul Bold ($X.XX) & Stock con Punto Verde */}
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-xl font-display font-black text-navy">
-                          ${product.price.toFixed(2)}
-                        </span>
-                        {product.originalPrice && (
-                          <span className="text-xs text-slate-400 line-through font-medium">
-                            ${product.originalPrice.toFixed(2)}
-                          </span>
+                    {/* Botón CTA full-width '+ Añadir a lista' */}
+                    <div className="mt-5 pt-4 border-t border-slate-100">
+                      <button
+                        onClick={() => handleAddClick(product)}
+                        className={`w-full py-2.5 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 active:scale-98 ${
+                          isAdded
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'bg-navy/5 hover:bg-navy hover:text-white text-navy'
+                        }`}
+                      >
+                        {isAdded ? (
+                          <>
+                            <Check className="w-4 h-4 text-white" />
+                            <span>¡Añadido!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            <span>+ Añadir a lista</span>
+                          </>
                         )}
-                        {product.unit && (
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            / {product.unit}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Stock Disponible (Punto Verde) */}
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>{product.stock} un.</span>
-                      </div>
+                      </button>
                     </div>
-                  </div>
 
-                  {/* Botón CTA full-width '+ Añadir a lista' */}
-                  <div className="mt-5 pt-4 border-t border-slate-100">
-                    <button
-                      onClick={() => handleAddClick(product)}
-                      className={`w-full py-2.5 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 active:scale-98 ${
-                        isAdded
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'bg-navy/5 hover:bg-navy hover:text-white text-navy'
-                      }`}
-                    >
-                      {isAdded ? (
-                        <>
-                          <Check className="w-4 h-4 text-white" />
-                          <span>¡Añadido!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4" />
-                          <span>+ Añadir a lista</span>
-                        </>
-                      )}
-                    </button>
                   </div>
-
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )
         )}
 
       </div>

@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Clock, Flame, ShieldAlert, Check } from 'lucide-react';
+import { Sparkles, Flame, ShieldAlert, Check, Clock, Bot, RefreshCw } from 'lucide-react';
 import { FLASH_OFFERS_DATA } from '../data/mockData';
 import { FlashOffer } from '../types';
 
 interface FlashOffersSectionProps {
   onReserveOffer: (offer: FlashOffer) => void;
+  offers?: FlashOffer[];
+  onGenerateGeminiPromo?: () => void;
+  isGenerating?: boolean;
 }
 
-export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({ onReserveOffer }) => {
-  // Live Countdown for 'PRÓXIMA RENOVACIÓN' (starting at 02h 34m 17s = 9257s)
+export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
+  onReserveOffer,
+  offers = FLASH_OFFERS_DATA,
+  onGenerateGeminiPromo,
+  isGenerating = false,
+}) => {
+  // Live Countdown for 'PRÓXIMA RENOVACIÓN'
   const [renewalSeconds, setRenewalSeconds] = useState(9257);
   const [reservedOfferId, setReservedOfferId] = useState<string | null>(null);
+
+  const displayOffers = offers && offers.length > 0 ? offers : FLASH_OFFERS_DATA;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -47,7 +57,7 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({ onReserv
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             
             {/* Title & IA Subtitle */}
-            <div className="space-y-2 max-w-2xl">
+            <div className="space-y-3 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider text-white">
                 <Flame className="w-4 h-4 text-amber-300 animate-bounce" />
                 <span>Liquidación Inteligente FEFO</span>
@@ -56,12 +66,34 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({ onReserv
                 Precios que vuelan 🔥
               </h2>
               <p className="text-white/90 text-sm sm:text-base font-normal">
-                Nuestra Inteligencia Artificial Gemini analiza fechas de vencimiento próximas y genera 
-                descuentos masivos para evitar el desperdicio de alimentos. ¡Reserva antes de que se agoten!
+                Nuestra Inteligencia Artificial Gemini analiza fechas de vencimiento próximas y lotes en percha 
+                para generar descuentos dinámicos y evitar el desperdicio de alimentos.
               </p>
+
+              {onGenerateGeminiPromo && (
+                <div className="pt-2">
+                  <button
+                    onClick={onGenerateGeminiPromo}
+                    disabled={isGenerating}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-navy font-bold text-xs rounded-xl shadow-md hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-navy" />
+                        <span>Consultando Gemini IA en Backend...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="w-4 h-4 text-karenRed" />
+                        <span>Generar Oferta Dinámica con IA</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Widget Contador: PRÓXIMA RENOVACIÓN (02:34:17) */}
+            {/* Widget Contador: PRÓXIMA RENOVACIÓN */}
             <div className="bg-black/30 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/20 text-center flex-shrink-0 min-w-[200px] shadow-lg">
               <span className="text-[11px] font-black uppercase tracking-widest text-red-200 block mb-1">
                 PRÓXIMA RENOVACIÓN
@@ -79,7 +111,7 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({ onReserv
 
         {/* Grid 2 Columnas de Ofertas Relámpago */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {FLASH_OFFERS_DATA.map((offer) => {
+          {displayOffers.map((offer) => {
             const stockPercent = Math.round(
               ((offer.stockTotal - offer.stockAvailable) / offer.stockTotal) * 100
             );
@@ -101,21 +133,21 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({ onReserv
 
                     {/* Floating Badges Overlay */}
                     <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
-                      {/* Discount Tag [-40%] */}
+                      {/* Discount Tag */}
                       <span className="bg-karenRed text-white px-3 py-1 rounded-xl text-xs font-black shadow-glow-red tracking-wider">
                         {offer.discountBadge}
                       </span>
 
-                      {/* IA Tag [✨ IA] */}
+                      {/* IA Tag */}
                       {offer.aiBadge && (
                         <span className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-2.5 py-1 rounded-xl text-xs font-extrabold shadow-sm flex items-center gap-1">
                           <Sparkles className="w-3 h-3 text-amber-300" />
-                          <span>IA</span>
+                          <span>Gemini IA</span>
                         </span>
                       )}
                     </div>
 
-                    {/* Urgency Badge [¡Últimas X!] */}
+                    {/* Urgency Badge */}
                     <div className="absolute bottom-3 right-3 bg-black/75 backdrop-blur-md text-amber-300 px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 border border-amber-300/30">
                       <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
                       <span>{offer.urgencyBadge}</span>
@@ -138,49 +170,50 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({ onReserv
                     <span className="text-sm font-semibold text-slate-400 line-through">
                       ${offer.originalPrice.toFixed(2)}
                     </span>
-                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                      Ahorras ${(offer.originalPrice - offer.price).toFixed(2)}
-                    </span>
                   </div>
 
                   {/* Barra de Progreso de Stock Disponible */}
                   <div className="mt-4 space-y-1.5">
-                    <div className="flex justify-between text-xs font-semibold text-slate-600">
-                      <span>Stock reservado: {stockPercent}%</span>
-                      <span className="text-karenRed font-bold">
-                        ¡Solo {offer.stockAvailable} disponibles!
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                      <span>Stock en percha:</span>
+                      <span className="font-mono text-navy font-bold">
+                        {offer.stockAvailable} de {offer.stockTotal} un.
                       </span>
                     </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-amber-500 to-karenRed h-2.5 rounded-full transition-all duration-500"
-                        style={{ width: `${stockPercent}%` }}
+                        className="bg-gradient-to-r from-amber-400 to-karenRed h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(stockPercent, 100)}%` }}
                       ></div>
                     </div>
                   </div>
 
-                  {/* Alerta de Caducidad con Reloj: ⏰ Caduca: Hoy, 20:00 */}
-                  <div className="mt-4 flex items-center gap-2 text-xs font-bold text-amber-700 bg-amber-50/80 border border-amber-200/80 rounded-xl p-2.5">
-                    <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  {/* Tag Caducidad Próxima */}
+                  <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                    <Clock className="w-3.5 h-3.5 text-karenRed" />
                     <span>{offer.expiryText}</span>
                   </div>
                 </div>
 
-                {/* Botón Rojo: 'Reservar Stock Ahora' */}
+                {/* Botón CTA 'Reservar Ahora' */}
                 <div className="mt-6 pt-4 border-t border-slate-100">
                   <button
                     onClick={() => handleReserve(offer)}
-                    className="w-full py-3.5 px-6 rounded-2xl text-sm font-bold text-white bg-karenRed hover:bg-karenRed-hover active:scale-98 transition-all flex items-center justify-center gap-2 shadow-glow-red"
+                    className={`w-full py-3.5 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 active:scale-98 shadow-sm ${
+                      isJustReserved
+                        ? 'bg-emerald-600 text-white shadow-soft'
+                        : 'bg-karenRed hover:bg-karenRed-hover text-white shadow-glow-red'
+                    }`}
                   >
                     {isJustReserved ? (
                       <>
-                        <Check className="w-5 h-5 text-white" />
-                        <span>¡Stock Bloqueado con Éxito!</span>
+                        <Check className="w-4 h-4 text-white" />
+                        <span>¡Pase PIN Generado!</span>
                       </>
                     ) : (
                       <>
-                        <span>Reservar Stock Ahora</span>
-                        <span className="text-xs opacity-90 font-mono">→</span>
+                        <Flame className="w-4 h-4" />
+                        <span>Reservar Oferta Flash (10 min)</span>
                       </>
                     )}
                   </button>
