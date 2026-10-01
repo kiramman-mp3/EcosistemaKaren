@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { CartItem } from '../types';
 
 interface CartDrawerMobileProps {
@@ -8,6 +8,7 @@ interface CartDrawerMobileProps {
   items: CartItem[];
   onUpdateQuantity: (id: string, delta: number) => void;
   onConfirmReservation: () => void;
+  isSubmitting?: boolean;
 }
 
 export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
@@ -16,6 +17,7 @@ export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
   items,
   onUpdateQuantity,
   onConfirmReservation,
+  isSubmitting = false,
 }) => {
   const total = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
@@ -70,12 +72,17 @@ export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
                 <Text style={styles.totalVal}>${total.toFixed(2)}</Text>
               </View>
               <TouchableOpacity
-                style={styles.confirmBtn}
+                style={[styles.confirmBtn, isSubmitting && styles.confirmBtnDisabled]}
                 onPress={onConfirmReservation}
+                disabled={isSubmitting}
               >
-                <Text style={styles.confirmBtnText}>
-                  Confirmar Reserva con PIN →
-                </Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.confirmBtnText}>
+                    Confirmar Reserva con PIN →
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           )}
@@ -204,6 +211,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
+  },
+  confirmBtnDisabled: {
+    opacity: 0.65,
   },
   confirmBtnText: {
     color: '#FFFFFF',

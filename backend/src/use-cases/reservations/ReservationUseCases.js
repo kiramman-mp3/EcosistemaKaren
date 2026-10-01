@@ -148,9 +148,52 @@ class CleanExpiredReservations {
   }
 }
 
+class CancelReservation {
+  constructor(reservationRepository, lotRepository) {
+    this.reservationRepository = reservationRepository;
+    this.lotRepository = lotRepository;
+  }
+
+  async execute(reservationId) {
+    const reservation = await this.reservationRepository.findById(reservationId);
+    if (!reservation) {
+      throw new NotFoundException(`Reserva con ID '${reservationId}' no encontrada.`);
+    }
+
+    reservation.cancelar();
+
+    // Liberar stock reservado en los lotes
+    for (const detalle of reservation.detalles) {
+      const lot = await this.lotRepository.findById(detalle.loteId);
+      if (lot) {
+        lot.liberar(detalle.cantidad);
+        await this.lotRepository.update(lot);
+      }
+    }
+
+    return await this.reservationRepository.update(reservation);
+  }
+}
+
+class GetReservationsByUser {
+  constructor(reservationRepository) {
+    this.reservationRepository = reservationRepository;
+  }
+
+  async execute(usuarioId) {
+    if (!usuarioId) {
+      throw new ValidationException('El usuarioId es requerido.');
+    }
+    return await this.reservationRepository.findByUserId(usuarioId);
+  }
+}
+
 module.exports = {
   ReservarStock,
   GetReservationByCode,
   ConfirmReservation,
-  CleanExpiredReservations
+  CleanExpiredReservations,
+  CancelReservation,
+  GetReservationsByUser
 };
+

@@ -161,6 +161,7 @@ class InMemoryRepositories {
     return {
       findByCode: async (code) => this.reservations.find(r => r.codigoRetiro === code) || null,
       findById: async (id) => this.reservations.find(r => r.id === id) || null,
+      findByUserId: async (userId) => this.reservations.filter(r => r.usuarioId === userId),
       findExpiredPending: async () => {
         const now = new Date();
         return this.reservations.filter(r => r.estado === 'PENDIENTE' && new Date(r.fechaExpiracion) < now);

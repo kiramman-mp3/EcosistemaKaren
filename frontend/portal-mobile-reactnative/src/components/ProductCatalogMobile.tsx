@@ -17,9 +17,12 @@ interface ProductCatalogMobileProps {
   onAddToCart: (prod: Product) => void;
   onOpenCart: () => void;
   cartCount: number;
+  products?: Product[];
+  categories?: ProductCategory[];
+  loading?: boolean;
 }
 
-const CATEGORY_PILLS: ProductCategory[] = [
+const DEFAULT_CATEGORY_PILLS: ProductCategory[] = [
   'Todos',
   'Carnes',
   'Lácteos',
@@ -35,19 +38,25 @@ export const ProductCatalogMobile: React.FC<ProductCatalogMobileProps> = ({
   onAddToCart,
   onOpenCart,
   cartCount,
+  products = PRODUCTS_CATALOG,
+  categories = DEFAULT_CATEGORY_PILLS,
+  loading = false,
 }) => {
   const [search, setSearch] = useState('');
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
+  const activeCategories = categories.length > 0 ? categories : DEFAULT_CATEGORY_PILLS;
+
   const filtered = useMemo(() => {
-    return PRODUCTS_CATALOG.filter((p) => {
+    return products.filter((p) => {
       const matchCat = selectedCategory === 'Todos' || p.category === selectedCategory;
       const matchSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.category.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [selectedCategory, search]);
+  }, [products, selectedCategory, search]);
+
 
   const handleAdd = (prod: Product) => {
     onAddToCart(prod);
@@ -95,7 +104,7 @@ export const ProductCatalogMobile: React.FC<ProductCatalogMobileProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.pillsScroll}
       >
-        {CATEGORY_PILLS.map((cat) => {
+        {activeCategories.map((cat) => {
           const isActive = selectedCategory === cat;
           return (
             <TouchableOpacity

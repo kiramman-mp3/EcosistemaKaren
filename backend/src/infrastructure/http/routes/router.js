@@ -31,7 +31,9 @@ function createApiRouter(controllers) {
   // Reservaciones Anti-Overbooking
   router.post('/reservations', (req, res, next) => reservationController.createReservation(req, res, next));
   router.get('/reservations/code/:code', (req, res, next) => reservationController.getByCode(req, res, next));
+  router.get('/reservations/user/:userId', (req, res, next) => reservationController.getByUser(req, res, next));
   router.post('/reservations/:id/confirm', (req, res, next) => reservationController.confirm(req, res, next));
+  router.post('/reservations/:id/cancel', (req, res, next) => reservationController.cancel(req, res, next));
 
   // Alertas y SSE Stream
   router.get('/alerts', (req, res, next) => alertController.getAlerts(req, res, next));

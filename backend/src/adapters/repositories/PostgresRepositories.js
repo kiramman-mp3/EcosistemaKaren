@@ -215,6 +215,30 @@ class PostgresReservationRepository {
     return reservation;
   }
 
+  async findByUserId(userId) {
+    const resHead = await this.pool.query(`
+      SELECT id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
+             estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
+      FROM reservas
+      WHERE usuario_id = $1
+      ORDER BY created_at DESC
+    `, [userId]);
+
+    const list = [];
+    for (const row of resHead.rows) {
+      const resDetails = await this.pool.query(`
+        SELECT id, reserva_id as "reservaId", lote_id as "loteId",
+               cantidad, precio_unitario as "precioUnitario"
+        FROM reserva_detalles
+        WHERE reserva_id = $1
+      `, [row.id]);
+      const r = new Reservation(row);
+      r.detalles = resDetails.rows;
+      list.push(r);
+    }
+    return list;
+  }
+
   async findExpiredPending() {
     const resHead = await this.pool.query(`
       SELECT id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
