@@ -4,10 +4,12 @@ import { SAMPLE_QR_MATRIX } from '../data/mockData';
 
 interface AntiOverbookingBannerMobileProps {
   onBackToSelector?: () => void;
+  isOnline?: boolean;
 }
 
 export const AntiOverbookingBannerMobile: React.FC<AntiOverbookingBannerMobileProps> = ({
   onBackToSelector,
+  isOnline = true,
 }) => {
   const [seconds, setSeconds] = useState(585);
 
@@ -28,9 +30,17 @@ export const AntiOverbookingBannerMobile: React.FC<AntiOverbookingBannerMobilePr
     <View style={styles.container}>
       <View style={styles.bannerCard}>
         
-        {/* Badge Sistema Patentado */}
-        <View style={styles.patentBadge}>
-          <Text style={styles.patentBadgeText}>✨ Sistema patentado</Text>
+        {/* Badge Sistema Patentado & Live Status */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <View style={styles.patentBadge}>
+            <Text style={styles.patentBadgeText}>✨ Sistema patentado</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: isOnline ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isOnline ? '#10B981' : '#EF4444' }} />
+            <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>
+              {isOnline ? 'SIACI Sincronizado' : 'Tienda Offline'}
+            </Text>
+          </View>
         </View>
 
         {/* Title */}

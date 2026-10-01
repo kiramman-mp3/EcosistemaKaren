@@ -5,13 +5,17 @@ import { FlashOffer } from '../types';
 
 interface FlashOffersMobileProps {
   onReserveOffer: (offer: FlashOffer) => void;
+  offers?: FlashOffer[];
 }
 
 export const FlashOffersMobile: React.FC<FlashOffersMobileProps> = ({
   onReserveOffer,
+  offers = FLASH_OFFERS_DATA,
 }) => {
   const [renewalSeconds, setRenewalSeconds] = useState(9257); // 02:34:17
   const [reservedId, setReservedId] = useState<string | null>(null);
+
+  const activeOffers = offers.length > 0 ? offers : FLASH_OFFERS_DATA;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -55,7 +59,7 @@ export const FlashOffersMobile: React.FC<FlashOffersMobileProps> = ({
 
       {/* Lista de Ofertas */}
       <View style={styles.offersList}>
-        {FLASH_OFFERS_DATA.map((offer) => {
+        {activeOffers.map((offer) => {
           const stockPercent = Math.round(
             ((offer.stockTotal - offer.stockAvailable) / offer.stockTotal) * 100
           );

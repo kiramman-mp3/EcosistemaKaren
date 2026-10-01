@@ -25,7 +25,7 @@ const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
 const { GetProducts, GetProductByBarcode, CreateProduct } = require('../../use-cases/products/ProductUseCases');
 const { GetLots, IngresarLote, UpdateLotLocation, RegisterMerma, ObtenerAlertasCaducidad } = require('../../use-cases/lots/LotUseCases');
-const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations } = require('../../use-cases/reservations/ReservationUseCases');
+const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const { GenerarPromocionesIA, GetPromotions } = require('../../use-cases/promotions/PromotionUseCases');
 const { RegisterUser, LoginUser } = require('../../use-cases/auth/AuthUseCases');
 
@@ -94,6 +94,8 @@ async function createServer() {
   const getReservationByCodeUC = new GetReservationByCode(reservationRepo);
   const confirmReservationUC = new ConfirmReservation(reservationRepo, lotRepo);
   const cleanExpiredReservationsUC = new CleanExpiredReservations(reservationRepo, lotRepo);
+  const cancelReservationUC = new CancelReservation(reservationRepo, lotRepo);
+  const getReservationsByUserUC = new GetReservationsByUser(reservationRepo);
 
   const generarPromocionesIAUC = new GenerarPromocionesIA(lotRepo, promotionRepo, geminiAdapter);
   const getPromotionsUC = new GetPromotions(promotionRepo);
@@ -105,7 +107,13 @@ async function createServer() {
   const categoryController = new CategoryController(getCategoriesUC, createCategoryUC);
   const productController = new ProductController(getProductsUC, getProductByBarcodeUC, createProductUC);
   const lotController = new LotController(getLotsUC, ingresarLoteUC, updateLotLocationUC, registerMermaUC);
-  const reservationController = new ReservationController(reservarStockUC, getReservationByCodeUC, confirmReservationUC);
+  const reservationController = new ReservationController(
+    reservarStockUC,
+    getReservationByCodeUC,
+    confirmReservationUC,
+    cancelReservationUC,
+    getReservationsByUserUC
+  );
   const alertController = new AlertController(obtenerAlertasCaducidadUC, alertStreamManager);
   const promotionController = new PromotionController(generarPromocionesIAUC, getPromotionsUC);
   const authController = new AuthController(registerUserUC, loginUserUC);

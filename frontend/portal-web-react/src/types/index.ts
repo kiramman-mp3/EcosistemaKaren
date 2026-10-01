@@ -1,15 +1,6 @@
 export type NavTab = 'inicio' | 'productos' | 'ofertas';
 
-export type ProductCategory = 
-  | 'Todos' 
-  | 'Carnes' 
-  | 'Lácteos' 
-  | 'Frutas' 
-  | 'Panadería' 
-  | 'Verduras' 
-  | 'Conservas'
-  | 'Bebidas'
-  | 'Snacks';
+export type ProductCategory = string;
 
 export interface Product {
   id: string;
@@ -22,6 +13,7 @@ export interface Product {
   badge?: string;
   expiryDate?: string;
   unit?: string;
+  barcode?: string;
 }
 
 export interface FlashOffer {
@@ -37,6 +29,8 @@ export interface FlashOffer {
   stockAvailable: number;
   expiryText: string;    // "⏰ Caduca: Hoy, 20:00"
   image: string;
+  loteId?: string;
+  razonIa?: string;
 }
 
 export interface CategoryItem {
