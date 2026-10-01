@@ -9,6 +9,7 @@
     "build": "npm run build --prefix portal-web-react",
     "dev:react": "npm run dev --prefix portal-web-react",
     "build:react": "npm run build --prefix portal-web-react",
-    "start:mobile": "npm start --prefix portal-mobile-reactnative"
+    "start:mobile": "npm start --prefix portal-mobile-reactnative",
+    "start:bodega": "npm start --prefix bodega-mobile-reactnative"
   }
 }
