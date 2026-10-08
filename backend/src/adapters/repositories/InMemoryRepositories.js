@@ -88,6 +88,35 @@ class InMemoryRepositories {
       passwordHash: '$2a$10$demo'
     }));
 
+    // Reserva demo activa para pruebas de caja SIACI y retiro móvil
+    this.reservations.push(
+      new Reservation({
+        id: 'res-demo-01',
+        usuarioId: 'u8a7b6c5-1111-2222-3333-444455556666',
+        codigoRetiro: 'KR-X7Y9Z2',
+        estado: 'PENDIENTE',
+        fechaExpiracion: new Date(Date.now() + 30 * 60 * 1000),
+        detalles: [
+          {
+            id: 'det-01',
+            productoId: prods[1].id,
+            productoNombre: 'Yogurt Griego Toni Natural 500g',
+            loteId: lotsData[0].id,
+            cantidad: 2,
+            precioUnitario: 2.50
+          },
+          {
+            id: 'det-02',
+            productoId: prods[0].id,
+            productoNombre: 'Leche Entera Pasteurizada 1 Litro',
+            loteId: lotsData[1].id,
+            cantidad: 3,
+            precioUnitario: 0.95
+          }
+        ]
+      })
+    );
+
     // Promociones IA iniciales activas
     this.promotions.push(
       new Promotion({
