@@ -1,40 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Flame, ShieldAlert, Check, Clock, Bot, RefreshCw } from 'lucide-react';
-import { FLASH_OFFERS_DATA } from '../data/mockData';
-import { FlashOffer } from '../types';
+import React, { useState } from 'react';
+import { Sparkles, Flame, ShieldAlert, Check, Clock, RefreshCw, AlertCircle, Bot } from 'lucide-react';
+import { DataLoadState, FlashOffer } from '../types';
 
 interface FlashOffersSectionProps {
   onReserveOffer: (offer: FlashOffer) => void;
-  offers?: FlashOffer[];
+  offers: FlashOffer[];
+  state: DataLoadState;
+  errorMessage?: string | null;
+  onRefresh?: () => void;
   onGenerateGeminiPromo?: () => void;
   isGenerating?: boolean;
 }
 
 export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
   onReserveOffer,
-  offers = FLASH_OFFERS_DATA,
+  offers,
+  state,
+  errorMessage,
+  onRefresh,
   onGenerateGeminiPromo,
   isGenerating = false,
 }) => {
-  // Live Countdown for 'PRÓXIMA RENOVACIÓN'
-  const [renewalSeconds, setRenewalSeconds] = useState(9257);
   const [reservedOfferId, setReservedOfferId] = useState<string | null>(null);
-
-  const displayOffers = offers && offers.length > 0 ? offers : FLASH_OFFERS_DATA;
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRenewalSeconds((prev) => (prev > 0 ? prev - 1 : 9257));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTimer = (totalSec: number) => {
-    const hrs = Math.floor(totalSec / 3600).toString().padStart(2, '0');
-    const mins = Math.floor((totalSec % 3600) / 60).toString().padStart(2, '0');
-    const secs = (totalSec % 60).toString().padStart(2, '0');
-    return `${hrs}:${mins}:${secs}`;
-  };
 
   const handleReserve = (offer: FlashOffer) => {
     setReservedOfferId(offer.id);
@@ -96,10 +83,10 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
             {/* Widget Contador: PRÓXIMA RENOVACIÓN */}
             <div className="bg-black/30 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/20 text-center flex-shrink-0 min-w-[200px] shadow-lg">
               <span className="text-[11px] font-black uppercase tracking-widest text-red-200 block mb-1">
-                PRÓXIMA RENOVACIÓN
+                ESTADO DEL CATÁLOGO
               </span>
-              <div className="font-mono text-3xl sm:text-4xl font-black text-white tracking-widest text-shadow">
-                {formatTimer(renewalSeconds)}
+              <div className="text-lg font-black text-white tracking-wide">
+                DATOS EN TIEMPO REAL
               </div>
               <span className="text-[10px] text-white/70 block mt-1">
                 Ofertas dinámicas por lote
@@ -109,9 +96,23 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
           </div>
         </div>
 
-        {/* Grid 2 Columnas de Ofertas Relámpago */}
+        {(state === 'offline' || state === 'error') && (
+          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-10 text-center">
+            <AlertCircle className="mx-auto mb-3 h-10 w-10 text-amber-500" />
+            <h3 className="font-bold text-amber-900">Ofertas no disponibles</h3>
+            <p className="mt-1 text-sm text-amber-700">{errorMessage || 'No fue posible consultar el servidor.'}</p>
+            {onRefresh && <button onClick={onRefresh} className="mt-4 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white">Reintentar</button>}
+          </div>
+        )}
+        {state === 'empty' && (
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
+            <h3 className="font-bold text-navy">No hay ofertas activas</h3>
+            <p className="mt-1 text-sm text-slate-500">El servidor respondió correctamente, pero no existen promociones aprobadas y vigentes.</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {displayOffers.map((offer) => {
+          {state === 'ready' && offers.map((offer) => {
             const stockPercent = Math.round(
               ((offer.stockTotal - offer.stockAvailable) / offer.stockTotal) * 100
             );

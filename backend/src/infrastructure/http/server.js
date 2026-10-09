@@ -3,10 +3,16 @@ const cors = require('cors');
 require('dotenv').config();
 
 const { testConnection, getPool } = require('../db/postgres');
+const { runMigrations } = require('../db/migrations');
 const setupSwagger = require('../swagger/swaggerDoc');
 const errorHandler = require('./middlewares/errorHandler');
+const createAuthMiddleware = require('./middlewares/auth');
 const AlertStreamManager = require('../sse/AlertStreamManager');
 const ReservationCleanerWorker = require('../workers/ReservationCleanerWorker');
+const LotExpiryWorker = require('../workers/LotExpiryWorker');
+const HeartbeatMonitor = require('../heartbeat/HeartbeatMonitor');
+const PromotionCache = require('../cache/PromotionCache');
+const aiMetrics = require('../metrics/AiMetricsCollector');
 
 // Repositorios & Adaptadores
 const {
@@ -24,9 +30,15 @@ const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 // Use Cases
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
 const { GetProducts, GetProductByBarcode, CreateProduct } = require('../../use-cases/products/ProductUseCases');
-const { GetLots, IngresarLote, UpdateLotLocation, RegisterMerma, ObtenerAlertasCaducidad } = require('../../use-cases/lots/LotUseCases');
+const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
 const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
-const { GenerarPromocionesIA, GetPromotions } = require('../../use-cases/promotions/PromotionUseCases');
+const {
+  GenerarPromocionesIA,
+  GetPromotions,
+  GetPendingPromotions,
+  ApprovePromotion,
+  RejectPromotion
+} = require('../../use-cases/promotions/PromotionUseCases');
 const { RegisterUser, LoginUser } = require('../../use-cases/auth/AuthUseCases');
 
 // Controllers
@@ -54,6 +66,7 @@ async function createServer() {
 
   if (dbConnected) {
     const pool = getPool();
+    await runMigrations(pool);
     categoryRepo = new PostgresCategoryRepository(pool);
     productRepo = new PostgresProductRepository(pool);
     lotRepo = new PostgresLotRepository(pool);
@@ -62,6 +75,9 @@ async function createServer() {
     alertRepo = new PostgresAlertRepository(pool);
     promotionRepo = new PostgresPromotionRepository(pool);
   } else {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('PostgreSQL es obligatorio en producción; se rechazó el fallback en memoria.');
+    }
     const mem = new InMemoryRepositories();
     categoryRepo = mem.categoryRepository;
     productRepo = mem.productRepository;
@@ -75,6 +91,14 @@ async function createServer() {
   // Componentes de Infraestructura
   const alertStreamManager = new AlertStreamManager();
   const geminiAdapter = new GeminiAdapter(process.env.GEMINI_API_KEY);
+  const heartbeatMonitor = new HeartbeatMonitor(process.env.HEARTBEAT_TIMEOUT_SECONDS || 60);
+  const cacheTtlSeconds = process.env.GEMINI_CACHE_TTL_SECONDS === undefined
+    ? 900
+    : Number(process.env.GEMINI_CACHE_TTL_SECONDS);
+  const cacheMaxEntries = process.env.GEMINI_CACHE_MAX_ENTRIES === undefined
+    ? 1000
+    : Number(process.env.GEMINI_CACHE_MAX_ENTRIES);
+  const promotionCache = new PromotionCache(cacheTtlSeconds, cacheMaxEntries);
 
   // Instanciar Casos de Uso
   const getCategoriesUC = new GetCategories(categoryRepo);
@@ -85,20 +109,33 @@ async function createServer() {
   const createProductUC = new CreateProduct(productRepo, categoryRepo);
 
   const getLotsUC = new GetLots(lotRepo);
+  const getPublicLotAvailabilityUC = new GetPublicLotAvailability(lotRepo);
   const ingresarLoteUC = new IngresarLote(lotRepo, productRepo, alertRepo, alertStreamManager);
   const updateLotLocationUC = new UpdateLotLocation(lotRepo);
   const registerMermaUC = new RegisterMerma(lotRepo);
+  const getInventoryMovementsUC = new GetInventoryMovements(lotRepo);
+  const getWastesUC = new GetWastes(lotRepo);
   const obtenerAlertasCaducidadUC = new ObtenerAlertasCaducidad(lotRepo);
+  const expireLotsUC = new ExpireLots(lotRepo);
 
-  const reservarStockUC = new ReservarStock(reservationRepo, lotRepo, productRepo);
+  const reservarStockUC = new ReservarStock(reservationRepo, heartbeatMonitor);
   const getReservationByCodeUC = new GetReservationByCode(reservationRepo);
-  const confirmReservationUC = new ConfirmReservation(reservationRepo, lotRepo);
-  const cleanExpiredReservationsUC = new CleanExpiredReservations(reservationRepo, lotRepo);
-  const cancelReservationUC = new CancelReservation(reservationRepo, lotRepo);
+  const confirmReservationUC = new ConfirmReservation(reservationRepo);
+  const cleanExpiredReservationsUC = new CleanExpiredReservations(reservationRepo);
+  const cancelReservationUC = new CancelReservation(reservationRepo);
   const getReservationsByUserUC = new GetReservationsByUser(reservationRepo);
 
-  const generarPromocionesIAUC = new GenerarPromocionesIA(lotRepo, promotionRepo, geminiAdapter);
+  const generarPromocionesIAUC = new GenerarPromocionesIA(
+    lotRepo,
+    promotionRepo,
+    geminiAdapter,
+    promotionCache,
+    productRepo
+  );
   const getPromotionsUC = new GetPromotions(promotionRepo);
+  const getPendingPromotionsUC = new GetPendingPromotions(promotionRepo);
+  const approvePromotionUC = new ApprovePromotion(promotionRepo);
+  const rejectPromotionUC = new RejectPromotion(promotionRepo);
 
   const registerUserUC = new RegisterUser(userRepo, process.env.JWT_SECRET);
   const loginUserUC = new LoginUser(userRepo, process.env.JWT_SECRET);
@@ -106,7 +143,7 @@ async function createServer() {
   // Instanciar Controladores
   const categoryController = new CategoryController(getCategoriesUC, createCategoryUC);
   const productController = new ProductController(getProductsUC, getProductByBarcodeUC, createProductUC);
-  const lotController = new LotController(getLotsUC, ingresarLoteUC, updateLotLocationUC, registerMermaUC);
+  const lotController = new LotController(getLotsUC, getPublicLotAvailabilityUC, ingresarLoteUC, updateLotLocationUC, registerMermaUC, getInventoryMovementsUC, getWastesUC);
   const reservationController = new ReservationController(
     reservarStockUC,
     getReservationByCodeUC,
@@ -115,13 +152,23 @@ async function createServer() {
     getReservationsByUserUC
   );
   const alertController = new AlertController(obtenerAlertasCaducidadUC, alertStreamManager);
-  const promotionController = new PromotionController(generarPromocionesIAUC, getPromotionsUC);
+  const promotionController = new PromotionController(
+    generarPromocionesIAUC,
+    getPromotionsUC,
+    getPendingPromotionsUC,
+    approvePromotionUC,
+    rejectPromotionUC,
+    aiMetrics
+  );
   const authController = new AuthController(registerUserUC, loginUserUC);
-  const heartbeatController = new HeartbeatController();
+  const heartbeatController = new HeartbeatController(heartbeatMonitor);
+  const security = createAuthMiddleware(process.env.JWT_SECRET);
 
   // Iniciar Worker Background Sweeper para expiración de reservas TTL
   const sweeperWorker = new ReservationCleanerWorker(cleanExpiredReservationsUC, 60000);
   sweeperWorker.start();
+  const lotExpiryWorker = new LotExpiryWorker(expireLotsUC, 60000);
+  lotExpiryWorker.start();
 
   // Configurar Swagger UI
   setupSwagger(app);
@@ -136,7 +183,7 @@ async function createServer() {
     promotionController,
     authController,
     heartbeatController
-  });
+  }, security);
 
   app.use('/api/v1', apiRouter);
 

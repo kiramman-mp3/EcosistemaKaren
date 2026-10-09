@@ -1,46 +1,39 @@
 import React, { useState, useMemo } from 'react';
 import { Search, ShoppingCart, Check, Plus, AlertCircle, RefreshCw } from 'lucide-react';
-import { Product, ProductCategory } from '../types';
-import { PRODUCTS_CATALOG } from '../data/mockData';
+import { DataLoadState, Product, ProductCategory } from '../types';
 
 interface ProductCatalogProps {
-  products?: Product[];
-  categories?: ProductCategory[];
+  products: Product[];
+  categories: ProductCategory[];
   selectedCategory: ProductCategory;
   onSelectCategory: (cat: ProductCategory) => void;
   onAddToCart: (prod: Product) => void;
   onOpenCart: () => void;
   cartCount: number;
   loading?: boolean;
+  state: DataLoadState;
+  errorMessage?: string | null;
   onRefresh?: () => void;
 }
 
-const DEFAULT_CATEGORY_PILLS: ProductCategory[] = [
-  'Todos',
-  'Carnes',
-  'Lácteos',
-  'Frutas',
-  'Panadería',
-  'Verduras',
-  'Conservas'
-];
-
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
-  products = PRODUCTS_CATALOG,
-  categories = DEFAULT_CATEGORY_PILLS,
+  products,
+  categories,
   selectedCategory,
   onSelectCategory,
   onAddToCart,
   onOpenCart,
   cartCount,
   loading = false,
+  state,
+  errorMessage,
   onRefresh
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [addedItemIds, setAddedItemIds] = useState<Record<string, boolean>>({});
 
-  const catalogItems = products && products.length > 0 ? products : PRODUCTS_CATALOG;
-  const categoryPills = categories && categories.length > 0 ? categories : DEFAULT_CATEGORY_PILLS;
+  const catalogItems = products;
+  const categoryPills = categories.length > 0 ? categories : ['Todos'];
 
   const filteredProducts = useMemo(() => {
     return catalogItems.filter((p) => {
@@ -166,13 +159,21 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           </div>
         )}
 
-        {/* Grid 3x3 de Productos */}
-        {!loading && filteredProducts.length === 0 ? (
+        {state === 'offline' || state === 'error' ? (
+          <div className="py-16 text-center bg-amber-50 rounded-3xl border border-amber-200 p-8 shadow-sm">
+            <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-amber-900">Catálogo no disponible</h3>
+            <p className="text-sm text-amber-700 mt-1 max-w-md mx-auto">
+              {errorMessage || 'No fue posible comunicarse con el servidor.'}
+            </p>
+            {onRefresh && <button onClick={onRefresh} className="mt-4 px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl">Reintentar</button>}
+          </div>
+        ) : !loading && filteredProducts.length === 0 ? (
           <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
             <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-navy">No se encontraron productos</h3>
+            <h3 className="text-lg font-bold text-navy">{products.length === 0 ? 'Catálogo sin productos' : 'No se encontraron productos'}</h3>
             <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
-              Intenta con otro término de búsqueda o selecciona otra categoría.
+              {products.length === 0 ? 'El servidor respondió correctamente, pero todavía no hay productos disponibles.' : 'Intenta con otro término de búsqueda o selecciona otra categoría.'}
             </p>
             <button
               onClick={() => {

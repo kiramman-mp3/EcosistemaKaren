@@ -18,7 +18,6 @@ import { PickupPassModal } from './src/components/PickupPassModal';
 import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
 import { SearchReservationModalMobile } from './src/components/SearchReservationModalMobile';
-import { INITIAL_PASS, PRODUCTS_CATALOG, FLASH_OFFERS_DATA } from './src/data/mockData';
 import {
   NavTab,
   ProductCategory,
@@ -26,8 +25,28 @@ import {
   FlashOffer,
   CartItem,
   ReservationPass,
+  DataLoadState,
 } from './src/types';
-import { api, BackendProduct, BackendLot, BackendPromotion } from './src/api/client';
+import { api } from './src/api/client';
+
+const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
+
+function secondsUntilExpiration(expiration: string | undefined): number {
+  if (!expiration) return APPROVED_RESERVATION_TTL_SECONDS;
+  const timestamp = new Date(expiration).getTime();
+  if (!Number.isFinite(timestamp)) return APPROVED_RESERVATION_TTL_SECONDS;
+  return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
+}
+
+function createPassMatrix(code: string): number[][] {
+  let seed = [...code].reduce((total, char) => total + char.charCodeAt(0), 0);
+  return Array.from({ length: 7 }, (_, row) =>
+    Array.from({ length: 7 }, (_, column) => {
+      seed = (seed * 1103515245 + 12345 + row + column) & 0x7fffffff;
+      return seed % 2;
+    })
+  );
+}
 
 const CATEGORY_IMAGES: Record<string, string> = {
   'Lácteos': 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=600&q=80',
@@ -41,30 +60,18 @@ const CATEGORY_IMAGES: Record<string, string> = {
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('inicio');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Todos');
-  const [categoriesList, setCategoriesList] = useState<ProductCategory[]>([
-    'Todos', 'Carnes', 'Lácteos', 'Frutas', 'Panadería', 'Verduras', 'Conservas'
-  ]);
-
-  const [products, setProducts] = useState<Product[]>(PRODUCTS_CATALOG);
-  const [offers, setOffers] = useState<FlashOffer[]>(FLASH_OFFERS_DATA);
-
-  const [cart, setCart] = useState<CartItem[]>([
-    {
-      product: PRODUCTS_CATALOG[1],
-      quantity: 1,
-    },
-    {
-      product: PRODUCTS_CATALOG[0],
-      quantity: 1,
-    },
-  ]);
-
-  const [pass, setPass] = useState<ReservationPass>(INITIAL_PASS);
+  const [categoriesList, setCategoriesList] = useState<ProductCategory[]>(['Todos']);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [offers, setOffers] = useState<FlashOffer[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [pass, setPass] = useState<ReservationPass | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol?: string } | null>(null);
 
   // Connection & status
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [dataState, setDataState] = useState<DataLoadState>('loading');
+  const [dataError, setDataError] = useState<string>();
 
   // Modales
   const [isPassOpen, setIsPassOpen] = useState(false);
@@ -84,24 +91,17 @@ export default function App() {
 
   // 2. Fetch Catalog & Data from Live Backend
   const loadBackendData = useCallback(async () => {
+    setDataState('loading');
+    setDataError(undefined);
     try {
       await checkHeartbeat();
-
-      // Categories
-      const backendCats = await api.getCategories().catch(() => []);
-      if (backendCats && backendCats.length > 0) {
-        const catNames = ['Todos', ...backendCats.map((c) => c.nombre as ProductCategory)];
-        setCategoriesList(Array.from(new Set(catNames)) as ProductCategory[]);
-      }
-
-      // Products & Lots
-      const [backendProds, backendLots] = await Promise.all([
-        api.getProducts().catch(() => [] as BackendProduct[]),
-        api.getLots().catch(() => [] as BackendLot[]),
+      const [backendCats, backendProds, backendLots, backendPromos] = await Promise.all([
+        api.getCategories(), api.getProducts(), api.getLots(), api.getPromotions(),
       ]);
+      const categoryById = new Map(backendCats.map((category) => [category.id, category.nombre]));
+      setCategoriesList(Array.from(new Set(['Todos', ...backendCats.map((category) => category.nombre)])));
 
-      if (backendProds && backendProds.length > 0) {
-        const mappedProducts: Product[] = backendProds.map((bp) => {
+      const mappedProducts: Product[] = backendProds.map((bp) => {
           const matchingLots = backendLots.filter(
             (l) => l.productoId === bp.id || l.productoNombre === bp.nombre
           );
@@ -113,50 +113,51 @@ export default function App() {
           return {
             id: bp.id,
             name: bp.nombre,
-            category: (bp.descripcion && categoriesList.includes(bp.descripcion as any)
-              ? bp.descripcion
-              : 'Lácteos') as ProductCategory,
-            price: Number(bp.precioVenta) || 1.0,
-            stock: totalStock > 0 ? totalStock : 25,
+            category: categoryById.get(bp.categoriaId) || 'Sin categoría',
+            price: Number(bp.precioVenta),
+            stock: totalStock,
             image:
-              CATEGORY_IMAGES[bp.descripcion || ''] ||
+              CATEGORY_IMAGES[categoryById.get(bp.categoriaId) || ''] ||
               'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
             badge: bp.codigoBarras ? `EAN: ${bp.codigoBarras}` : undefined,
           };
-        });
-        setProducts(mappedProducts);
-      }
+      });
+      setProducts(mappedProducts);
 
-      // Promotions
-      const backendPromos = await api.getPromotions().catch(() => [] as BackendPromotion[]);
-      if (backendPromos && backendPromos.length > 0) {
-        const mappedOffers: FlashOffer[] = backendPromos.map((pr) => {
+      const mappedOffers: FlashOffer[] = backendPromos.flatMap((pr) => {
           const relatedLot = backendLots.find((l) => l.id === pr.loteId);
-          const originalPrice = 2.50;
+          const relatedProduct = relatedLot && backendProds.find((product) => product.id === relatedLot.productoId);
+          if (!relatedLot || !relatedProduct || relatedLot.cantidadDisponible <= 0) return [];
+          const originalPrice = Number(relatedProduct.precioVenta);
           const discountedPrice = originalPrice * (1 - pr.descuentoPorcentaje / 100);
 
-          return {
+          return [{
             id: pr.id,
-            title: pr.frasePromocional || 'Oferta Relámpago Anti-Desperdicio',
-            category: 'Lácteos',
+            title: pr.frasePromocional || relatedProduct.nombre,
+            category: categoryById.get(relatedProduct.categoriaId) || 'Sin categoría',
             discountBadge: `-${pr.descuentoPorcentaje}%`,
             aiBadge: Boolean(pr.razonIa),
-            urgencyBadge: '¡Algoritmo Gemini!',
+            urgencyBadge: `${relatedLot.cantidadDisponible} disponibles`,
             price: Number(discountedPrice.toFixed(2)),
             originalPrice,
-            stockTotal: relatedLot ? relatedLot.cantidadIngresada : 50,
-            stockAvailable: relatedLot ? relatedLot.cantidadDisponible : 15,
-            expiryText: relatedLot
-              ? `⏰ Caduca: ${new Date(relatedLot.fechaCaducidad).toLocaleDateString()}`
-              : '⏰ Caduca: Próximamente',
+            stockTotal: relatedLot.cantidadIngresada,
+            stockAvailable: relatedLot.cantidadDisponible,
+            expiryText: `Caduca: ${new Date(relatedLot.fechaCaducidad).toLocaleDateString()}`,
             image:
               'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
-          };
-        });
-        setOffers(mappedOffers);
-      }
-    } catch {
-      // Graceful fallback to default mock data
+            loteId: relatedLot.id,
+            productId: relatedProduct.id,
+          }];
+      });
+      setOffers(mappedOffers);
+      setDataState(mappedProducts.length > 0 ? 'ready' : 'empty');
+    } catch (error: any) {
+      setProducts([]);
+      setOffers([]);
+      setCategoriesList(['Todos']);
+      setIsOnline(false);
+      setDataState(error?.response ? 'error' : 'offline');
+      setDataError(error?.response?.data?.message || 'No fue posible obtener información del servidor.');
     }
   }, [checkHeartbeat]);
 
@@ -202,10 +203,15 @@ export default function App() {
   // Confirm Real Anti-Overbooking Reservation
   const handleConfirmReservation = async () => {
     if (cart.length === 0) return;
+    if (!currentUser) {
+      Alert.alert('Inicio de sesión requerido', 'Debes iniciar sesión para reservar stock.');
+      setIsLoginOpen(true);
+      return;
+    }
     setIsSubmitting(true);
 
     try {
-      const userId = currentUser?.id || 'u8a7b6c5-demo-user';
+      const userId = currentUser.id;
       const itemsPayload = cart.map((i) => ({
         productoId: i.product.id,
         cantidad: i.quantity,
@@ -219,9 +225,11 @@ export default function App() {
       const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
       setPass({
-        ...INITIAL_PASS,
         code: reservation.codigoRetiro,
-        remainingSeconds: 600,
+        status: reservation.estado,
+        remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
+        storeLocation: 'Sucursal Matriz',
+        qrBlocks: createPassMatrix(reservation.codigoRetiro),
         items: cart.map((i) => ({
           productName: i.product.name,
           quantity: i.quantity,
@@ -234,29 +242,10 @@ export default function App() {
       setIsCartOpen(false);
       setIsPassOpen(true);
     } catch (err: any) {
-      // Fallback local if server is offline or fails
-      const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-      const fakeCode = `KR-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-      setPass({
-        ...INITIAL_PASS,
-        code: fakeCode,
-        remainingSeconds: 600,
-        items: cart.map((i) => ({
-          productName: i.product.name,
-          quantity: i.quantity,
-          price: i.product.price,
-        })),
-        total,
-      });
-
-      setCart([]);
-      setIsCartOpen(false);
-      setIsPassOpen(true);
-
-      if (err.message) {
-        Alert.alert('Aviso de Reserva', err.message);
-      }
+      Alert.alert(
+        'No se pudo crear la reserva',
+        err.message || 'Comprueba tu sesión y la conexión con la tienda.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -264,10 +253,14 @@ export default function App() {
 
   // Reserve single flash offer
   const handleReserveOffer = async (offer: FlashOffer) => {
+    if (!currentUser) {
+      Alert.alert('Inicio de sesión requerido', 'Debes iniciar sesión para reservar esta oferta.');
+      setIsLoginOpen(true);
+      return;
+    }
     try {
-      const userId = currentUser?.id || 'u8a7b6c5-demo-user';
-      // Search matching product in catalog
-      const matchingProduct = products.find((p) => p.name === offer.title) || products[0];
+      const userId = currentUser.id;
+      const matchingProduct = products.find((p) => p.id === offer.productId);
 
       if (matchingProduct) {
         const reservation = await api.createReservation({
@@ -276,27 +269,24 @@ export default function App() {
         });
 
         setPass({
-          ...INITIAL_PASS,
           code: reservation.codigoRetiro,
-          remainingSeconds: 600,
+          status: reservation.estado,
+          remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
+          storeLocation: 'Sucursal Matriz',
+          qrBlocks: createPassMatrix(reservation.codigoRetiro),
           items: [{ productName: offer.title, quantity: 1, price: offer.price }],
           total: offer.price,
         });
         setIsPassOpen(true);
         return;
       }
-    } catch {
-      // Fallback local
+    } catch (err: any) {
+      Alert.alert(
+        'No se pudo reservar la oferta',
+        err.message || 'Comprueba tu sesión y la conexión con la tienda.'
+      );
+      return;
     }
-
-    setPass({
-      ...INITIAL_PASS,
-      code: `KR-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      remainingSeconds: 600,
-      items: [{ productName: offer.title, quantity: 1, price: offer.price }],
-      total: offer.price,
-    });
-    setIsPassOpen(true);
   };
 
   return (
@@ -321,9 +311,16 @@ export default function App() {
           <View>
             <HeroSectionMobile
               onNavigate={setActiveTab}
-              onOpenPassPreview={() => setIsPassOpen(true)}
+              onOpenPassPreview={() => pass
+                ? setIsPassOpen(true)
+                : Alert.alert('Sin reserva activa', 'Crea una reserva para consultar tu pase de retiro.')}
             />
-            <CategoriesGridMobile onSelectCategory={handleSelectCategory} />
+            <CategoriesGridMobile
+              onSelectCategory={handleSelectCategory}
+              categories={categoriesList}
+              products={products}
+              state={dataState}
+            />
             <AntiOverbookingBannerMobile isOnline={isOnline} />
           </View>
         )}
@@ -337,6 +334,9 @@ export default function App() {
             cartCount={totalCartCount}
             products={products}
             categories={categoriesList}
+            state={dataState}
+            error={dataError}
+            onRetry={loadBackendData}
           />
         )}
 
@@ -344,6 +344,9 @@ export default function App() {
           <FlashOffersMobile
             offers={offers}
             onReserveOffer={handleReserveOffer}
+            state={dataState === 'ready' && offers.length === 0 ? 'empty' : dataState}
+            error={dataError}
+            onRetry={loadBackendData}
           />
         )}
 
@@ -365,11 +368,9 @@ export default function App() {
       </ScrollView>
 
       {/* Modales */}
-      <PickupPassModal
-        pass={pass}
-        visible={isPassOpen}
-        onClose={() => setIsPassOpen(false)}
-      />
+      {pass && (
+        <PickupPassModal pass={pass} visible={isPassOpen} onClose={() => setIsPassOpen(false)} />
+      )}
 
       <CartDrawerMobile
         visible={isCartOpen}

@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { SAMPLE_QR_MATRIX } from '../data/mockData';
 
 interface AntiOverbookingBannerMobileProps {
   onBackToSelector?: () => void;
@@ -11,21 +10,6 @@ export const AntiOverbookingBannerMobile: React.FC<AntiOverbookingBannerMobilePr
   onBackToSelector,
   isOnline = true,
 }) => {
-  const [seconds, setSeconds] = useState(585);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSeconds((prev) => (prev > 0 ? prev - 1 : 585));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (total: number) => {
-    const m = Math.floor(total / 60).toString().padStart(2, '0');
-    const s = (total % 60).toString().padStart(2, '0');
-    return `${m}m:${s}s`;
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.bannerCard}>
@@ -85,38 +69,25 @@ export const AntiOverbookingBannerMobile: React.FC<AntiOverbookingBannerMobilePr
           <View style={styles.passHeader}>
             <Text style={styles.passBrand}>SK Supermercado Karen</Text>
             <View style={styles.activeDotBadge}>
-              <Text style={styles.activeDotText}>🟢 ACTIVO</Text>
+              <Text style={styles.activeDotText}>AL RESERVAR</Text>
             </View>
           </View>
 
           <View style={styles.pinBox}>
             <Text style={styles.pinLabel}>CÓDIGO PIN CAJA SIACI</Text>
-            <Text style={styles.pinCode}>KR-X7Y9Z2</Text>
+            <Text style={styles.pinCode}>SE GENERA AL RESERVAR</Text>
           </View>
 
-          {/* QR Blocks */}
           <View style={styles.qrContainer}>
             <View style={styles.qrGrid}>
-              {SAMPLE_QR_MATRIX.map((row, rIdx) => (
-                <View key={rIdx} style={styles.qrRow}>
-                  {row.map((cell, cIdx) => (
-                    <View
-                      key={cIdx}
-                      style={[
-                        styles.qrCell,
-                        cell === 1 ? styles.qrCellBlack : styles.qrCellWhite,
-                      ]}
-                    />
-                  ))}
-                </View>
-              ))}
+              <Text style={styles.passIcon}>🛡️</Text>
             </View>
           </View>
 
           {/* Countdown: 🔴 09m:45s restantes */}
           <View style={styles.countdownBox}>
             <Text style={styles.countdownText}>
-              🔴 {formatTime(seconds)} restantes
+              Vigencia: 10 minutos desde la reserva
             </Text>
           </View>
         </View>
@@ -272,6 +243,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 6,
     borderRadius: 8,
+    width: 130,
+    height: 130,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passIcon: {
+    fontSize: 58,
   },
   qrRow: {
     flexDirection: 'row',

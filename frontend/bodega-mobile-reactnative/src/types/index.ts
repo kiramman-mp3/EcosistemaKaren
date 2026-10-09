@@ -27,7 +27,9 @@ export interface BackendLot {
   id: string;
   productoId: string;
   numeroLote: string;
+  fechaElaboracion?: string | null;
   fechaCaducidad: string;
+  costoUnitario?: number | null;
   cantidadIngresada: number;
   cantidadDisponible: number;
   cantidadReservada: number;
@@ -60,6 +62,8 @@ export interface BackendPromotion {
   frasePromocional: string;
   razonIa?: string;
   activa: boolean;
+  estado?: 'PENDIENTE_APROBACION' | 'APROBADA' | 'RECHAZADA';
+  cacheHit?: boolean;
   created_at?: string;
 }
 
@@ -85,7 +89,25 @@ export interface BackendReservation {
 export interface CreateLotPayload {
   productoId: string;
   numeroLote: string;
+  fechaElaboracion: string;
   fechaCaducidad: string;
+  costoUnitario: number;
   cantidadIngresada: number;
   ubicacion: UbicacionLote;
+}
+
+export interface WasteAuditResult {
+  lote: BackendLot;
+  merma: {
+    id: string;
+    loteId: string;
+    movimientoId: string;
+    cantidad: number;
+    razon: string;
+    costoUnitario: number | null;
+    costoTotal: number | null;
+    registradaPor: string;
+    created_at: string;
+  };
+  movimiento: Record<string, unknown>;
 }

@@ -27,10 +27,13 @@ export const AiPromoModal: React.FC<AiPromoModalProps> = ({
             <Text style={styles.icon}>✨</Text>
           </View>
 
-          <Text style={styles.badge}>ALGORITMO GEMINI IA</Text>
+          <Text style={styles.badge}>ALGORITMO GEMINI IA • BORRADOR</Text>
           <Text style={styles.title}>Promoción Generada</Text>
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusText}>⏳ PENDIENTE DE APROBACIÓN POR ADMIN</Text>
+          </View>
           <Text style={styles.subtitle}>
-            Oferta relámpago calculada en base al vencimiento FEFO y rotación de lote.
+            Borrador generado en base a FEFO. Requiere aprobación de un Administrador antes de publicarse en tienda.
           </Text>
 
           <View style={styles.discountBox}>
@@ -39,7 +42,7 @@ export const AiPromoModal: React.FC<AiPromoModalProps> = ({
           </View>
 
           <View style={styles.phraseBox}>
-            <Text style={styles.phraseLabel}>FRASE COMERCIAL PUBLICADA:</Text>
+            <Text style={styles.phraseLabel}>FRASE COMERCIAL PROPUESTA:</Text>
             <Text style={styles.phraseText}>"{promotion.frasePromocional}"</Text>
           </View>
 
@@ -51,7 +54,7 @@ export const AiPromoModal: React.FC<AiPromoModalProps> = ({
           )}
 
           <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
-            <Text style={styles.doneBtnText}>Aceptar y Sincronizar en Tienda</Text>
+            <Text style={styles.doneBtnText}>Entendido (Pendiente de Aprobación)</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -197,5 +200,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 13,
+  },
+  statusBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#B45309',
   },
 });

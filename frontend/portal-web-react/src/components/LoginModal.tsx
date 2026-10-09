@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, ArrowRight, Shield, AlertTriangle, Sparkles, UserPlus } from 'lucide-react';
+import { X, User, ArrowRight, Shield, AlertTriangle, UserPlus } from 'lucide-react';
 import { api } from '../api/client';
 
 interface LoginModalProps {
@@ -47,25 +47,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     }
   };
 
-  const handleQuickDemo = async () => {
-    setEmail('cliente@karen.com');
-    setPassword('demo123');
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.login({ email: 'cliente@karen.com', password: 'demo123' });
-      setSuccessMsg('¡Conectado como Cliente Demo!');
-      onLoginSuccess(res.user);
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-    } catch (err: any) {
-      setError(err.message || 'Error con usuario demo.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-deep/75 backdrop-blur-sm animate-fade-in">
       <div
@@ -92,23 +73,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               ? 'Regístrate para reservar productos frescos sin sobreventa'
               : 'Inicia sesión para reservar stock y sincronizar tus compras físicas.'}
           </p>
-        </div>
-
-        {/* Demo Fast Login Pill */}
-        <div className="mb-5 p-3 bg-red-50/80 border border-red-100 rounded-2xl flex items-center justify-between">
-          <div className="text-left">
-            <span className="text-[11px] font-bold text-karenRed block">¿Prueba rápida?</span>
-            <span className="text-[10px] text-slate-500">Acceso con cuenta de prueba</span>
-          </div>
-          <button
-            type="button"
-            onClick={handleQuickDemo}
-            disabled={loading}
-            className="px-3 py-1.5 bg-karenRed hover:bg-karenRed-hover text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1 active:scale-95"
-          >
-            <Sparkles className="w-3 h-3" />
-            <span>Demo 1-Click</span>
-          </button>
         </div>
 
         {error && (
@@ -161,10 +125,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Contraseña
               </label>
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
+                <input
+                  type="password"
+                  required
+                  minLength={isRegister ? 8 : undefined}
+                  placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-navy"

@@ -59,14 +59,17 @@ CREATE TABLE IF NOT EXISTS lotes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     producto_id UUID NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
     numero_lote VARCHAR(50) NOT NULL,
+    fecha_elaboracion DATE,
     fecha_caducidad DATE NOT NULL,
+    costo_unitario NUMERIC(12,4) CHECK (costo_unitario IS NULL OR costo_unitario > 0),
     cantidad_ingresada INTEGER NOT NULL CHECK (cantidad_ingresada >= 0),
     cantidad_disponible INTEGER NOT NULL CHECK (cantidad_disponible >= 0),
     cantidad_reservada INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_reservada >= 0),
     ubicacion ubicacion_lote NOT NULL DEFAULT 'BODEGA',
     estado estado_lote NOT NULL DEFAULT 'ACTIVO',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (fecha_elaboracion IS NULL OR fecha_elaboracion < fecha_caducidad)
 );
 
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -135,14 +138,14 @@ INSERT INTO productos (id, categoria_id, codigo_barras, nombre, descripcion, pre
 ON CONFLICT (codigo_barras) DO NOTHING;
 
 INSERT INTO usuarios (id, nombre, email, rol, password_hash) VALUES
-('u8a7b6c5-1111-2222-3333-444455556666', 'Cliente Demo', 'cliente@karen.com', 'CLIENTE', '$2a$10$wT/p013z...demo_hash'),
-('u8a7b6c5-1111-2222-3333-444455556667', 'Nancy Alvares (Bodega)', 'bodega@karen.com', 'BODEGUERO', '$2a$10$wT/p013z...demo_hash'),
-('u8a7b6c5-1111-2222-3333-444455556668', 'Admin Supermercado', 'admin@karen.com', 'ADMIN', '$2a$10$wT/p013z...demo_hash')
+('d8a7b6c5-1111-2222-3333-444455556666', 'Cliente Demo', 'cliente@karen.com', 'CLIENTE', '$2a$10$2t02iry3fpfeLbiyW6fEouQMk5n6EPyKcokmWEWpq/BZ0hTdGriGS'),
+('d8a7b6c5-1111-2222-3333-444455556667', 'Nancy Alvares (Bodega)', 'bodega@karen.com', 'BODEGUERO', '$2a$10$2t02iry3fpfeLbiyW6fEouQMk5n6EPyKcokmWEWpq/BZ0hTdGriGS'),
+('d8a7b6c5-1111-2222-3333-444455556668', 'Admin Supermercado', 'admin@karen.com', 'ADMIN', '$2a$10$2t02iry3fpfeLbiyW6fEouQMk5n6EPyKcokmWEWpq/BZ0hTdGriGS')
 ON CONFLICT (email) DO NOTHING;
 
 -- Lotes iniciales para pruebas (uno crítico < 7 días, uno advertencia < 15 días, uno normal)
 INSERT INTO lotes (id, producto_id, numero_lote, fecha_caducidad, cantidad_ingresada, cantidad_disponible, cantidad_reservada, ubicacion, estado) VALUES
-('l9k8j7h6-1111-2222-3333-444455556666', 'c8a4d2e1-1111-2222-3333-444455556667', 'LOT-YG-2026-01', CURRENT_DATE + INTERVAL '4 days', 50, 45, 0, 'PERCHA', 'ACTIVO'),
-('l9k8j7h6-1111-2222-3333-444455556667', 'c8a4d2e1-1111-2222-3333-444455556666', 'LOT-VT-2026-02', CURRENT_DATE + INTERVAL '12 days', 100, 90, 0, 'BODEGA', 'ACTIVO'),
-('l9k8j7h6-1111-2222-3333-444455556668', 'c8a4d2e1-1111-2222-3333-444455556668', 'LOT-PL-2026-03', CURRENT_DATE + INTERVAL '45 days', 40, 40, 0, 'BODEGA', 'ACTIVO')
+('b9a8f7e6-1111-2222-3333-444455556666', 'c8a4d2e1-1111-2222-3333-444455556667', 'LOT-YG-2026-01', CURRENT_DATE + INTERVAL '4 days', 50, 45, 0, 'PERCHA', 'ACTIVO'),
+('b9a8f7e6-1111-2222-3333-444455556667', 'c8a4d2e1-1111-2222-3333-444455556666', 'LOT-VT-2026-02', CURRENT_DATE + INTERVAL '12 days', 100, 90, 0, 'BODEGA', 'ACTIVO'),
+('b9a8f7e6-1111-2222-3333-444455556668', 'c8a4d2e1-1111-2222-3333-444455556668', 'LOT-PL-2026-03', CURRENT_DATE + INTERVAL '45 days', 40, 40, 0, 'BODEGA', 'ACTIVO')
 ON CONFLICT (id) DO NOTHING;

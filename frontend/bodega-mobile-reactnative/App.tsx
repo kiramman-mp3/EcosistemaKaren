@@ -12,6 +12,7 @@ import { IngresoLoteScreen } from './src/screens/IngresoLoteScreen';
 import { AlertasCaducidadScreen } from './src/screens/AlertasCaducidadScreen';
 import { InventarioLotesScreen } from './src/screens/InventarioLotesScreen';
 import { CajaSiaciScreen } from './src/screens/CajaSiaciScreen';
+import { BodegaLoginScreen } from './src/screens/BodegaLoginScreen';
 import { AiPromoModal } from './src/components/AiPromoModal';
 import { MermaModal } from './src/components/MermaModal';
 import {
@@ -22,6 +23,7 @@ import {
   BackendPromotion,
 } from './src/types';
 import { api } from './src/api/client';
+import { classifyExpiryDays } from './src/config/businessRules';
 
 // Initial sample data for fallback
 const INITIAL_PRODUCTS: BackendProduct[] = [
@@ -106,8 +108,9 @@ const INITIAL_LOTS: BackendLot[] = [
 ];
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol: string } | null>(null);
   const [activeTab, setActiveTab] = useState<BodegaTab>('ingreso');
-  const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [isOnline, setIsOnline] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Core data states
@@ -134,6 +137,15 @@ export default function App() {
     }
   }, []);
 
+  const sendHeartbeat = useCallback(async () => {
+    try {
+      const hb = await api.sendHeartbeat();
+      setIsOnline(hb.status === 'ONLINE' && !hb.reservationsBlocked);
+    } catch {
+      setIsOnline(false);
+    }
+  }, []);
+
   // Compute alerts from lots
   const computeAlertsFromLots = (currentLots: BackendLot[], prods: BackendProduct[]): ExpiryAlertItem[] => {
     const now = new Date();
@@ -146,7 +158,8 @@ export default function App() {
         const diffMs = exp.getTime() - now.getTime();
         const dias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-        if (dias <= 15) {
+        const nivel = classifyExpiryDays(dias);
+        if (nivel !== 'NORMAL') {
           const prod = prods.find((p) => p.id === lot.productoId);
           result.push({
             id: `alert-${lot.id}`,
@@ -156,7 +169,7 @@ export default function App() {
             codigoBarras: lot.codigoBarras || prod?.codigoBarras || 'S/C',
             fechaCaducidad: lot.fechaCaducidad,
             diasParaVencer: dias,
-            nivel: dias <= 0 ? 'VENCIDO' : dias < 7 ? 'ROJO' : 'AMARILLO',
+            nivel,
             cantidadDisponible: lot.cantidadDisponible,
             cantidadReservada: lot.cantidadReservada || 0,
             ubicacion: lot.ubicacion,
@@ -202,10 +215,13 @@ export default function App() {
   }, [checkHeartbeat]);
 
   useEffect(() => {
+    if (!currentUser) return;
+    const heartbeatAction = currentUser.rol === 'PERCHERO' ? checkHeartbeat : sendHeartbeat;
+    void heartbeatAction();
     loadData();
-    const interval = setInterval(checkHeartbeat, 15000);
+    const interval = setInterval(heartbeatAction, 30000);
     return () => clearInterval(interval);
-  }, [loadData, checkHeartbeat]);
+  }, [loadData, checkHeartbeat, sendHeartbeat, currentUser]);
 
   const handleOpenMerma = (lotId: string, lotNumber: string, maxUnits: number) => {
     setMermaTarget({ lotId, lotNumber, maxUnits });
@@ -221,6 +237,10 @@ export default function App() {
     (a) => a.nivel === 'ROJO' || a.nivel === 'VENCIDO'
   ).length;
 
+  if (!currentUser) {
+    return <BodegaLoginScreen onLogin={({ user }) => setCurrentUser(user)} />;
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#1E293B" />
@@ -230,6 +250,11 @@ export default function App() {
         isOnline={isOnline}
         onRefresh={loadData}
         refreshing={refreshing}
+        operatorName={currentUser.nombre}
+        onLogout={() => {
+          api.logout();
+          setCurrentUser(null);
+        }}
       />
 
       {/* Main Screen Body */}

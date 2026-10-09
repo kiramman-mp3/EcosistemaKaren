@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Detect environment or fallback to localhost:4000
+// The deployment must provide VITE_API_URL when /api/v1 is not reverse-proxied.
 const BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
 
 export const apiClient = axios.create({
@@ -69,6 +69,9 @@ export interface BackendPromotion {
   frasePromocional: string;
   razonIa?: string;
   activa: boolean;
+  estado?: 'PENDIENTE_APROBACION' | 'APROBADA' | 'RECHAZADA';
+  cacheHit?: boolean;
+  motivoRechazo?: string;
   created_at?: string;
 }
 
@@ -116,78 +119,72 @@ export interface AuthResponse {
 export const api = {
   // Heartbeat & System Status
   async getHeartbeat(): Promise<HeartbeatResponse> {
-    try {
-      const res = await apiClient.get<HeartbeatResponse>('/heartbeat');
-      return res.data;
-    } catch {
-      // Direct fallback if relative proxy fails
-      const directRes = await axios.get<HeartbeatResponse>('http://localhost:4000/api/v1/heartbeat');
-      return directRes.data;
-    }
+    const res = await apiClient.get<HeartbeatResponse>('/heartbeat');
+    return res.data;
   },
 
   async pingHeartbeat(): Promise<HeartbeatResponse> {
-    try {
-      const res = await apiClient.post<HeartbeatResponse>('/heartbeat');
-      return res.data;
-    } catch {
-      const directRes = await axios.post<HeartbeatResponse>('http://localhost:4000/api/v1/heartbeat');
-      return directRes.data;
-    }
+    const res = await apiClient.post<HeartbeatResponse>('/heartbeat');
+    return res.data;
   },
 
   // Categories
   async getCategories(): Promise<BackendCategory[]> {
-    try {
-      const res = await apiClient.get<{ success: boolean; data: BackendCategory[] }>('/categories');
-      return res.data.data || [];
-    } catch {
-      const directRes = await axios.get<{ success: boolean; data: BackendCategory[] }>('http://localhost:4000/api/v1/categories');
-      return directRes.data.data || [];
-    }
+    const res = await apiClient.get<{ success: boolean; data: BackendCategory[] }>('/categories');
+    return res.data.data || [];
   },
 
   // Products
   async getProducts(): Promise<BackendProduct[]> {
-    try {
-      const res = await apiClient.get<{ success: boolean; data: BackendProduct[] }>('/products');
-      return res.data.data || [];
-    } catch {
-      const directRes = await axios.get<{ success: boolean; data: BackendProduct[] }>('http://localhost:4000/api/v1/products');
-      return directRes.data.data || [];
-    }
+    const res = await apiClient.get<{ success: boolean; data: BackendProduct[] }>('/products');
+    return res.data.data || [];
   },
 
   // Lots & Stock
   async getLots(): Promise<BackendLot[]> {
-    try {
-      const res = await apiClient.get<{ success: boolean; data: BackendLot[] }>('/lots');
-      return res.data.data || [];
-    } catch {
-      const directRes = await axios.get<{ success: boolean; data: BackendLot[] }>('http://localhost:4000/api/v1/lots');
-      return directRes.data.data || [];
-    }
+    const res = await apiClient.get<{ success: boolean; data: BackendLot[] }>('/availability');
+    return res.data.data || [];
   },
 
   // Gemini AI Promotions
   async getPromotions(): Promise<BackendPromotion[]> {
-    try {
-      const res = await apiClient.get<{ success: boolean; data: BackendPromotion[] }>('/promotions');
-      return res.data.data || [];
-    } catch {
-      const directRes = await axios.get<{ success: boolean; data: BackendPromotion[] }>('http://localhost:4000/api/v1/promotions');
-      return directRes.data.data || [];
-    }
+    const res = await apiClient.get<{ success: boolean; data: BackendPromotion[] }>('/promotions');
+    return res.data.data || [];
   },
 
   async generatePromotion(loteId: string): Promise<BackendPromotion> {
     try {
       const res = await apiClient.post<{ success: boolean; data: BackendPromotion }>('/promotions/generate', { loteId });
       return res.data.data;
-    } catch {
-      const directRes = await axios.post<{ success: boolean; data: BackendPromotion }>('http://localhost:4000/api/v1/promotions/generate', { loteId });
-      return directRes.data.data;
+    } catch (err: any) {
+      const status = err.response?.status;
+      if (status === 504) throw new Error('Tiempo de espera agotado al consultar la IA (Timeout 10s).');
+      if (status === 429) throw new Error('Límite de solicitudes de IA alcanzado. Espere un momento.');
+      if (status === 502) throw new Error('La IA devolvió una respuesta no válida. Intente nuevamente.');
+      if (status === 503) throw new Error('El servicio de Gemini no está configurado o disponible.');
+      if (err.response?.data?.message) throw new Error(err.response.data.message);
+      throw new Error('No se pudo confirmar el resultado de la generación. No se reintentó para evitar duplicados.');
     }
+  },
+
+  async getPendingPromotions(): Promise<BackendPromotion[]> {
+    const res = await apiClient.get<{ success: boolean; data: BackendPromotion[] }>('/promotions/pending');
+    return res.data.data || [];
+  },
+
+  async approvePromotion(id: string): Promise<BackendPromotion> {
+    const res = await apiClient.post<{ success: boolean; data: BackendPromotion }>(`/promotions/${id}/approve`);
+    return res.data.data;
+  },
+
+  async rejectPromotion(id: string, motivoRechazo: string): Promise<BackendPromotion> {
+    const res = await apiClient.post<{ success: boolean; data: BackendPromotion }>(`/promotions/${id}/reject`, { motivoRechazo });
+    return res.data.data;
+  },
+
+  async getAiMetrics(): Promise<any> {
+    const res = await apiClient.get<{ success: boolean; data: any }>('/metrics/ai');
+    return res.data.data;
   },
 
   // Anti-Overbooking Reservations (FEFO)
@@ -199,9 +196,7 @@ export const api = {
       if (err.response?.data?.message) {
         throw new Error(err.response.data.message);
       }
-      // Try direct fallback
-      const directRes = await axios.post<{ success: boolean; data: BackendReservation }>('http://localhost:4000/api/v1/reservations', payload);
-      return directRes.data.data;
+      throw new Error('No se pudo conectar con el servidor para crear la reserva.');
     }
   },
 
@@ -213,8 +208,7 @@ export const api = {
       if (err.response?.data?.message) {
         throw new Error(err.response.data.message);
       }
-      const directRes = await axios.get<{ success: boolean; data: BackendReservation }>(`http://localhost:4000/api/v1/reservations/code/${encodeURIComponent(code.trim())}`);
-      return directRes.data.data;
+      throw new Error('No se pudo conectar con el servidor para consultar la reserva.');
     }
   },
 
@@ -231,12 +225,7 @@ export const api = {
       if (err.response?.data?.message) {
         throw new Error(err.response.data.message);
       }
-      const directRes = await axios.post<{ success: boolean; data: AuthResponse }>('http://localhost:4000/api/v1/auth/login', credentials);
-      if (directRes.data.data.token) {
-        localStorage.setItem('karen_token', directRes.data.data.token);
-        localStorage.setItem('karen_user', JSON.stringify(directRes.data.data.user));
-      }
-      return directRes.data.data;
+      throw new Error('No se pudo conectar con el servidor para iniciar sesión.');
     }
   },
 
@@ -252,12 +241,7 @@ export const api = {
       if (err.response?.data?.message) {
         throw new Error(err.response.data.message);
       }
-      const directRes = await axios.post<{ success: boolean; data: AuthResponse }>('http://localhost:4000/api/v1/auth/register', data);
-      if (directRes.data.data.token) {
-        localStorage.setItem('karen_token', directRes.data.data.token);
-        localStorage.setItem('karen_user', JSON.stringify(directRes.data.data.user));
-      }
-      return directRes.data.data;
+      throw new Error('No se pudo conectar con el servidor para crear la cuenta.');
     }
   },
 

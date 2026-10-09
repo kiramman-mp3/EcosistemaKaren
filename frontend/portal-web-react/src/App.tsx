@@ -9,10 +9,9 @@ import { ReservationModal } from './components/ReservationModal';
 import { SearchReservationModal } from './components/SearchReservationModal';
 import { CartDrawer } from './components/CartDrawer';
 import { LoginModal } from './components/LoginModal';
-import { INITIAL_SAMPLE_PASS, PRODUCTS_CATALOG, FLASH_OFFERS_DATA, SAMPLE_QR_MATRIX } from './data/mockData';
-import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass } from './types';
+import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './types';
 import { CheckCircle, ShieldCheck, AlertTriangle } from 'lucide-react';
-import { api, BackendLot } from './api/client';
+import { api } from './api/client';
 
 // Product image fallbacks by category
 const CATEGORY_IMAGES: Record<string, string> = {
@@ -24,36 +23,41 @@ const CATEGORY_IMAGES: Record<string, string> = {
   'Conservas': 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?auto=format&fit=crop&w=600&q=80',
 };
 
+const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
+
+function secondsUntilExpiration(expiration: string | undefined): number {
+  if (!expiration) return APPROVED_RESERVATION_TTL_SECONDS;
+  const timestamp = new Date(expiration).getTime();
+  if (!Number.isFinite(timestamp)) return APPROVED_RESERVATION_TTL_SECONDS;
+  return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
+}
+
+function createPassMatrix(code: string): number[][] {
+  let seed = [...code].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return Array.from({ length: 7 }, (_, row) => Array.from({ length: 7 }, (_, col) => {
+    seed = (seed * 9301 + 49297 + row * 7 + col) % 233280;
+    return seed % 2;
+  }));
+}
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('inicio');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Todos');
-  const [categoriesList, setCategoriesList] = useState<ProductCategory[]>([
-    'Todos', 'Carnes', 'Lácteos', 'Frutas', 'Panadería', 'Verduras', 'Conservas'
-  ]);
+  const [categoriesList, setCategoriesList] = useState<ProductCategory[]>(['Todos']);
   
-  const [products, setProducts] = useState<Product[]>(PRODUCTS_CATALOG);
-  const [offers, setOffers] = useState<FlashOffer[]>(FLASH_OFFERS_DATA);
-  const [rawLots, setRawLots] = useState<BackendLot[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [offers, setOffers] = useState<FlashOffer[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   
-  const [cart, setCart] = useState<CartItem[]>([
-    {
-      product: PRODUCTS_CATALOG[1], // Yogurt Toni
-      quantity: 1
-    },
-    {
-      product: PRODUCTS_CATALOG[0], // Leche Vita
-      quantity: 1
-    }
-  ]);
-  
-  const [currentPass, setCurrentPass] = useState<ReservationPass>(INITIAL_SAMPLE_PASS);
+  const [currentPass, setCurrentPass] = useState<ReservationPass | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol?: string } | null>(null);
   
   // Connection & loading flags
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
+  const [dataState, setDataState] = useState<DataLoadState>('loading');
+  const [dataError, setDataError] = useState<string | null>(null);
   const [isSubmittingReservation, setIsSubmittingReservation] = useState<boolean>(false);
-  const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
   const [cartError, setCartError] = useState<string | null>(null);
 
   // Modals & Drawers
@@ -81,16 +85,16 @@ export const App: React.FC = () => {
   // 2. Fetch Categories, Products & Lots from Live Backend
   const loadBackendData = useCallback(async () => {
     setLoadingProducts(true);
+    setDataState('loading');
+    setDataError(null);
     try {
       // Heartbeat
       await checkHeartbeat();
 
       // Categories
       const backendCats = await api.getCategories();
-      if (backendCats && backendCats.length > 0) {
-        const catNames = ['Todos', ...backendCats.map(c => c.nombre)];
-        setCategoriesList(Array.from(new Set(catNames)));
-      }
+      const catNames = ['Todos', ...backendCats.map(c => c.nombre)];
+      setCategoriesList(Array.from(new Set(catNames)));
 
       // Products & Lots
       const [backendProds, backendLots] = await Promise.all([
@@ -98,80 +102,68 @@ export const App: React.FC = () => {
         api.getLots()
       ]);
 
-      setRawLots(backendLots);
-
-      if (backendProds && backendProds.length > 0) {
-        // Map backend products and compute real stock from active lots
-        const mappedProducts: Product[] = backendProds.map((bp) => {
+      const mappedProducts: Product[] = backendProds.map((bp) => {
           // Find matching lots for real stock calculation
           const matchingLots = backendLots.filter(
             l => (l.productoId === bp.id || l.productoId === bp.aliasId) && l.estado === 'ACTIVO'
           );
           const computedStock = matchingLots.reduce((sum, l) => sum + (l.cantidadDisponible || 0), 0);
 
-          // Find mock product to preserve image / units
-          const mockMatch = PRODUCTS_CATALOG.find(
-            mp => mp.name.toLowerCase().includes(bp.nombre.toLowerCase().substring(0, 10)) ||
-                  mp.id === bp.aliasId
-          );
-
           // Determine category name
           const catObj = backendCats.find(c => c.id === bp.categoriaId);
-          const catName = catObj ? catObj.nombre : (mockMatch?.category || 'General');
+          const catName = catObj?.nombre || 'Sin categoría';
 
           return {
             id: bp.id,
             name: bp.nombre,
             category: catName,
             price: bp.precioVenta,
-            originalPrice: mockMatch?.originalPrice || (bp.precioVenta * 1.25),
-            stock: computedStock > 0 ? computedStock : (mockMatch?.stock || 20),
-            image: mockMatch?.image || CATEGORY_IMAGES[catName] || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
+            stock: computedStock,
+            image: CATEGORY_IMAGES[catName] || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
             badge: catName,
-            unit: mockMatch?.unit || 'Unidad',
+            unit: 'Unidad',
             barcode: bp.codigoBarras
           };
         });
-
-        setProducts(mappedProducts);
-      }
+      setProducts(mappedProducts);
 
       // Promotions
       const backendPromos = await api.getPromotions();
-      if (backendPromos && backendPromos.length > 0) {
-        const mappedOffers: FlashOffer[] = backendPromos.map((p, idx) => {
+      const mappedOffers: FlashOffer[] = backendPromos.flatMap((p) => {
           const matchingLot = backendLots.find(l => l.id === p.loteId);
           const lotProd = backendProds.find(pr => pr.id === matchingLot?.productoId);
-          
-          const origPrice = lotProd?.precioVenta || 4.20;
+          if (!matchingLot || !lotProd || matchingLot.cantidadDisponible <= 0) return [];
+          const origPrice = Number(lotProd.precioVenta);
           const discountedPrice = +(origPrice * (1 - (p.descuentoPorcentaje / 100))).toFixed(2);
-
-          const mockImg = FLASH_OFFERS_DATA[idx % FLASH_OFFERS_DATA.length]?.image;
 
           return {
             id: p.id,
-            title: p.frasePromocional || `Oferta IA: ${lotProd?.nombre || 'Producto Fresco'}`,
+            title: p.frasePromocional,
             category: 'Liquidación FEFO',
             discountBadge: `-${p.descuentoPorcentaje}%`,
             aiBadge: true,
-            urgencyBadge: `¡${matchingLot?.cantidadDisponible || 5} en percha!`,
+            urgencyBadge: `¡${matchingLot.cantidadDisponible} disponibles!`,
             price: discountedPrice,
             originalPrice: origPrice,
-            stockTotal: matchingLot?.cantidadIngresada || 20,
-            stockAvailable: matchingLot?.cantidadDisponible || 5,
-            expiryText: matchingLot?.fechaCaducidad ? `⏰ Caduca: ${new Date(matchingLot.fechaCaducidad).toLocaleDateString()}` : '⏰ Caduca pronto',
-            image: mockImg || 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
+            stockTotal: matchingLot.cantidadIngresada,
+            stockAvailable: matchingLot.cantidadDisponible,
+            expiryText: `⏰ Caduca: ${new Date(matchingLot.fechaCaducidad).toLocaleDateString()}`,
+            image: CATEGORY_IMAGES[backendCats.find(c => c.id === lotProd.categoriaId)?.nombre || ''] || 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
             loteId: p.loteId,
+            productId: lotProd.id,
             razonIa: p.razonIa
           };
         });
-
-        // Combine backend promotions with static flash offers
-        setOffers([...mappedOffers, ...FLASH_OFFERS_DATA.slice(mappedOffers.length)]);
-      }
+      setOffers(mappedOffers);
+      setDataState(mappedProducts.length === 0 ? 'empty' : 'ready');
 
     } catch (err) {
-      console.warn('Backend offline o inaccesible, operando con datos locales de contingencia.', err);
+      setProducts([]);
+      setOffers([]);
+      setCategoriesList(['Todos']);
+      setDataState('offline');
+      setDataError('No fue posible consultar el catálogo. Comprueba la conexión con el servidor e inténtalo nuevamente.');
+      setIsOnline(false);
     } finally {
       setLoadingProducts(false);
     }
@@ -196,9 +188,9 @@ export const App: React.FC = () => {
   // Handle Manual Heartbeat Ping
   const handlePingHeartbeat = async () => {
     try {
-      const res = await api.pingHeartbeat();
-      setIsOnline(res.status === 'ONLINE');
-      showToast('✓ Conexión establecida con el servidor local de tienda física (ONLINE).');
+      const res = await api.getHeartbeat();
+      setIsOnline(res.status === 'ONLINE' && !res.reservationsBlocked);
+      showToast('✓ Estado de conexión actualizado.');
       loadBackendData();
     } catch {
       showToast('⚠️ No se pudo contactar al servidor local de tienda.');
@@ -249,6 +241,12 @@ export const App: React.FC = () => {
   const handleConfirmReservationFromCart = async () => {
     if (cart.length === 0) return;
 
+    if (!currentUser) {
+      setCartError('Debes iniciar sesión para reservar stock.');
+      setIsLoginOpen(true);
+      return;
+    }
+
     if (!isOnline) {
       setCartError('⚠️ El servidor de tienda física está desconectado. Las reservas están bloqueadas temporalmente para evitar sobreventas.');
       return;
@@ -258,7 +256,7 @@ export const App: React.FC = () => {
     setCartError(null);
 
     const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-    const userId = currentUser?.id || 'u8a7b6c5-1111-2222-3333-444455556666'; // fallback to demo client
+    const userId = currentUser.id;
 
     try {
       // Map items to backend payload
@@ -271,16 +269,17 @@ export const App: React.FC = () => {
       };
 
       const result = await api.createReservation(reservationPayload);
+      const remainingSeconds = secondsUntilExpiration(result.fechaExpiracion);
 
       // Generate Pass UI Model
       const newPass: ReservationPass = {
         code: result.codigoRetiro,
         status: 'ACTIVA',
-        initialSeconds: 600,
-        remainingSeconds: 600,
+        initialSeconds: remainingSeconds,
+        remainingSeconds,
         customerName: currentUser?.nombre || 'Cliente Supermercado Karen',
         storeLocation: 'Sucursal Matriz - Calle Principal 102 (Caja SIACI)',
-        qrBlocks: SAMPLE_QR_MATRIX,
+        qrBlocks: createPassMatrix(result.codigoRetiro),
         items: cart.map(i => ({
           productName: i.product.name,
           quantity: i.quantity,
@@ -308,29 +307,39 @@ export const App: React.FC = () => {
 
   // Reserve a Flash Offer directly
   const handleReserveOffer = async (offer: FlashOffer) => {
+    if (!currentUser) {
+      showToast('Inicia sesión para reservar esta oferta.');
+      setIsLoginOpen(true);
+      return;
+    }
     if (!isOnline) {
       showToast('⚠️ Servidor local sin conexión. Reservas temporalmente suspendidas.');
       return;
     }
 
     // Try finding matching product in catalog
-    const matchingProd = products.find(p => p.name.toLowerCase().includes('yogurt') || p.id === offer.id) || products[0];
-    const userId = currentUser?.id || 'u8a7b6c5-1111-2222-3333-444455556666';
+    const matchingProd = products.find(p => p.id === offer.productId);
+    if (!matchingProd) {
+      showToast('La oferta ya no tiene un producto disponible asociado. Actualiza el catálogo.');
+      return;
+    }
+    const userId = currentUser.id;
 
     try {
       const result = await api.createReservation({
         usuarioId: userId,
-        items: [{ productoId: matchingProd?.id || 'c8a4d2e1-1111-2222-3333-444455556667', cantidad: 1 }]
+        items: [{ productoId: matchingProd.id, cantidad: 1 }]
       });
+      const remainingSeconds = secondsUntilExpiration(result.fechaExpiracion);
 
       const newPass: ReservationPass = {
         code: result.codigoRetiro,
         status: 'ACTIVA',
-        initialSeconds: 600,
-        remainingSeconds: 600,
+        initialSeconds: remainingSeconds,
+        remainingSeconds,
         customerName: currentUser?.nombre || 'Cliente Supermercado Karen',
         storeLocation: 'Sucursal Matriz - Sección Ofertas FEFO',
-        qrBlocks: SAMPLE_QR_MATRIX,
+        qrBlocks: createPassMatrix(result.codigoRetiro),
         items: [
           {
             productName: offer.title,
@@ -348,26 +357,6 @@ export const App: React.FC = () => {
       loadBackendData();
     } catch (err: any) {
       showToast(`⚠️ ${err.message || 'No se pudo reservar la oferta'}`);
-    }
-  };
-
-  // Generate dynamic Gemini AI Promotion
-  const handleGenerateGeminiPromo = async () => {
-    if (rawLots.length === 0) {
-      showToast('No hay lotes disponibles para análisis de IA.');
-      return;
-    }
-    setIsGeneratingPromo(true);
-    try {
-      // Find a lot that hasn't expired yet
-      const candidateLot = rawLots[Math.floor(Math.random() * rawLots.length)];
-      await api.generatePromotion(candidateLot.id);
-      showToast('✨ Gemini IA ha analizado lotes FEFO y generado una nueva oferta de liquidación.');
-      await loadBackendData();
-    } catch (err: any) {
-      showToast(`⚠️ Error al generar promoción IA: ${err.message}`);
-    } finally {
-      setIsGeneratingPromo(false);
     }
   };
 
@@ -432,10 +421,17 @@ export const App: React.FC = () => {
                 setActiveTab(tab);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              onOpenPassPreview={() => setIsPassModalOpen(true)}
+              onOpenPassPreview={() => currentPass
+                ? setIsPassModalOpen(true)
+                : showToast('Aún no tienes una reserva activa. Crea una o consulta tu PIN.')}
             />
 
-            <CategoriesGrid onSelectCategory={handleSelectCategory} />
+            <CategoriesGrid
+              categories={categoriesList.filter(category => category !== 'Todos')}
+              products={products}
+              state={dataState}
+              onSelectCategory={handleSelectCategory}
+            />
 
             <AntiOverbookingBanner
               onBackToAppSelector={() => {
@@ -482,6 +478,8 @@ export const App: React.FC = () => {
             onOpenCart={() => setIsCartOpen(true)}
             cartCount={totalCartCount}
             loading={loadingProducts}
+            state={dataState}
+            errorMessage={dataError}
             onRefresh={loadBackendData}
           />
         )}
@@ -490,9 +488,10 @@ export const App: React.FC = () => {
         {activeTab === 'ofertas' && (
           <FlashOffersSection
             offers={offers}
+            state={dataState === 'ready' && offers.length === 0 ? 'empty' : dataState}
+            errorMessage={dataError}
+            onRefresh={loadBackendData}
             onReserveOffer={handleReserveOffer}
-            onGenerateGeminiPromo={handleGenerateGeminiPromo}
-            isGenerating={isGeneratingPromo}
           />
         )}
 
@@ -544,11 +543,13 @@ export const App: React.FC = () => {
       </footer>
 
       {/* Modals & Drawers */}
-      <ReservationModal
-        pass={currentPass}
-        isOpen={isPassModalOpen}
-        onClose={() => setIsPassModalOpen(false)}
-      />
+      {currentPass && (
+        <ReservationModal
+          pass={currentPass}
+          isOpen={isPassModalOpen}
+          onClose={() => setIsPassModalOpen(false)}
+        />
+      )}
 
       <SearchReservationModal
         isOpen={isSearchReservationOpen}

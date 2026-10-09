@@ -5,12 +5,16 @@ interface HeaderBodegaProps {
   isOnline: boolean;
   onRefresh: () => void;
   refreshing: boolean;
+  operatorName: string;
+  onLogout: () => void;
 }
 
 export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
   isOnline,
   onRefresh,
   refreshing,
+  operatorName,
+  onLogout,
 }) => {
   return (
     <View style={styles.container}>
@@ -28,20 +32,25 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.syncBtn, refreshing && styles.syncBtnRefreshing]}
-          onPress={onRefresh}
-          disabled={refreshing}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.syncIcon}>{refreshing ? '⏳' : '🔄'}</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.syncBtn, refreshing && styles.syncBtnRefreshing]}
+            onPress={onRefresh}
+            disabled={refreshing}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.syncIcon}>{refreshing ? '⏳' : '🔄'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+            <Text style={styles.logoutText}>Salir</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.statusBar}>
         <View style={styles.operatorBox}>
           <Text style={styles.operatorLabel}>OPERADOR:</Text>
-          <Text style={styles.operatorName}>Nancy A. / Luis G.</Text>
+          <Text style={styles.operatorName}>{operatorName}</Text>
         </View>
 
         <View
@@ -128,6 +137,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoutBtn: {
+    paddingHorizontal: 10,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#7F1D1D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutText: {
+    color: '#FEE2E2',
+    fontWeight: '800',
+    fontSize: 11,
   },
   syncBtnRefreshing: {
     opacity: 0.6,

@@ -14,6 +14,16 @@ let state = {
   sseEventSource: null
 };
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  })[character]);
+}
+
 // --- DOM Loaded Bootstrap ---
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
@@ -28,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadLots();
   loadAlerts();
   loadActivePromotions();
+  loadPendingPromotions();
 });
 
 // --- Tabs Management ---
@@ -220,7 +231,7 @@ async function submitReservation() {
 
   try {
     const payload = {
-      usuarioId: 'u8a7b6c5-1111-2222-3333-444455556666', // Cliente demo
+      usuarioId: 'd8a7b6c5-1111-2222-3333-444455556666', // Cliente demo
       items: [{ productoId: state.selectedProductId, cantidad: qty }]
     };
 
@@ -379,12 +390,14 @@ async function submitNewLot(event) {
   event.preventDefault();
   const productoId = document.getElementById('lotProductSelect').value;
   const numeroLote = document.getElementById('lotNumberInput').value.trim();
+  const fechaElaboracion = document.getElementById('lotProductionInput').value;
   const fechaCaducidad = document.getElementById('lotExpiryInput').value;
+  const costoUnitario = Number(document.getElementById('lotCostInput').value);
   const cantidadIngresada = parseInt(document.getElementById('lotQtyInput').value, 10);
   const ubicacion = document.getElementById('lotLocationSelect').value;
 
   try {
-    await apiFetch('/lots', 'POST', { productoId, numeroLote, fechaCaducidad, cantidadIngresada, ubicacion });
+    await apiFetch('/lots', 'POST', { productoId, numeroLote, fechaElaboracion, fechaCaducidad, costoUnitario, cantidadIngresada, ubicacion });
     closeModal('newLotModal');
     showToast('📦 Nuevo lote ingresado en inventario maestro.');
     loadLots();
@@ -421,19 +434,81 @@ async function handleGenerateAiPromo(event) {
 
     output.innerHTML = `
       <div class="promo-output-card">
-        <div class="promo-badge">${promo.descuentoPorcentaje}% DESCUENTO</div>
-        <div class="promo-copy">"${promo.frasePromocional}"</div>
-        <div class="promo-reason"><strong>Razonamiento IA:</strong> ${promo.razonIa || 'Generado por Gemini AI'}</div>
+        <div class="promo-badge" style="background:#fef3c7; color:#b45309; border:1px solid #fcd34d; margin-bottom:6px;">⏳ PENDIENTE DE APROBACIÓN (ADMIN)</div>
+        <div class="promo-badge">${escapeHtml(promo.descuentoPorcentaje)}% DESCUENTO SUGERIDO</div>
+        <div class="promo-copy">"${escapeHtml(promo.frasePromocional)}"</div>
+        <div class="promo-reason"><strong>Razonamiento IA:</strong> ${escapeHtml(promo.razonIa || 'Generado por Gemini AI')}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">
+          ${promo.cacheHit ? '⚡ Obtenido de Caché (TTL 15m)' : '✨ Generado en tiempo real con Gemini'}
+        </div>
       </div>
     `;
 
-    showToast('✨ Promoción generada con Gemini AI!');
+    showToast('✨ Borrador generado por IA (Pendiente de aprobación)');
+    loadPendingPromotions();
     loadActivePromotions();
   } catch (err) {
-    output.innerHTML = `<div style="color:var(--accent-rose)">❌ Error Gemini IA: ${err.message}</div>`;
+    let friendly = err.message;
+    if (friendly.includes('504')) friendly = 'Tiempo de espera agotado al consultar la IA (Timeout 10s).';
+    else if (friendly.includes('429')) friendly = 'Límite de solicitudes de IA alcanzado. Espere un momento.';
+    else if (friendly.includes('502')) friendly = 'La IA devolvió una respuesta que no cumple con el esquema requerido.';
+    else if (friendly.includes('503')) friendly = 'La API de Gemini no está configurada.';
+    output.innerHTML = `<div style="color:var(--accent-rose)">❌ Error IA: ${escapeHtml(friendly)}</div>`;
   } finally {
     btn.disabled = false;
     btn.textContent = '✨ Generar Promoción con Gemini API';
+  }
+}
+
+async function loadPendingPromotions() {
+  const container = document.getElementById('pendingPromotionsList');
+  if (!container) return;
+  try {
+    const res = await apiFetch('/promotions/pending');
+    const pending = res.data || [];
+    if (pending.length === 0) {
+      container.innerHTML = '<div class="loading-state">No hay borradores pendientes de aprobación.</div>';
+      return;
+    }
+    container.innerHTML = pending.map(p => `
+      <div class="glass-card" style="border-color: rgba(251, 191, 36, 0.4); margin-bottom: 10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="badge badge-yellow">-${escapeHtml(p.descuentoPorcentaje)}%</span>
+          <span style="font-size:0.75rem; color:#b45309; font-weight:700;">PENDIENTE ADMIN</span>
+        </div>
+        <h4 style="margin: 8px 0; font-size:1rem;">"${escapeHtml(p.frasePromocional)}"</h4>
+        <p style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(p.razonIa || '')}</p>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn btn-sm btn-primary" onclick="handleApprovePromo('${p.id}')">✅ Aprobar y Publicar</button>
+          <button class="btn btn-sm btn-outline" style="border-color:#ef4444; color:#ef4444;" onclick="handleRejectPromo('${p.id}')">❌ Rechazar</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    container.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted);">Inicia sesión como ADMIN para gestionar borradores pendientes.</div>`;
+  }
+}
+
+async function handleApprovePromo(id) {
+  try {
+    await apiFetch(`/promotions/${id}/approve`, 'POST');
+    showToast('✅ Promoción aprobada y publicada');
+    loadPendingPromotions();
+    loadActivePromotions();
+  } catch (err) {
+    alert('Error al aprobar: ' + err.message);
+  }
+}
+
+async function handleRejectPromo(id) {
+  const motivo = prompt('Ingresa el motivo del rechazo:');
+  if (!motivo || !motivo.trim()) return;
+  try {
+    await apiFetch(`/promotions/${id}/reject`, 'POST', { motivoRechazo: motivo.trim() });
+    showToast('Promoción rechazada');
+    loadPendingPromotions();
+  } catch (err) {
+    alert('Error al rechazar: ' + err.message);
   }
 }
 
@@ -450,8 +525,8 @@ async function loadActivePromotions() {
 
     grid.innerHTML = state.promotions.map(p => `
       <div class="glass-card" style="border-color: rgba(225, 0, 255, 0.3);">
-        <span class="badge badge-yellow">${p.descuentoPorcentaje}% OFF</span>
-        <h4 style="margin: 8px 0; font-size:1.05rem;">${p.frasePromocional}</h4>
+        <span class="badge badge-yellow">${escapeHtml(p.descuentoPorcentaje)}% OFF</span>
+        <h4 style="margin: 8px 0; font-size:1.05rem;">${escapeHtml(p.frasePromocional)}</h4>
         <div style="font-size:0.75rem; color:var(--text-muted);">Generado: ${new Date(p.created_at).toLocaleString()}</div>
       </div>
     `).join('');

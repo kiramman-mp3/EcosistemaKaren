@@ -1,15 +1,22 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { CATEGORIES_DATA } from '../data/mockData';
-import { ProductCategory } from '../types';
+import { DataLoadState, Product, ProductCategory } from '../types';
 
 interface CategoriesGridMobileProps {
   onSelectCategory: (category: ProductCategory) => void;
+  categories: ProductCategory[];
+  products: Product[];
+  state: DataLoadState;
 }
 
 export const CategoriesGridMobile: React.FC<CategoriesGridMobileProps> = ({
   onSelectCategory,
+  categories,
+  products,
+  state,
 }) => {
+  const visibleCategories = categories.filter((category) => category !== 'Todos');
+  const icons = ['🥩', '🥦', '🥖', '🥛', '🥤', '🛒'];
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
@@ -18,19 +25,23 @@ export const CategoriesGridMobile: React.FC<CategoriesGridMobileProps> = ({
       </View>
 
       {/* Grid 6 categorías */}
+      {state === 'loading' && <Text style={styles.message}>Cargando categorías...</Text>}
+      {state === 'offline' && <Text style={styles.message}>Sin conexión. Las categorías no están disponibles.</Text>}
+      {state === 'error' && <Text style={styles.message}>No fue posible cargar las categorías.</Text>}
+      {state === 'empty' && <Text style={styles.message}>Aún no hay categorías ni productos publicados.</Text>}
       <View style={styles.grid}>
-        {CATEGORIES_DATA.map((item) => (
+        {state === 'ready' && visibleCategories.map((category, index) => (
           <TouchableOpacity
-            key={item.id}
+            key={category}
             style={styles.card}
-            onPress={() => onSelectCategory(item.id)}
+            onPress={() => onSelectCategory(category)}
             activeOpacity={0.8}
           >
             <View style={styles.iconCircle}>
-              <Text style={styles.iconText}>{item.icon}</Text>
+              <Text style={styles.iconText}>{icons[index % icons.length]}</Text>
             </View>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.count}>{item.count} prods.</Text>
+            <Text style={styles.name}>{category}</Text>
+            <Text style={styles.count}>{products.filter((product) => product.category === category).length} prods.</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -39,6 +50,11 @@ export const CategoriesGridMobile: React.FC<CategoriesGridMobileProps> = ({
 };
 
 const styles = StyleSheet.create({
+  message: {
+    color: '#64748B',
+    textAlign: 'center',
+    paddingVertical: 18,
+  },
   container: {
     paddingHorizontal: 16,
     paddingVertical: 18,

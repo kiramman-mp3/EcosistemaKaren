@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { BackendLot } from '../types';
 import { api } from '../api/client';
+import { classifyExpiryDays } from '../config/businessRules';
 
 interface InventarioLotesScreenProps {
   lots: BackendLot[];
@@ -133,8 +134,9 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
           <View style={styles.list}>
             {filteredLots.map((lot) => {
               const days = getDaysLeft(lot.fechaCaducidad);
-              const isCritical = days < 7;
-              const isWarning = days < 15 && days >= 7;
+              const expiryLevel = classifyExpiryDays(days);
+              const isCritical = expiryLevel === 'VENCIDO' || expiryLevel === 'ROJO';
+              const isWarning = expiryLevel === 'AMARILLO';
               const isMoving = movingLotId === lot.id;
 
               return (
@@ -203,6 +205,13 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
                       </Text>
                     </View>
                   </View>
+                  <Text style={styles.dateLabel}>
+                    Elaboración: {lot.fechaElaboracion
+                      ? new Date(lot.fechaElaboracion).toLocaleDateString()
+                      : 'Dato histórico no disponible'} · Costo unitario: {lot.costoUnitario != null
+                      ? `$${Number(lot.costoUnitario).toFixed(4)}`
+                      : 'No registrado'}
+                  </Text>
 
                   {/* Stock Metrics */}
                   <View style={styles.metricsBox}>

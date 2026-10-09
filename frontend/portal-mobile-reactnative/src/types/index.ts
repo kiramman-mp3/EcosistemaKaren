@@ -1,15 +1,6 @@
 export type NavTab = 'inicio' | 'productos' | 'ofertas';
 
-export type ProductCategory =
-  | 'Todos'
-  | 'Carnes'
-  | 'Lácteos'
-  | 'Frutas'
-  | 'Panadería'
-  | 'Verduras'
-  | 'Conservas'
-  | 'Bebidas'
-  | 'Snacks';
+export type ProductCategory = string;
 
 export interface Product {
   id: string;
@@ -36,6 +27,8 @@ export interface FlashOffer {
   stockAvailable: number;
   expiryText: string;
   image: string;
+  loteId?: string;
+  productId?: string;
 }
 
 export interface CategoryItem {
@@ -63,3 +56,5 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export type DataLoadState = 'loading' | 'ready' | 'empty' | 'offline' | 'error';

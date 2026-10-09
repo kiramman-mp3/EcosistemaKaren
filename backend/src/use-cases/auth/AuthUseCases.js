@@ -4,14 +4,14 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 class RegisterUser {
-  constructor(userRepository, jwtSecret = 'super_secret_karen_key_2026') {
+  constructor(userRepository, jwtSecret) {
     this.userRepository = userRepository;
     this.jwtSecret = jwtSecret;
   }
 
-  async execute({ nombre, email, password, rol = 'CLIENTE' }) {
-    if (!password || password.length < 4) {
-      throw new ValidationException('La contraseña debe tener al menos 4 caracteres.');
+  async execute({ nombre, email, password }) {
+    if (!password || password.length < 8) {
+      throw new ValidationException('La contraseña debe tener al menos 8 caracteres.');
     }
 
     const existingUser = await this.userRepository.findByEmail(email);
@@ -20,7 +20,7 @@ class RegisterUser {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = new User({ nombre, email, rol, passwordHash });
+    const user = new User({ nombre, email, rol: 'CLIENTE', passwordHash });
     const savedUser = await this.userRepository.save(user);
 
     const token = jwt.sign(
@@ -42,7 +42,7 @@ class RegisterUser {
 }
 
 class LoginUser {
-  constructor(userRepository, jwtSecret = 'super_secret_karen_key_2026') {
+  constructor(userRepository, jwtSecret) {
     this.userRepository = userRepository;
     this.jwtSecret = jwtSecret;
   }
@@ -58,7 +58,7 @@ class LoginUser {
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash || '');
-    if (!isMatch && password !== 'demo123') { // Soporte para claves demo
+    if (!isMatch) {
       throw new UnauthorizedException('Credenciales incorrectas (contraseña inválida).');
     }
 

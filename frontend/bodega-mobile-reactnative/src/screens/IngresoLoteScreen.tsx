@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { BackendProduct, UbicacionLote, CreateLotPayload } from '../types';
 import { api } from '../api/client';
+import { classifyExpiryDays } from '../config/businessRules';
 
 interface IngresoLoteScreenProps {
   products: BackendProduct[];
@@ -24,7 +25,9 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   const [barcode, setBarcode] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<BackendProduct | null>(null);
   const [numeroLote, setNumeroLote] = useState('');
+  const [fechaElaboracion, setFechaElaboracion] = useState('');
   const [fechaCaducidad, setFechaCaducidad] = useState('');
+  const [costoUnitario, setCostoUnitario] = useState('');
   const [cantidad, setCantidad] = useState('50');
   const [ubicacion, setUbicacion] = useState<UbicacionLote>('BODEGA');
   const [loading, setLoading] = useState(false);
@@ -34,6 +37,10 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   // Set default expiration date 20 days ahead
   useEffect(() => {
     const d = new Date();
+    const productionYear = d.getFullYear();
+    const productionMonth = String(d.getMonth() + 1).padStart(2, '0');
+    const productionDay = String(d.getDate()).padStart(2, '0');
+    setFechaElaboracion(`${productionYear}-${productionMonth}-${productionDay}`);
     d.setDate(d.getDate() + 20);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -76,13 +83,14 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
 
   const getFefoBadge = () => {
     if (daysLeft === null) return null;
-    if (daysLeft <= 0) {
+    const level = classifyExpiryDays(daysLeft);
+    if (level === 'VENCIDO') {
       return { bg: '#FEE2E2', text: '#DC2626', label: '⛔ FECHA CADUCADA' };
     }
-    if (daysLeft < 7) {
+    if (level === 'ROJO') {
       return { bg: '#FEE2E2', text: '#DC2626', label: `🔴 CRÍTICO: ${daysLeft} DÍAS (Alerta Roja)` };
     }
-    if (daysLeft < 15) {
+    if (level === 'AMARILLO') {
       return { bg: '#FEF3C7', text: '#D97706', label: `🟡 PREVENTIVO: ${daysLeft} DÍAS (Alerta Amarilla)` };
     }
     return { bg: '#DCFCE7', text: '#15803D', label: `🟢 NORMAL: ${daysLeft} DÍAS (Caducidad óptima)` };
@@ -111,6 +119,15 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       setError('La fecha de caducidad es requerida (YYYY-MM-DD)');
       return;
     }
+    if (!fechaElaboracion.trim() || new Date(fechaElaboracion) >= new Date(fechaCaducidad)) {
+      setError('La fecha de elaboración es obligatoria y debe ser anterior a la caducidad');
+      return;
+    }
+    const cost = Number(costoUnitario.replace(',', '.'));
+    if (!Number.isFinite(cost) || cost <= 0) {
+      setError('El costo unitario debe ser un número mayor a cero');
+      return;
+    }
     const qty = parseInt(cantidad, 10);
     if (isNaN(qty) || qty <= 0) {
       setError('La cantidad ingresada debe ser un número mayor a cero');
@@ -124,7 +141,9 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
     const payload: CreateLotPayload = {
       productoId: selectedProduct.id,
       numeroLote: numeroLote.trim(),
+      fechaElaboracion: fechaElaboracion.trim(),
       fechaCaducidad: fechaCaducidad.trim(),
+      costoUnitario: cost,
       cantidadIngresada: qty,
       ubicacion,
     };
@@ -245,6 +264,17 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
 
         {/* Expiration Date */}
         <View style={styles.field}>
+          <Text style={styles.label}>FECHA DE ELABORACIÓN (YYYY-MM-DD):</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="2026-09-01"
+            placeholderTextColor="#94A3B8"
+            value={fechaElaboracion}
+            onChangeText={setFechaElaboracion}
+          />
+        </View>
+
+        <View style={styles.field}>
           <View style={styles.labelRow}>
             <Text style={styles.label}>FECHA DE CADUCIDAD (YYYY-MM-DD):</Text>
             {fefoStatus && (
@@ -261,6 +291,18 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
             placeholderTextColor="#94A3B8"
             value={fechaCaducidad}
             onChangeText={setFechaCaducidad}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>COSTO UNITARIO DE ADQUISICIÓN:</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Ej: 1.2500"
+            placeholderTextColor="#94A3B8"
+            value={costoUnitario}
+            onChangeText={setCostoUnitario}
+            keyboardType="decimal-pad"
           />
         </View>
 

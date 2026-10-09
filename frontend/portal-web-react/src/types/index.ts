@@ -30,6 +30,7 @@ export interface FlashOffer {
   expiryText: string;    // "⏰ Caduca: Hoy, 20:00"
   image: string;
   loteId?: string;
+  productId?: string;
   razonIa?: string;
 }
 
@@ -62,3 +63,5 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export type DataLoadState = 'loading' | 'ready' | 'empty' | 'offline' | 'error';

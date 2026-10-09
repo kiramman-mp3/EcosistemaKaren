@@ -55,7 +55,18 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
       onOpenAiPromo(promo);
       onRefresh();
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Error al generar promoción con IA');
+      const status = err.response?.status;
+      const messages: Record<number, string> = {
+        429: 'Gemini alcanzó temporalmente su límite de solicitudes. Intenta nuevamente en unos minutos.',
+        502: 'Gemini devolvió una respuesta no válida. No se creó ningún borrador; puedes intentarlo otra vez.',
+        503: 'El servicio de promociones con IA no está configurado o no se encuentra disponible.',
+        504: 'Gemini tardó demasiado en responder. No se confirmó ningún borrador; inténtalo nuevamente.',
+      };
+      const message = messages[status]
+        || err.response?.data?.message
+        || err.message
+        || 'Error al generar promoción con IA';
+      Alert.alert('Error', message);
     } finally {
       setActionLoadingId(null);
     }
