@@ -23,6 +23,7 @@ dist/
 build/
 .next/
 .cache/
+.expo/
 *.tsbuildinfo
 
 # OS & IDE files
