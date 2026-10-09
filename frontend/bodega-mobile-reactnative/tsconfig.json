@@ -12,13 +12,10 @@
     "isolatedModules": true,
     "strict": false,
     "noImplicitAny": false,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "typeRoots": [
-      "../portal-web-react/node_modules/@types"
-    ]
+    "skipLibCheck": true
   },
   "include": [
     "src/**/*",
