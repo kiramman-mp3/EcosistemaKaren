@@ -66,7 +66,7 @@ Este documento define la arquitectura de separación del canal de usuario entre 
 │                                                                                        │
 │  ➕ REGISTRO ÁGIL DE LOTE RECIBIDO EN BODEGA                                           │
 │  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
-│  │ Código de Barras / EAN: [ 7861000100011        ] [🔍 Escanear]                   │  │
+│  │ Código de Barras / EAN: [ 7861000100014        ] [🔍 Escanear]                   │  │
 │  │ Producto:               Leche Entera Vita 1 Litro                                │  │
 │  │ Número de Lote:         [ LOT-VT-2026-99    ]                                    │  │
 │  │ Fecha de Caducidad:     [ 2026-09-25        ] (Quedan 11 días - AMARILLO)         │  │

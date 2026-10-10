@@ -92,7 +92,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   </h4>
                   <p className="text-xs text-slate-500 font-mono">
                     ${product.price.toFixed(2)} c/u
+                    {product.originalPrice && <span className="ml-2 line-through">${product.originalPrice.toFixed(2)}</span>}
                   </p>
+                  {product.isOffer && <span className="inline-block mt-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-karenRed">OFERTA {product.badge}</span>}
                   <div className="flex items-center gap-2 mt-2">
                     <div className="flex items-center border border-slate-200 rounded-lg bg-white">
                       <button
@@ -106,6 +108,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       </span>
                       <button
                         onClick={() => onUpdateQuantity(product.id, 1)}
+                        disabled={quantity >= product.stock}
                         className="p-1 hover:bg-slate-100 text-slate-600 rounded-r-lg"
                       >
                         <Plus className="w-3 h-3" />

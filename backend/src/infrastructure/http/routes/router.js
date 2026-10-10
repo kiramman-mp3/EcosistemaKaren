@@ -21,7 +21,7 @@ function createApiRouter(controllers, security) {
   router.post('/categories', authenticate, authorize('ADMIN'), validate({ body: schemas.categoryBody }), (req, res, next) => categoryController.createCategory(req, res, next));
 
   // Productos
-  router.get('/products', (req, res, next) => productController.getProducts(req, res, next));
+  router.get('/products', validate({ query: schemas.productQuery }), (req, res, next) => productController.getProducts(req, res, next));
   router.get('/products/barcode/:barcode', validate({ params: schemas.barcodeParams }), (req, res, next) => productController.getProductByBarcode(req, res, next));
   router.post('/products', authenticate, authorize('ADMIN'), validate({ body: schemas.productBody }), (req, res, next) => productController.createProduct(req, res, next));
 
@@ -52,6 +52,10 @@ function createApiRouter(controllers, security) {
   router.get('/promotions', (req, res, next) => promotionController.getPromotions(req, res, next));
   // - GET /promotions/pending: Solo ADMIN
   router.get('/promotions/pending', authenticate, authorize('ADMIN'), (req, res, next) => promotionController.getPendingPromotions(req, res, next));
+  router.get('/promotions/manage', authenticate, authorize('ADMIN'), validate({ query: schemas.promotionAdminQuery }), (req, res, next) => promotionController.getOperationalPromotions(req, res, next));
+  router.patch('/promotions/:id', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams, body: schemas.promotionUpdateBody }), (req, res, next) => promotionController.updatePromotion(req, res, next));
+  router.post('/promotions/:id/deactivate', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => promotionController.deactivatePromotion(req, res, next));
+  router.delete('/promotions/:id', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams }), (req, res, next) => promotionController.deletePromotionDraft(req, res, next));
   // - POST /promotions/:id/approve: Solo ADMIN
   router.post('/promotions/:id/approve', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => promotionController.approvePromotion(req, res, next));
   // - POST /promotions/:id/reject: Solo ADMIN

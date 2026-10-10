@@ -1,35 +1,41 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { BodegaTab } from '../types';
+import { Ionicons } from '@expo/vector-icons';
 
 interface TabNavBodegaProps {
   activeTab: BodegaTab;
   onTabChange: (tab: BodegaTab) => void;
-  criticalAlertsCount: number;
   role: string;
 }
 
 export const TabNavBodega: React.FC<TabNavBodegaProps> = ({
   activeTab,
   onTabChange,
-  criticalAlertsCount,
   role,
 }) => {
-  const tabs: { id: BodegaTab; icon: string; label: string; roles: string[] }[] = [
-    { id: 'ingreso', icon: '📦', label: 'Ingreso', roles: ['BODEGUERO','ADMIN'] },
-    { id: 'alertas', icon: '🚨', label: 'Alertas', roles: ['BODEGUERO','PERCHERO','ADMIN'] },
-    { id: 'inventario', icon: '📋', label: 'Inventario', roles: ['BODEGUERO','PERCHERO','ADMIN'] },
-    { id: 'caja', icon: '🧾', label: 'Caja', roles: ['BODEGUERO','ADMIN'] },
-    { id: 'reportes', icon: '📊', label: 'Reportes', roles: ['BODEGUERO','PERCHERO','ADMIN'] },
-    { id: 'aprobaciones', icon: '✅', label: 'Aprobar', roles: ['ADMIN'] },
+  const tabs: { id: BodegaTab; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; roles: string[] }[] = [
+    { id: 'ingreso', icon: 'cube-outline', label: 'Ingreso', roles: ['BODEGUERO','ADMIN'] },
+    { id: 'inventario', icon: 'clipboard-outline', label: 'Inventario', roles: ['BODEGUERO','PERCHERO','ADMIN'] },
+    { id: 'catalogo', icon: 'grid-outline', label: 'Catálogo', roles: ['BODEGUERO','PERCHERO','ADMIN'] },
+    { id: 'caja', icon: 'receipt-outline', label: 'Caja', roles: ['BODEGUERO','ADMIN'] },
+    { id: 'promociones', icon: 'pricetags-outline', label: 'Promociones', roles: ['ADMIN'] },
   ];
   return (
     <View style={styles.container}>
       {tabs.filter(tab => tab.roles.includes(role)).map(tab => <TouchableOpacity key={tab.id}
-        style={[styles.tabBtn, activeTab === tab.id && (tab.id === 'alertas' ? styles.tabBtnActiveRed : styles.tabBtnActive)]}
+        style={[styles.tabBtn, activeTab === tab.id && styles.tabBtnActive]}
         onPress={() => onTabChange(tab.id)} activeOpacity={0.8}>
-        <View style={styles.iconWithBadge}><Text style={styles.tabIcon}>{tab.icon}</Text>{tab.id === 'alertas' && criticalAlertsCount > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{criticalAlertsCount}</Text></View>}</View>
-        <Text style={[styles.tabText, activeTab === tab.id && (tab.id === 'alertas' ? styles.tabTextActiveRed : styles.tabTextActive)]}>{tab.label}</Text>
+        <Ionicons name={tab.icon} size={21} color={activeTab === tab.id ? '#FFFFFF' : '#64748B'} style={styles.tabIcon} />
+        <Text
+          style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+          maxFontSizeMultiplier={1.15}
+        >
+          {tab.label}
+        </Text>
       </TouchableOpacity>)}
     </View>
   );
@@ -61,42 +67,16 @@ const styles = StyleSheet.create({
   tabBtnActive: {
     backgroundColor: '#1E293B',
   },
-  tabBtnActiveRed: {
-    backgroundColor: '#FEE2E2',
-  },
-  tabIcon: {
-    fontSize: 18,
-    marginBottom: 2,
-  },
-  iconWithBadge: {
-    position: 'relative',
-    alignItems: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -8,
-    backgroundColor: '#EF4444',
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    minWidth: 16,
-    alignItems: 'center',
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '900',
-  },
+  tabIcon: { marginBottom: 2 },
   tabText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#64748B',
+    width: '100%',
+    textAlign: 'center',
+    paddingHorizontal: 2,
   },
   tabTextActive: {
     color: '#FFFFFF',
-  },
-  tabTextActiveRed: {
-    color: '#DC2626',
   },
 });

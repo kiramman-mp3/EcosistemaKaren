@@ -83,6 +83,7 @@ export interface CreateReservationRequest {
   items: {
     productoId: string;
     cantidad: number;
+    promocionId?: string;
   }[];
 }
 
@@ -139,7 +140,9 @@ export const api = {
 
   // Products
   async getProducts(): Promise<BackendProduct[]> {
-    const res = await apiClient.get<{ success: boolean; data: BackendProduct[] }>('/products');
+    const res = await apiClient.get<{ success: boolean; data: BackendProduct[] }>('/products', {
+      params: { limit: 100, offset: 0 },
+    });
     return res.data.data || [];
   },
 

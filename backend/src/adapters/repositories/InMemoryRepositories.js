@@ -43,9 +43,9 @@ class InMemoryRepositories {
     this.categories.push(catLacteos, catCarnes, catPan, catVerduras, catFrutas, catConservas);
 
     const prods = [
-      { id: 'c8a4d2e1-1111-2222-3333-444455556666', aliasId: 'prod-01', categoriaId: catLacteos.id, codigoBarras: '7861000100011', nombre: 'Leche Entera Pasteurizada 1 Litro', descripcion: 'Leche pasteurizada UHT alta calidad', precioVenta: 0.95, minStockAlerta: 20 },
-      { id: 'c8a4d2e1-1111-2222-3333-444455556667', aliasId: 'prod-02', categoriaId: catLacteos.id, codigoBarras: '786999900011', nombre: 'Yogurt Griego Toni Natural 500g', descripcion: 'Yogurt natural griego descremado', precioVenta: 2.50, minStockAlerta: 15 },
-      { id: 'c8a4d2e1-1111-2222-3333-444455556668', aliasId: 'prod-03', categoriaId: catCarnes.id, codigoBarras: '7861234567890', nombre: 'Corte Lomo Fino de Res Premium', descripcion: 'Corte de res tierno y magro de primera', precioVenta: 6.80, minStockAlerta: 10 },
+      { id: 'c8a4d2e1-1111-2222-3333-444455556666', aliasId: 'prod-01', categoriaId: catLacteos.id, codigoBarras: '7861000100014', nombre: 'Leche Entera Pasteurizada 1 Litro', descripcion: 'Leche pasteurizada UHT alta calidad', precioVenta: 0.95, minStockAlerta: 20 },
+      { id: 'c8a4d2e1-1111-2222-3333-444455556667', aliasId: 'prod-02', categoriaId: catLacteos.id, codigoBarras: '786999900018', nombre: 'Yogurt Griego Toni Natural 500g', descripcion: 'Yogurt natural griego descremado', precioVenta: 2.50, minStockAlerta: 15 },
+      { id: 'c8a4d2e1-1111-2222-3333-444455556668', aliasId: 'prod-03', categoriaId: catCarnes.id, codigoBarras: '7861234567898', nombre: 'Corte Lomo Fino de Res Premium', descripcion: 'Corte de res tierno y magro de primera', precioVenta: 6.80, minStockAlerta: 10 },
       { id: 'c8a4d2e1-1111-2222-3333-444455556669', aliasId: 'prod-04', categoriaId: catCarnes.id, codigoBarras: '7861234567891', nombre: 'Pechuga de Pollo Fresca en Filetes', descripcion: 'Pechuga de pollo sin piel ni hueso', precioVenta: 3.90, minStockAlerta: 15 },
       { id: 'c8a4d2e1-1111-2222-3333-444455556670', aliasId: 'prod-05', categoriaId: catPan.id, codigoBarras: '7861234567892', nombre: 'Pan Artesanal de Masa Madre', descripcion: 'Horneado cada mañana con fermentación natural', precioVenta: 1.85, minStockAlerta: 10 },
       { id: 'c8a4d2e1-1111-2222-3333-444455556671', aliasId: 'prod-06', categoriaId: catVerduras.id, codigoBarras: '7861234567893', nombre: 'Brócoli Fresco Orgánico de Granja', descripcion: 'Brócoli seleccionado de cosecha diaria', precioVenta: 1.10, minStockAlerta: 15 },
@@ -178,6 +178,7 @@ class InMemoryRepositories {
     return {
       findAll: async () => [...this.categories],
       findById: async (id) => this.categories.find(c => c.id === id) || null,
+      findByName: async (name) => this.categories.find(c => c.nombre.toLocaleLowerCase('es') === name.trim().toLocaleLowerCase('es')) || null,
       save: async (catData) => {
         const cat = new Category({ id: randomUUID(), ...catData });
         this.categories.push(cat);
@@ -188,7 +189,14 @@ class InMemoryRepositories {
 
   get productRepository() {
     return {
-      findAll: async () => [...this.products],
+      findAll: async ({ q = '', categoriaId = null, limit = 30, offset = 0 } = {}) => {
+        const search = q.trim().toLocaleLowerCase('es');
+        const filtered = this.products.filter(product =>
+          (!search || product.nombre.toLocaleLowerCase('es').includes(search) || product.codigoBarras.includes(search)) &&
+          (!categoriaId || product.categoriaId === categoriaId)
+        );
+        return { items: filtered.slice(offset, offset + limit), total: filtered.length };
+      },
       findById: async (id) => this.products.find(p => p.id === id || p.aliasId === id) || null,
       findByBarcode: async (bc) => this.products.find(p => p.codigoBarras === bc) || null,
       save: async (prodData) => {
@@ -293,10 +301,25 @@ class InMemoryRepositories {
       },
       findMovements: async ({ loteId, tipo, limit } = {}) => this.movements
         .filter(m => (!loteId || m.loteId === loteId) && (!tipo || m.tipo === String(tipo).toUpperCase()))
-        .slice(-(Math.min(Number(limit) || 100, 500))).reverse(),
+        .slice(-(Math.min(Number(limit) || 100, 500))).reverse()
+        .map(movement => {
+          const lot = this.lots.find(item => item.id === movement.loteId);
+          const product = this.products.find(item => item.id === lot?.productoId);
+          return { ...movement, numeroLote: lot?.numeroLote, productoNombre: product?.nombre,
+            codigoBarras: product?.codigoBarras, precioVenta: product?.precioVenta,
+            costoUnitario: lot?.costoUnitario, fechaElaboracion: lot?.fechaElaboracion,
+            fechaCaducidad: lot?.fechaCaducidad };
+        }),
       findWastes: async ({ loteId, limit } = {}) => this.wastes
         .filter(w => !loteId || w.loteId === loteId)
         .slice(-(Math.min(Number(limit) || 100, 500))).reverse()
+        .map(waste => {
+          const lot = this.lots.find(item => item.id === waste.loteId);
+          const product = this.products.find(item => item.id === lot?.productoId);
+          const actor = this.users.find(item => item.id === waste.registradaPor);
+          return { ...waste, numeroLote: lot?.numeroLote, productoNombre: product?.nombre,
+            registradaPorNombre: actor?.nombre };
+        })
     };
   }
 
@@ -323,9 +346,21 @@ class InMemoryRepositories {
           if (!product) {
             throw new NotFoundException(`El producto con ID '${item.productoId}' no existe.`);
           }
+          let promotedLotId = null;
+          let unitPrice = product.precioVenta;
+          if (item.promocionId) {
+            const promotion = this.promotions.find(p => p.id === item.promocionId && p.estado === 'APROBADA' && p.activa);
+            const promotionLot = promotion && this.lots.find(l => l.id === promotion.loteId);
+            if (!promotion || !promotionLot || promotionLot.productoId !== product.id) {
+              throw new ValidationException('La oferta seleccionada ya no está disponible para este producto.');
+            }
+            promotedLotId = promotion.loteId;
+            unitPrice = Number((unitPrice * (1 - Number(promotion.descuentoPorcentaje) / 100)).toFixed(2));
+          }
           const lots = this.lots
             .filter(l =>
               (l.productoId === product.id || l.productoAliasId === item.productoId) &&
+              (!promotedLotId || l.id === promotedLotId) &&
               l.estado === 'ACTIVO' &&
               l.calcularDiasParaVencer() > 0 &&
               l.cantidadDisponible > 0
@@ -342,7 +377,7 @@ class InMemoryRepositories {
           for (const lot of lots) {
             if (remaining === 0) break;
             const quantity = Math.min(lot.cantidadDisponible, remaining);
-            allocationPlan.push({ lot, quantity, price: product.precioVenta });
+            allocationPlan.push({ lot, quantity, price: unitPrice, promocionId: item.promocionId || null });
             remaining -= quantity;
           }
         }
@@ -358,7 +393,8 @@ class InMemoryRepositories {
             reservadaAntes, reservadaDespues: allocation.lot.cantidadReservada,
             ubicacionOrigen: allocation.lot.ubicacion, ubicacionDestino: allocation.lot.ubicacion,
             motivo: 'Stock asignado a reserva', actorId: reservationInstance.usuarioId,
-            reservaId: reservationInstance.id
+            reservaId: reservationInstance.id,
+            metadata: allocation.promocionId ? { promocionId: allocation.promocionId } : {}
           }));
           return {
             id: randomUUID(),
@@ -510,7 +546,29 @@ class InMemoryRepositories {
       findAllApproved: async () => this.promotions.filter(isPubliclyValid),
       findAllActive: async () => this.promotions.filter(isPubliclyValid),
       findAllPending: async () => this.promotions.filter(p => p.estado === 'PENDIENTE_APROBACION'),
+      findAllOperational: async ({ estado, activa } = {}) => this.promotions.filter(p =>
+        (!estado || p.estado === estado) && (activa === undefined || p.activa === activa)
+      ),
       findById: async (id) => this.promotions.find(p => p.id === id) || null,
+      updateDraft: async (id, data) => {
+        const promo = this.promotions.find(p => p.id === id && p.estado === 'PENDIENTE_APROBACION');
+        if (!promo) return null;
+        promo.descuentoPorcentaje = Number(data.descuentoPorcentaje);
+        promo.frasePromocional = data.frasePromocional.trim();
+        return promo;
+      },
+      deactivate: async (id) => {
+        const promo = this.promotions.find(p => p.id === id && p.estado === 'APROBADA' && p.activa);
+        if (!promo) return null;
+        promo.activa = false;
+        return promo;
+      },
+      deleteDraft: async (id) => {
+        const index = this.promotions.findIndex(p => p.id === id && p.estado === 'PENDIENTE_APROBACION');
+        if (index < 0) return false;
+        this.promotions.splice(index, 1);
+        return true;
+      },
       savePending: async ({
         loteId, descuentoPorcentaje, frasePromocional, razonIa,
         modeloIa, promptVersion, cacheKey, cacheHit

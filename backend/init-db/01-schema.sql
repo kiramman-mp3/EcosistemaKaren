@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS productos (
     nombre VARCHAR(150) NOT NULL,
     descripcion TEXT,
     precio_venta NUMERIC(10,2) NOT NULL CHECK (precio_venta > 0),
+    impuesto_porcentaje NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (impuesto_porcentaje >= 0 AND impuesto_porcentaje <= 100),
     min_stock_alerta INTEGER NOT NULL DEFAULT 10 CHECK (min_stock_alerta >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -132,9 +133,9 @@ INSERT INTO categorias (id, nombre, descripcion) VALUES
 ON CONFLICT (nombre) DO NOTHING;
 
 INSERT INTO productos (id, categoria_id, codigo_barras, nombre, descripcion, precio_venta, min_stock_alerta) VALUES
-('c8a4d2e1-1111-2222-3333-444455556666', 'f1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', '7861000100011', 'Leche Entera Vita 1 Litro', 'Leche pasteurizada UHT alta calidad', 0.95, 20),
-('c8a4d2e1-1111-2222-3333-444455556667', 'f1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', '786999900011', 'Yogurt Griego Toni 500g', 'Yogurt natural griego descremado', 2.50, 15),
-('c8a4d2e1-1111-2222-3333-444455556668', 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6e', '7861234567890', 'Jamon Plumrose 250g', 'Jamón de pierna tajado', 3.20, 10)
+('c8a4d2e1-1111-2222-3333-444455556666', 'f1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', '7861000100014', 'Leche Entera Vita 1 Litro', 'Leche pasteurizada UHT alta calidad', 0.95, 20),
+('c8a4d2e1-1111-2222-3333-444455556667', 'f1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', '786999900018', 'Yogurt Griego Toni 500g', 'Yogurt natural griego descremado', 2.50, 15),
+('c8a4d2e1-1111-2222-3333-444455556668', 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6e', '7861234567898', 'Jamon Plumrose 250g', 'Jamón de pierna tajado', 3.20, 10)
 ON CONFLICT (codigo_barras) DO NOTHING;
 
 INSERT INTO usuarios (id, nombre, email, rol, password_hash) VALUES

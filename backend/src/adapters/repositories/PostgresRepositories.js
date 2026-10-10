@@ -31,6 +31,14 @@ class PostgresCategoryRepository {
     return res.rows.length ? new Category(res.rows[0]) : null;
   }
 
+  async findByName(name) {
+    const res = await this.pool.query(
+      'SELECT id, nombre, descripcion, created_at FROM categorias WHERE LOWER(nombre) = LOWER($1)',
+      [name.trim()]
+    );
+    return res.rows.length ? new Category(res.rows[0]) : null;
+  }
+
   async save(category) {
     const res = await this.pool.query(
       `INSERT INTO categorias (nombre, descripcion)
@@ -47,21 +55,38 @@ class PostgresProductRepository {
     this.pool = pool;
   }
 
-  async findAll() {
-    const res = await this.pool.query(`
+  async findAll({ q = '', categoriaId = null, limit = 30, offset = 0 } = {}) {
+    const search = q.trim() ? `%${q.trim()}%` : null;
+    const [res, countResult] = await Promise.all([
+      this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
+             p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.created_at, p.updated_at
       FROM productos p
+      WHERE ($1::text IS NULL OR p.nombre ILIKE $1 OR p.codigo_barras ILIKE $1)
+        AND ($2::uuid IS NULL OR p.categoria_id = $2)
       ORDER BY p.nombre ASC
-    `);
-    return res.rows.map(r => new Product(r));
+      LIMIT $3 OFFSET $4
+    `, [search, categoriaId, limit, offset]),
+      this.pool.query(`
+        SELECT COUNT(*)::integer AS total
+        FROM productos p
+        WHERE ($1::text IS NULL OR p.nombre ILIKE $1 OR p.codigo_barras ILIKE $1)
+          AND ($2::uuid IS NULL OR p.categoria_id = $2)
+      `, [search, categoriaId])
+    ]);
+    return {
+      items: res.rows.map(r => new Product(r)),
+      total: Number(countResult.rows[0]?.total || 0)
+    };
   }
 
   async findById(id) {
     const res = await this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
+             p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.created_at, p.updated_at
       FROM productos p
       WHERE p.id = $1
@@ -73,6 +98,7 @@ class PostgresProductRepository {
     const res = await this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
+             p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.created_at, p.updated_at
       FROM productos p
       WHERE p.codigo_barras = $1
@@ -82,12 +108,14 @@ class PostgresProductRepository {
 
   async save(product) {
     const res = await this.pool.query(
-      `INSERT INTO productos (categoria_id, codigo_barras, nombre, descripcion, precio_venta, min_stock_alerta)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO productos (categoria_id, codigo_barras, nombre, descripcion, precio_venta, impuesto_porcentaje, min_stock_alerta)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, categoria_id as "categoriaId", codigo_barras as "codigoBarras",
                  nombre, descripcion, precio_venta as "precioVenta",
+                 impuesto_porcentaje as "impuestoPorcentaje",
                  min_stock_alerta as "minStockAlerta", created_at, updated_at`,
-      [product.categoriaId, product.codigoBarras, product.nombre, product.descripcion, product.precioVenta, product.minStockAlerta]
+      [product.categoriaId, product.codigoBarras, product.nombre, product.descripcion, product.precioVenta,
+        product.impuestoPorcentaje, product.minStockAlerta]
     );
     return new Product(res.rows[0]);
   }
@@ -324,7 +352,11 @@ class PostgresLotRepository {
   async findMovements({ loteId, tipo, limit } = {}) {
     const max = Math.min(Math.max(Number.parseInt(limit, 10) || 100, 1), 500);
     const result = await this.pool.query(`
-      SELECT m.id, m.lote_id as "loteId", l.numero_lote as "numeroLote", m.tipo, m.cantidad,
+      SELECT m.id, m.lote_id as "loteId", l.numero_lote as "numeroLote",
+        p.nombre as "productoNombre", p.codigo_barras as "codigoBarras",
+        p.precio_venta as "precioVenta", l.costo_unitario as "costoUnitario",
+        l.fecha_elaboracion as "fechaElaboracion", l.fecha_caducidad as "fechaCaducidad",
+        m.tipo, m.cantidad,
         m.disponible_antes as "disponibleAntes", m.disponible_despues as "disponibleDespues",
         m.reservada_antes as "reservadaAntes", m.reservada_despues as "reservadaDespues",
         m.ubicacion_origen as "ubicacionOrigen", m.ubicacion_destino as "ubicacionDestino",
@@ -332,6 +364,7 @@ class PostgresLotRepository {
         m.reserva_id as "reservaId", m.metadata, m.created_at
       FROM inventario_movimientos m
       JOIN lotes l ON l.id = m.lote_id
+      JOIN productos p ON p.id = l.producto_id
       LEFT JOIN usuarios u ON u.id = m.actor_id
       WHERE ($1::uuid IS NULL OR m.lote_id = $1) AND ($2::varchar IS NULL OR m.tipo = $2)
       ORDER BY m.created_at DESC, m.id DESC LIMIT $3
@@ -410,17 +443,35 @@ class PostgresReservationRepository {
         }
 
         const product = productResult.rows[0];
+        let promotedLotId = null;
+        let unitPrice = Number(product.precioVenta);
+        if (item.promocionId) {
+          const promotionResult = await client.query(`
+            SELECT pi.lote_id as "loteId", pi.descuento_porcentaje as "descuentoPorcentaje"
+            FROM promociones_ia pi
+            JOIN lotes l ON l.id = pi.lote_id
+            WHERE pi.id = $1 AND l.producto_id = $2
+              AND pi.estado = 'APROBADA' AND pi.activa = TRUE
+              AND l.estado = 'ACTIVO' AND l.fecha_caducidad > CURRENT_DATE
+          `, [item.promocionId, item.productoId]);
+          if (!promotionResult.rows.length) {
+            throw new ValidationException('La oferta seleccionada ya no está disponible para este producto.');
+          }
+          promotedLotId = promotionResult.rows[0].loteId;
+          unitPrice = Number((unitPrice * (1 - Number(promotionResult.rows[0].descuentoPorcentaje) / 100)).toFixed(2));
+        }
         const lotsResult = await client.query(`
           SELECT id, cantidad_disponible as "cantidadDisponible",
                  cantidad_reservada as "cantidadReservada", ubicacion
           FROM lotes
           WHERE producto_id = $1
+            AND ($2::uuid IS NULL OR id = $2)
             AND estado = 'ACTIVO'
             AND fecha_caducidad > CURRENT_DATE
             AND cantidad_disponible > 0
           ORDER BY fecha_caducidad ASC, id ASC
           FOR UPDATE
-        `, [item.productoId]);
+        `, [item.productoId, promotedLotId]);
 
         const totalAvailable = lotsResult.rows.reduce(
           (sum, lot) => sum + Number(lot.cantidadDisponible),
@@ -451,10 +502,11 @@ class PostgresReservationRepository {
           details.push({
             loteId: lot.id,
             cantidad: quantity,
-            precioUnitario: Number(product.precioVenta),
+            precioUnitario: unitPrice,
             disponibleAntes: Number(lot.cantidadDisponible),
             reservadaAntes: Number(lot.cantidadReservada),
-            ubicacion: lot.ubicacion
+            ubicacion: lot.ubicacion,
+            promocionId: item.promocionId || null
           });
           remaining -= quantity;
         }
@@ -484,7 +536,8 @@ class PostgresReservationRepository {
           reservadaDespues: detail.reservadaAntes + detail.cantidad,
           ubicacionOrigen: detail.ubicacion, ubicacionDestino: detail.ubicacion,
           motivo: 'Stock asignado a reserva', actorId: reservation.usuarioId,
-          reservaId: reservationResult.rows[0].id
+          reservaId: reservationResult.rows[0].id,
+          metadata: detail.promocionId ? { promocionId: detail.promocionId } : {}
         });
       }
 
@@ -1006,6 +1059,56 @@ class PostgresPromotionRepository {
       FROM promociones_ia WHERE estado = 'PENDIENTE_APROBACION' ORDER BY created_at ASC
     `);
     return res.rows.map(r => new Promotion(r));
+  }
+
+  async findAllOperational({ estado, activa } = {}) {
+    const res = await this.pool.query(`
+      SELECT pi.id, pi.lote_id as "loteId", pi.descuento_porcentaje as "descuentoPorcentaje",
+             pi.frase_promocional as "frasePromocional", pi.razon_ia as "razonIa",
+             pi.activa, pi.estado, pi.modelo_ia as "modeloIa", pi.prompt_version as "promptVersion",
+             pi.cache_key as "cacheKey", pi.cache_hit as "cacheHit",
+             pi.motivo_rechazo as "motivoRechazo", pi.created_at,
+             l.numero_lote as "numeroLote", l.fecha_caducidad as "fechaCaducidad",
+             l.cantidad_disponible as "cantidadDisponible", p.nombre as "productoNombre"
+      FROM promociones_ia pi
+      JOIN lotes l ON l.id = pi.lote_id
+      JOIN productos p ON p.id = l.producto_id
+      WHERE ($1::estado_promocion IS NULL OR pi.estado = $1)
+        AND ($2::boolean IS NULL OR pi.activa = $2)
+      ORDER BY pi.created_at DESC
+    `, [estado || null, activa === undefined ? null : activa]);
+    return res.rows.map(row => new Promotion(row));
+  }
+
+  async updateDraft(id, { descuentoPorcentaje, frasePromocional }) {
+    const res = await this.pool.query(`
+      UPDATE promociones_ia SET descuento_porcentaje = $2, frase_promocional = $3
+      WHERE id = $1 AND estado = 'PENDIENTE_APROBACION'
+      RETURNING id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
+        frase_promocional as "frasePromocional", razon_ia as "razonIa", activa, estado,
+        modelo_ia as "modeloIa", prompt_version as "promptVersion", cache_key as "cacheKey",
+        cache_hit as "cacheHit", created_at
+    `, [id, descuentoPorcentaje, frasePromocional]);
+    return res.rows.length ? new Promotion(res.rows[0]) : null;
+  }
+
+  async deactivate(id) {
+    const res = await this.pool.query(`
+      UPDATE promociones_ia SET activa = FALSE
+      WHERE id = $1 AND estado = 'APROBADA' AND activa = TRUE
+      RETURNING id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
+        frase_promocional as "frasePromocional", razon_ia as "razonIa", activa, estado,
+        modelo_ia as "modeloIa", prompt_version as "promptVersion", cache_key as "cacheKey",
+        cache_hit as "cacheHit", created_at
+    `, [id]);
+    return res.rows.length ? new Promotion(res.rows[0]) : null;
+  }
+
+  async deleteDraft(id) {
+    const result = await this.pool.query(
+      `DELETE FROM promociones_ia WHERE id = $1 AND estado = 'PENDIENTE_APROBACION' RETURNING id`, [id]
+    );
+    return result.rowCount > 0;
   }
 
   async findById(id) {

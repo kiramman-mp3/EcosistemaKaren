@@ -29,15 +29,17 @@ class ReservarStock {
           `Cantidad inválida (${item.cantidad}) para el producto '${item.productoId}'.`
         );
       }
-      quantitiesByProduct.set(
-        item.productoId,
-        (quantitiesByProduct.get(item.productoId) || 0) + quantity
-      );
+      const key = `${item.productoId}::${item.promocionId || ''}`;
+      const current = quantitiesByProduct.get(key);
+      quantitiesByProduct.set(key, {
+        productoId: item.productoId,
+        promocionId: item.promocionId,
+        cantidad: (current?.cantidad || 0) + quantity
+      });
     }
 
-    const normalizedItems = [...quantitiesByProduct.entries()]
-      .map(([productoId, cantidad]) => ({ productoId, cantidad }))
-      .sort((a, b) => a.productoId.localeCompare(b.productoId));
+    const normalizedItems = [...quantitiesByProduct.values()]
+      .sort((a, b) => `${a.productoId}:${a.promocionId || ''}`.localeCompare(`${b.productoId}:${b.promocionId || ''}`));
 
     // La reserva no puede comenzar si la tienda no ha reportado conectividad
     // recientemente. Se comprueba justo antes de abrir la transacción de stock.

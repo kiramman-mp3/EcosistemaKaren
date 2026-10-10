@@ -8,17 +8,23 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { BackendReservation } from '../types';
 import { api } from '../api/client';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { Ionicons } from '@expo/vector-icons';
 
 interface CajaSiaciScreenProps {
   onReservationUpdated?: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
 }
 
 export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
   onReservationUpdated,
+  onRefresh,
+  refreshing,
 }) => {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -84,13 +90,13 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
         return {
           bg: '#FEF3C7',
           text: '#D97706',
-          label: '🟡 PENDIENTE DE COBRO EN CAJA',
+          label: 'PENDIENTE DE COBRO EN CAJA',
         };
       case 'CONFIRMADA':
         return {
           bg: '#DCFCE7',
           text: '#15803D',
-          label: '🟢 COMPLETADA Y COBRADA EN CAJA SIACI',
+          label: 'COMPLETADA Y COBRADA EN CAJA SIACI',
         };
       case 'CANCELADA':
         return {
@@ -103,7 +109,7 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
         return {
           bg: '#FEE2E2',
           text: '#DC2626',
-          label: '🔴 EXPIRADA (STOCK LIBERADO)',
+          label: 'EXPIRADA (STOCK LIBERADO)',
         };
     }
   };
@@ -115,7 +121,12 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
     ) || 0;
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      alwaysBounceVertical
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1E293B" colors={['#1E293B']} />}
+    >
       {/* Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.badgeTop}>
@@ -153,14 +164,15 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
           </TouchableOpacity>
         </View>
         <TouchableOpacity style={styles.scannerBtn} onPress={() => setScannerOpen(true)}>
-          <Text style={styles.scannerBtnText}>📷 Escanear QR o código del retiro</Text>
+          <Ionicons name="qr-code-outline" size={19} color="#FFFFFF" />
+          <Text style={styles.scannerBtnText}>Escanear QR o código del retiro</Text>
         </TouchableOpacity>
       </View>
 
       {/* Messages */}
       {error && (
         <View style={styles.errorBox}>
-          <Text style={styles.errorText}>⚠️ {error}</Text>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
@@ -370,15 +382,18 @@ const styles = StyleSheet.create({
   },
   scannerBtn: {
     marginTop: 10,
-    backgroundColor: '#E0F2FE',
-    borderRadius: 10,
-    paddingVertical: 10,
+    backgroundColor: '#1E293B',
+    borderRadius: 13,
+    paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 7,
   },
   scannerBtnText: {
-    color: '#0369A1',
-    fontSize: 12,
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
   },
   errorBox: {
     backgroundColor: '#FEE2E2',

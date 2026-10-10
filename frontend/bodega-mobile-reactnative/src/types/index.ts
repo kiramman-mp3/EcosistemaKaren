@@ -1,4 +1,4 @@
-export type BodegaTab = 'ingreso' | 'alertas' | 'inventario' | 'caja' | 'reportes' | 'aprobaciones';
+export type BodegaTab = 'ingreso' | 'catalogo' | 'alertas' | 'inventario' | 'caja' | 'reportes' | 'promociones';
 export type StaffRole = 'BODEGUERO' | 'PERCHERO' | 'ADMIN';
 
 export type UbicacionLote = 'BODEGA' | 'PERCHA';
@@ -18,10 +18,21 @@ export interface BackendProduct {
   nombre: string;
   descripcion?: string;
   precioVenta: number;
+  impuestoPorcentaje: number;
   minStockAlerta: number;
   aliasId?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface CreateProductPayload {
+  categoriaId: string;
+  codigoBarras: string;
+  nombre: string;
+  descripcion?: string;
+  precioVenta: number;
+  impuestoPorcentaje: number;
+  minStockAlerta?: number;
 }
 
 export interface BackendLot {
@@ -67,6 +78,10 @@ export interface BackendPromotion {
   cacheHit?: boolean;
   created_at?: string;
   motivoRechazo?: string;
+  productoNombre?: string | null;
+  numeroLote?: string | null;
+  fechaCaducidad?: string | null;
+  cantidadDisponible?: number | null;
 }
 
 export interface InventoryMovement {
@@ -82,6 +97,16 @@ export interface InventoryMovement {
   ubicacionDestino?: UbicacionLote | null;
   motivo?: string;
   actorId?: string | null;
+  actorNombre?: string | null;
+  numeroLote?: string;
+  productoNombre?: string;
+  codigoBarras?: string;
+  costoUnitario?: number | null;
+  precioVenta?: number | null;
+  fechaElaboracion?: string | null;
+  fechaCaducidad?: string;
+  reservaId?: string | null;
+  metadata?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -94,6 +119,9 @@ export interface InventoryWaste {
   costoUnitario: number | null;
   costoTotal: number | null;
   registradaPor: string;
+  registradaPorNombre?: string;
+  numeroLote?: string;
+  productoNombre?: string;
   created_at: string;
 }
 

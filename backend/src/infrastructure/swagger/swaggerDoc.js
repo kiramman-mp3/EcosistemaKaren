@@ -76,7 +76,13 @@ const swaggerDocument = {
     '/products': {
       get: {
         tags: ['Productos'],
-        summary: 'Obtener el catálogo completo de productos',
+        summary: 'Consultar el catálogo paginado de productos',
+        parameters: [
+          { name: 'q', in: 'query', schema: { type: 'string' }, description: 'Nombre o código de barras' },
+          { name: 'categoriaId', in: 'query', schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 30, maximum: 100 } },
+          { name: 'offset', in: 'query', schema: { type: 'integer', default: 0, minimum: 0 } }
+        ],
         responses: {
           '200': { description: 'Lista de productos' }
         }
@@ -94,10 +100,11 @@ const swaggerDocument = {
                 required: ['categoriaId', 'codigoBarras', 'nombre', 'precioVenta'],
                 properties: {
                   categoriaId: { type: 'string', example: 'f1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d' },
-                  codigoBarras: { type: 'string', example: '786999900011' },
+                  codigoBarras: { type: 'string', example: '786999900018' },
                   nombre: { type: 'string', example: 'Queso Crema Toni 200g' },
                   descripcion: { type: 'string', example: 'Queso untable' },
                   precioVenta: { type: 'number', example: 1.95 },
+                  impuestoPorcentaje: { type: 'number', minimum: 0, maximum: 100, example: 15 },
                   minStockAlerta: { type: 'integer', example: 10 }
                 }
               }
@@ -119,7 +126,7 @@ const swaggerDocument = {
             in: 'path',
             required: true,
             schema: { type: 'string' },
-            example: '7861000100011'
+            example: '7861000100014'
           }
         ],
         responses: {

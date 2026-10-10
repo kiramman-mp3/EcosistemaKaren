@@ -72,9 +72,9 @@ async function runTests() {
     console.log('2. GET /products:', prods.status, `(${prods.body.count || 0} productos)`);
 
     // 3. Buscar por código de barras
-    const barcode = await request('/products/barcode/7861000100011');
+    const barcode = await request('/products/barcode/7861000100014');
     expectStatus('GET /products/barcode/:barcode', barcode, 200);
-    console.log('3. GET /products/barcode/7861000100011:', barcode.status, barcode.body.data ? barcode.body.data.nombre : 'No encontrado');
+    console.log('3. GET /products/barcode/7861000100014:', barcode.status, barcode.body.data ? barcode.body.data.nombre : 'No encontrado');
 
     // 4. Lotes
     const lots = await request('/lots', 'GET', null, warehouseToken);

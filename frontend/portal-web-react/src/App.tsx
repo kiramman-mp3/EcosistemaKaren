@@ -6,7 +6,7 @@ import { AntiOverbookingBanner } from './components/AntiOverbookingBanner';
 import { ProductCatalog } from './components/ProductCatalog';
 import { FlashOffersSection } from './components/FlashOffersSection';
 import { ReservationModal } from './components/ReservationModal';
-import { MyReservationsModal } from './components/MyReservationsModal';
+import { MyReservationsPage } from './components/MyReservationsPage';
 import { CartDrawer } from './components/CartDrawer';
 import { LoginModal } from './components/LoginModal';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './types';
@@ -59,7 +59,6 @@ export const App: React.FC = () => {
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSearchReservationOpen, setIsSearchReservationOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -239,11 +238,11 @@ export const App: React.FC = () => {
   // Cart operations
   const handleAddToCart = (product: Product) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id || item.product.name === product.name);
+      const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
         return prev.map((item) =>
-          (item.product.id === product.id || item.product.name === product.name)
-            ? { ...item, quantity: item.quantity + 1 }
+          item.product.id === product.id
+            ? { ...item, quantity: Math.min(item.quantity + 1, item.product.stock) }
             : item
         );
       }
@@ -258,7 +257,7 @@ export const App: React.FC = () => {
         .map((item) => {
           if (item.product.id === productId) {
             const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
+            return newQty > 0 ? { ...item, quantity: Math.min(newQty, item.product.stock) } : null;
           }
           return item;
         })
@@ -302,8 +301,9 @@ export const App: React.FC = () => {
       const reservationPayload = {
         usuarioId: userId,
         items: cart.map(i => ({
-          productoId: i.product.id,
-          cantidad: i.quantity
+          productoId: i.product.reservationProductId || i.product.id,
+          cantidad: i.quantity,
+          promocionId: i.product.promotionId
         }))
       };
 
@@ -346,57 +346,24 @@ export const App: React.FC = () => {
 
   // Reserve a Flash Offer directly
   const handleReserveOffer = async (offer: FlashOffer) => {
-    if (!currentUser) {
-      showToast('Inicia sesión para reservar esta oferta.');
-      setIsLoginOpen(true);
-      return;
-    }
-    if (!isOnline) {
-      showToast('⚠️ Servidor local sin conexión. Reservas temporalmente suspendidas.');
-      return;
-    }
-
-    // Try finding matching product in catalog
-    const matchingProd = products.find(p => p.id === offer.productId);
-    if (!matchingProd) {
+    const offerProduct = products.find(product => product.id === offer.productId);
+    if (!offerProduct) {
       showToast('La oferta ya no tiene un producto disponible asociado. Actualiza el catálogo.');
       return;
     }
-    const userId = currentUser.id;
-
-    try {
-      const result = await api.createReservation({
-        usuarioId: userId,
-        items: [{ productoId: matchingProd.id, cantidad: 1 }]
-      });
-      const remainingSeconds = secondsUntilExpiration(result.fechaExpiracion);
-
-      const newPass: ReservationPass = {
-        code: result.codigoRetiro,
-        status: 'ACTIVA',
-        initialSeconds: remainingSeconds,
-        remainingSeconds,
-        customerName: currentUser?.nombre || 'Cliente Supermercado Karen',
-        storeLocation: 'Sucursal Matriz - Sección Ofertas FEFO',
-        items: [
-          {
-            productName: offer.title,
-            quantity: 1,
-            price: offer.price,
-            lotCode: offer.loteId ? `LOT-${offer.loteId.substring(0, 8)}` : 'LOT-IA-2026'
-          }
-        ],
-        total: offer.price
-      };
-
-      setCurrentPass(newPass);
-      void syncReservations(currentUser);
-      setIsPassModalOpen(true);
-      showToast(`¡Oferta reservada! PIN: ${result.codigoRetiro}`);
-      loadBackendData();
-    } catch (err: any) {
-      showToast(`⚠️ ${err.message || 'No se pudo reservar la oferta'}`);
-    }
+    handleAddToCart({
+      ...offerProduct,
+      id: `${offerProduct.id}::offer::${offer.id}`,
+      reservationProductId: offerProduct.id,
+      promotionId: offer.id,
+      offerLotId: offer.loteId,
+      isOffer: true,
+      price: offer.price,
+      originalPrice: offer.originalPrice,
+      stock: offer.stockAvailable,
+      badge: offer.discountBadge,
+    });
+    setIsCartOpen(true);
   };
 
   const handleLogout = async () => {
@@ -449,7 +416,8 @@ export const App: React.FC = () => {
         user={currentUser}
         onLogout={handleLogout}
         onOpenSearchReservation={() => {
-          setIsSearchReservationOpen(true);
+          setActiveTab('reservas');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
           if (currentUser) void syncReservations(currentUser);
         }}
         onPingHeartbeat={handlePingHeartbeat}
@@ -522,6 +490,8 @@ export const App: React.FC = () => {
             state={dataState}
             errorMessage={dataError}
             onRefresh={loadBackendData}
+            offers={offers}
+            onReserveOffer={handleReserveOffer}
           />
         )}
 
@@ -533,6 +503,32 @@ export const App: React.FC = () => {
             errorMessage={dataError}
             onRefresh={loadBackendData}
             onReserveOffer={handleReserveOffer}
+          />
+        )}
+
+        {/* VIEW 4: MIS RESERVAS */}
+        {activeTab === 'reservas' && (
+          <MyReservationsPage
+            authenticated={Boolean(currentUser)}
+            reservations={reservations}
+            syncing={syncingReservations}
+            onRefresh={async () => { if (currentUser) await syncReservations(currentUser); }}
+            onCancel={async id => {
+              await api.cancelReservation(id);
+              if (currentUser) await syncReservations(currentUser);
+              await loadBackendData();
+              showToast('Reserva cancelada y stock liberado.');
+            }}
+            onOpenPass={reservation => {
+              if (!currentUser) return;
+              setCurrentPass(reservationToPass(reservation, currentUser.nombre));
+              setIsPassModalOpen(true);
+            }}
+            onLogin={() => setIsLoginOpen(true)}
+            onExplore={() => {
+              setActiveTab('productos');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         )}
 
@@ -591,26 +587,6 @@ export const App: React.FC = () => {
           onClose={() => setIsPassModalOpen(false)}
         />
       )}
-
-      <MyReservationsModal
-        isOpen={isSearchReservationOpen}
-        onClose={() => setIsSearchReservationOpen(false)}
-        authenticated={Boolean(currentUser)}
-        reservations={reservations}
-        syncing={syncingReservations}
-        onRefresh={async () => { if (currentUser) await syncReservations(currentUser); }}
-        onCancel={async id => {
-          await api.cancelReservation(id);
-          if (currentUser) await syncReservations(currentUser);
-          await loadBackendData();
-          showToast('Reserva cancelada y stock liberado.');
-        }}
-        onOpenPass={reservation => {
-          if (!currentUser) return;
-          setCurrentPass(reservationToPass(reservation, currentUser.nombre));
-          setIsPassModalOpen(true);
-        }}
-      />
 
       <CartDrawer
         isOpen={isCartOpen}

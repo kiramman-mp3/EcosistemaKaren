@@ -7,11 +7,14 @@ class ProductController {
 
   async getProducts(req, res, next) {
     try {
-      const products = await this.getProductsUC.execute();
+      const result = await this.getProductsUC.execute(req.query);
       res.json({
         success: true,
-        count: products.length,
-        data: products
+        count: result.items.length,
+        total: result.total,
+        limit: Number(req.query.limit),
+        offset: Number(req.query.offset),
+        data: result.items
       });
     } catch (err) {
       next(err);

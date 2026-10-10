@@ -7,21 +7,31 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
+  RefreshControl,
 } from 'react-native';
 import { BackendProduct, UbicacionLote, CreateLotPayload } from '../types';
 import { api } from '../api/client';
 import { classifyExpiryDays } from '../config/businessRules';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
+import { Ionicons } from '@expo/vector-icons';
+
+type BarcodeLookupState = 'idle' | 'loading' | 'found' | 'invalid' | 'not-found' | 'error';
 
 interface IngresoLoteScreenProps {
   products: BackendProduct[];
   onLotCreated: () => void;
+  onOpenCatalog: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
 }
 
 export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   products,
   onLotCreated,
+  onOpenCatalog,
+  onRefresh,
+  refreshing,
 }) => {
   const [barcode, setBarcode] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<BackendProduct | null>(null);
@@ -35,6 +45,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [barcodeState, setBarcodeState] = useState<BarcodeLookupState>('idle');
 
   // Set default expiration date 20 days ahead
   useEffect(() => {
@@ -51,20 +62,46 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
     setNumeroLote(`LOT-IN-${Math.floor(1000 + Math.random() * 9000)}`);
   }, []);
 
-  // When barcode changes, auto-find product
+  // Validate the GTIN and resolve it against the product master.
   useEffect(() => {
-    if (!barcode.trim()) {
+    const normalized = normalizeBarcode(barcode);
+    let cancelled = false;
+    if (!normalized) {
       setSelectedProduct(null);
-      return;
+      setBarcodeState('idle');
+      return () => { cancelled = true; };
     }
-    const found = products.find(
-      (p) =>
-        p.codigoBarras === barcode.trim() ||
-        p.nombre.toLowerCase().includes(barcode.toLowerCase())
-    );
-    if (found) {
-      setSelectedProduct(found);
+    if (validateScannedBarcode(normalized) !== 'valid') {
+      setSelectedProduct(null);
+      setBarcodeState('invalid');
+      return () => { cancelled = true; };
     }
+
+    const localProduct = products.find((product) => product.codigoBarras === normalized);
+    if (localProduct) {
+      setSelectedProduct(localProduct);
+      setBarcodeState('found');
+      return () => { cancelled = true; };
+    }
+
+    setSelectedProduct(null);
+    setBarcodeState('loading');
+    const timer = setTimeout(() => {
+      void api.getProductByBarcode(normalized)
+        .then((product) => {
+          if (cancelled) return;
+          setSelectedProduct(product);
+          setBarcodeState(product ? 'found' : 'not-found');
+        })
+        .catch((requestError: any) => {
+          if (cancelled) return;
+          setBarcodeState(requestError.response?.status === 404 ? 'not-found' : 'error');
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [barcode, products]);
 
   // Calculate days to expire
@@ -90,27 +127,30 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       return { bg: '#FEE2E2', text: '#DC2626', label: '⛔ FECHA CADUCADA' };
     }
     if (level === 'ROJO') {
-      return { bg: '#FEE2E2', text: '#DC2626', label: `🔴 CRÍTICO: ${daysLeft} DÍAS (Alerta Roja)` };
+      return { bg: '#FEE2E2', text: '#DC2626', label: `CRÍTICO: ${daysLeft} DÍAS` };
     }
     if (level === 'AMARILLO') {
-      return { bg: '#FEF3C7', text: '#D97706', label: `🟡 PREVENTIVO: ${daysLeft} DÍAS (Alerta Amarilla)` };
+      return { bg: '#FEF3C7', text: '#D97706', label: `PREVENTIVO: ${daysLeft} DÍAS` };
     }
-    return { bg: '#DCFCE7', text: '#15803D', label: `🟢 NORMAL: ${daysLeft} DÍAS (Caducidad óptima)` };
+    return { bg: '#DCFCE7', text: '#15803D', label: `NORMAL: ${daysLeft} DÍAS` };
   };
 
   const fefoStatus = getFefoBadge();
 
   const handleScan = (code: string) => {
-    setBarcode(code);
-    const prod = products.find((p) => p.codigoBarras === code);
-    if (prod) {
-      setSelectedProduct(prod);
-    }
+    setError(null);
+    setBarcode(normalizeBarcode(code));
   };
 
   const handleSave = async () => {
     if (!selectedProduct) {
-      setError('Debes ingresar o escanear un código de barras válido');
+      setError(
+        barcodeState === 'not-found'
+          ? 'El código es válido, pero el producto no está registrado en el catálogo maestro.'
+          : barcodeState === 'error'
+            ? 'No se pudo consultar el catálogo. Verifica la conexión con el backend.'
+            : 'El código no es un GTIN/EAN válido. Revisa la lectura o el dígito verificador.'
+      );
       return;
     }
     if (!numeroLote.trim()) {
@@ -167,7 +207,12 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      alwaysBounceVertical
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" colors={['#4F46E5']} />}
+    >
       {/* Title */}
       <View style={styles.sectionHeader}>
         <View style={styles.badgeTop}>
@@ -183,7 +228,8 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       <View style={styles.scanSimBox}>
         <Text style={styles.scanSimLabel}>LECTOR DE PRODUCTOS</Text>
         <TouchableOpacity style={styles.scanPill} onPress={() => setScannerOpen(true)}>
-          <Text style={styles.scanPillText}>📷 Abrir escáner de cámara</Text>
+          <Ionicons name="barcode-outline" size={19} color="#FFFFFF" />
+          <Text style={styles.scanPillText}>Escanear producto</Text>
         </TouchableOpacity>
       </View>
 
@@ -191,7 +237,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       <View style={styles.card}>
         {error && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
@@ -207,15 +253,18 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
           <View style={styles.barcodeInputRow}>
             <TextInput
               style={[styles.input, { flex: 1 }]}
-              placeholder="Ej: 7861000100011"
+              placeholder="Ej: 7861000100014"
               placeholderTextColor="#94A3B8"
               value={barcode}
-              onChangeText={setBarcode}
+              onChangeText={(value) => {
+                setError(null);
+                setBarcode(value);
+              }}
               keyboardType="numeric"
             />
             {barcode ? (
               <TouchableOpacity style={styles.clearBtn} onPress={() => setBarcode('')}>
-                <Text style={styles.clearBtnText}>✕</Text>
+                <Ionicons name="close" size={21} color="#64748B" />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -235,12 +284,29 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
               EAN: {selectedProduct.codigoBarras} • Alerta mínima: {selectedProduct.minStockAlerta} un.
             </Text>
           </View>
+        ) : barcodeState === 'loading' ? (
+          <View style={styles.productEmptyHint}>
+            <ActivityIndicator size="small" color="#4F46E5" />
+            <Text style={styles.productEmptyText}>Consultando catálogo maestro…</Text>
+          </View>
         ) : (
           <View style={styles.productEmptyHint}>
             <Text style={styles.productEmptyText}>
-              🔍 Ingresa o escanea un código de barras para cargar el producto maestro.
+              {barcodeState === 'invalid'
+                ? 'El formato o dígito verificador del código no es válido.'
+                : barcodeState === 'not-found'
+                  ? `El código ${normalizeBarcode(barcode)} es válido, pero no está registrado en el catálogo maestro.`
+                  : barcodeState === 'error'
+                    ? 'No se pudo consultar el catálogo maestro.'
+                    : 'Ingresa o escanea un código de barras para cargar el producto maestro.'}
             </Text>
           </View>
+        )}
+
+        {barcodeState === 'not-found' && (
+          <TouchableOpacity style={styles.registerProductBtn} onPress={onOpenCatalog}>
+            <Text style={styles.registerProductBtnText}>Abrir Catálogo para registrar producto</Text>
+          </TouchableOpacity>
         )}
 
         {/* Lot Number */}
@@ -323,15 +389,15 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
                 ubicacion === 'BODEGA' && styles.locationBtnActive,
               ]}
               onPress={() => setUbicacion('BODEGA')}
+              accessibilityRole="button"
+              accessibilityLabel="Ubicación inicial: Bodega"
             >
-              <Text
-                style={[
-                  styles.locationBtnText,
-                  ubicacion === 'BODEGA' && styles.locationBtnTextActive,
-                ]}
-              >
-                📦 BODEGA
-              </Text>
+              <View style={styles.locationBtnContent}>
+                <Ionicons name="cube-outline" size={22} color={ubicacion === 'BODEGA' ? '#FFFFFF' : '#334155'} />
+                <Text style={[styles.locationBtnText, ubicacion === 'BODEGA' && styles.locationBtnTextActive]}>
+                  Bodega
+                </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -340,15 +406,15 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
                 ubicacion === 'PERCHA' && styles.locationBtnActive,
               ]}
               onPress={() => setUbicacion('PERCHA')}
+              accessibilityRole="button"
+              accessibilityLabel="Ubicación inicial: Percha"
             >
-              <Text
-                style={[
-                  styles.locationBtnText,
-                  ubicacion === 'PERCHA' && styles.locationBtnTextActive,
-                ]}
-              >
-                🏪 PERCHA (Piso de venta)
-              </Text>
+              <View style={styles.locationBtnContent}>
+                <Ionicons name="storefront-outline" size={22} color={ubicacion === 'PERCHA' ? '#FFFFFF' : '#334155'} />
+                <Text style={[styles.locationBtnText, ubicacion === 'PERCHA' && styles.locationBtnTextActive]}>
+                  Percha
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -363,9 +429,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
           {loading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.submitBtnText}>
-              💾 Guardar e Ingresar a Inventario FEFO
-            </Text>
+            <><Ionicons name="save-outline" size={20} color="#FFFFFF" /><Text style={styles.submitBtnText}>Guardar e Ingresar a Inventario FEFO</Text></>
           )}
         </TouchableOpacity>
       </View>
@@ -429,17 +493,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   scanPill: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
   },
   scanPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#334155',
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -576,6 +642,127 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
   },
+  registerProductBtn: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+    marginTop: -6,
+    marginBottom: 14,
+  },
+  registerProductBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  adminNotice: {
+    color: '#92400E',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 11,
+    marginTop: -6,
+    marginBottom: 14,
+  },
+  productFormCard: {
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 14,
+    padding: 12,
+    marginTop: -6,
+    marginBottom: 16,
+  },
+  productFormTitle: {
+    color: '#312E81',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  productFormSubtitle: {
+    color: '#6366F1',
+    fontSize: 10,
+    marginTop: 3,
+    marginBottom: 12,
+  },
+  productFormError: {
+    color: '#B91C1C',
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  categoryLoader: {
+    marginVertical: 10,
+  },
+  categoryList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  categoryBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  categoryBtnActive: {
+    backgroundColor: '#4338CA',
+    borderColor: '#4338CA',
+  },
+  categoryBtnText: {
+    color: '#4338CA',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  categoryBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  productFormInput: {
+    marginBottom: 11,
+    backgroundColor: '#FFFFFF',
+  },
+  productNumericRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  productNumericField: {
+    flex: 1,
+  },
+  productFormActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  cancelProductBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#A5B4FC',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  cancelProductBtnText: {
+    color: '#4338CA',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  saveProductBtn: {
+    flex: 1.5,
+    backgroundColor: '#4338CA',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  saveProductBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '900',
+  },
   locationToggleRow: {
     flexDirection: 'row',
     gap: 8,
@@ -594,14 +781,26 @@ const styles = StyleSheet.create({
     borderColor: '#1E293B',
   },
   locationBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
     color: '#475569',
+  },
+  locationBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  locationBtnIcon: {
+    fontSize: 18,
   },
   locationBtnTextActive: {
     color: '#FFFFFF',
   },
   submitBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: '#1E293B',
     paddingVertical: 14,
     borderRadius: 14,

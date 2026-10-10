@@ -53,9 +53,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="font-display font-extrabold text-xl tracking-tight text-navy">
                   Supermercado <span className="text-karenRed">Karen</span>
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-navy/10 text-navy rounded-full">
-                  Portal Clientes
-                </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium leading-none">
                 Reservas Anti-Overbooking • Frescura Local
@@ -90,15 +87,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 relative ${
                 activeTab === 'ofertas'
                   ? 'text-karenRed bg-red-50/80 font-bold'
-                  : 'text-slate-600 hover:text-karenRed hover:bg-red-50/40'
+                  : 'text-karenRed hover:bg-red-50/40'
               }`}
             >
-              <span className="flex items-center gap-1.5">
-                Ofertas
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-karenRed text-white animate-pulse">
-                  IA 🔥
-                </span>
-              </span>
+              Ofertas
             </button>
           </nav>
 
@@ -131,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onOpenSearchReservation && (
               <button
                 onClick={onOpenSearchReservation}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all border border-slate-200/80"
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${activeTab === 'reservas' ? 'text-white bg-navy border-navy' : 'text-slate-700 bg-slate-100 hover:bg-slate-200 border-slate-200/80'}`}
                 title="Consultar y administrar mis reservas"
               >
                 <Search className="w-3.5 h-3.5 text-navy" />
@@ -262,10 +254,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => handleNavClick('ofertas')}
             className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold ${
-              activeTab === 'ofertas' ? 'bg-red-50 text-karenRed' : 'text-slate-600'
+              activeTab === 'ofertas' ? 'bg-red-50 text-karenRed' : 'text-karenRed'
             }`}
           >
-            Ofertas IA 🔥
+            Ofertas
           </button>
 
           <div className="pt-2 border-t border-slate-100">
