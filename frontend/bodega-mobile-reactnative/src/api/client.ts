@@ -16,7 +16,7 @@ import {
 } from '../types';
 
 const getBaseUrl = (): string => {
-  const configuredUrl = (globalThis as any)?.process?.env?.EXPO_PUBLIC_API_URL;
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
   if (configuredUrl) return configuredUrl.replace(/\/$/, '');
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:4000/api/v1';

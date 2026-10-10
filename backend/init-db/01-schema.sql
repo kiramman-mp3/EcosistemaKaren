@@ -143,9 +143,12 @@ INSERT INTO usuarios (id, nombre, email, rol, password_hash) VALUES
 ('d8a7b6c5-1111-2222-3333-444455556668', 'Admin Supermercado', 'admin@karen.com', 'ADMIN', '$2a$10$Ndinx2G0HgZgjtc4N3Q4B.2dHgih47xC7LtiJ.if4rsg3wp/RMtP.')
 ON CONFLICT (email) DO NOTHING;
 
--- Lotes iniciales para pruebas (uno crítico < 7 días, uno advertencia < 15 días, uno normal)
-INSERT INTO lotes (id, producto_id, numero_lote, fecha_caducidad, cantidad_ingresada, cantidad_disponible, cantidad_reservada, ubicacion, estado) VALUES
-('b9a8f7e6-1111-2222-3333-444455556666', 'c8a4d2e1-1111-2222-3333-444455556667', 'LOT-YG-2026-01', CURRENT_DATE + INTERVAL '4 days', 50, 45, 0, 'PERCHA', 'ACTIVO'),
-('b9a8f7e6-1111-2222-3333-444455556667', 'c8a4d2e1-1111-2222-3333-444455556666', 'LOT-VT-2026-02', CURRENT_DATE + INTERVAL '12 days', 100, 90, 0, 'BODEGA', 'ACTIVO'),
-('b9a8f7e6-1111-2222-3333-444455556668', 'c8a4d2e1-1111-2222-3333-444455556668', 'LOT-PL-2026-03', CURRENT_DATE + INTERVAL '45 days', 40, 40, 0, 'BODEGA', 'ACTIVO')
+-- Lotes demo: ROJO (4 días), AMARILLO (12 días) y NORMAL (30 días).
+INSERT INTO lotes
+  (id, producto_id, numero_lote, fecha_elaboracion, fecha_caducidad, costo_unitario,
+   cantidad_ingresada, cantidad_disponible, cantidad_reservada, ubicacion, estado)
+VALUES
+('b9a8f7e6-1111-2222-3333-444455556666', 'c8a4d2e1-1111-2222-3333-444455556667', 'LOT-YG-DEMO-01', CURRENT_DATE - INTERVAL '3 days', CURRENT_DATE + INTERVAL '4 days', 1.7500, 50, 45, 0, 'PERCHA', 'ACTIVO'),
+('b9a8f7e6-1111-2222-3333-444455556667', 'c8a4d2e1-1111-2222-3333-444455556666', 'LOT-VT-DEMO-02', CURRENT_DATE - INTERVAL '5 days', CURRENT_DATE + INTERVAL '12 days', 0.6800, 100, 90, 0, 'BODEGA', 'ACTIVO'),
+('b9a8f7e6-1111-2222-3333-444455556668', 'c8a4d2e1-1111-2222-3333-444455556668', 'LOT-PL-DEMO-03', CURRENT_DATE - INTERVAL '7 days', CURRENT_DATE + INTERVAL '30 days', 2.2400, 40, 40, 0, 'BODEGA', 'ACTIVO')
 ON CONFLICT (id) DO NOTHING;

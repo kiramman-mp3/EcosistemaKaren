@@ -13,6 +13,10 @@ const MIGRATIONS = [
   {
     version: '004_inventory_traceability',
     file: path.resolve(__dirname, '../../../init-db/04-inventory-traceability.sql')
+  },
+  {
+    version: '005_refresh_demo_lots',
+    file: path.resolve(__dirname, '../../../init-db/05-refresh-demo-lots.sql')
   }
 ];
 

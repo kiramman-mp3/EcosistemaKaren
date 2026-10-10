@@ -56,10 +56,13 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
       onRefresh();
     } catch (err: any) {
       const status = err.response?.status;
+      const backendError = err.response?.data?.error;
       const messages: Record<number, string> = {
         429: 'Gemini alcanzó temporalmente su límite de solicitudes. Intenta nuevamente en unos minutos.',
         502: 'Gemini devolvió una respuesta no válida. No se creó ningún borrador; puedes intentarlo otra vez.',
-        503: 'El servicio de promociones con IA no está configurado o no se encuentra disponible.',
+        503: backendError === 'GeminiNotConfigured'
+          ? 'Gemini no está configurado en el backend. Define GEMINI_API_KEY y reinicia el servidor.'
+          : 'El servicio de promociones con IA no se encuentra disponible.',
         504: 'Gemini tardó demasiado en responder. No se confirmó ningún borrador; inténtalo nuevamente.',
       };
       const message = messages[status]
@@ -128,6 +131,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
         <View style={styles.list}>
           {filtered.map((item) => {
             const isRed = item.nivel === 'ROJO' || item.nivel === 'VENCIDO';
+            const isExpired = item.nivel === 'VENCIDO';
             const isProcessing = actionLoadingId === item.loteId;
 
             return (
@@ -212,11 +216,13 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
                   )}
 
                   <TouchableOpacity
-                    style={styles.actionBtnPurple}
+                    style={[styles.actionBtnPurple, isExpired && styles.actionBtnDisabled]}
                     onPress={() => handleGenerateAiPromo(item)}
-                    disabled={isProcessing}
+                    disabled={isProcessing || isExpired}
                   >
-                    <Text style={styles.actionBtnTextPurple}>✨ Promo Gemini IA</Text>
+                    <Text style={[styles.actionBtnTextPurple, isExpired && styles.actionBtnTextDisabled]}>
+                      {isExpired ? 'No promocionable' : '✨ Promo Gemini IA'}
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -469,6 +475,14 @@ const styles = StyleSheet.create({
     color: '#9333EA',
     fontWeight: '800',
     fontSize: 11,
+  },
+  actionBtnDisabled: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
+    opacity: 0.75,
+  },
+  actionBtnTextDisabled: {
+    color: '#64748B',
   },
   actionBtnRed: {
     paddingHorizontal: 10,
