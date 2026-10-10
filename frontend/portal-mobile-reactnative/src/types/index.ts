@@ -43,7 +43,6 @@ export interface ReservationPass {
   status: string;
   remainingSeconds: number;
   storeLocation: string;
-  qrBlocks: number[][];
   items: {
     productName: string;
     quantity: number;

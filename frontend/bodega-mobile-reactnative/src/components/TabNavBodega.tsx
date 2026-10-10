@@ -6,69 +6,31 @@ interface TabNavBodegaProps {
   activeTab: BodegaTab;
   onTabChange: (tab: BodegaTab) => void;
   criticalAlertsCount: number;
+  role: string;
 }
 
 export const TabNavBodega: React.FC<TabNavBodegaProps> = ({
   activeTab,
   onTabChange,
   criticalAlertsCount,
+  role,
 }) => {
+  const tabs: { id: BodegaTab; icon: string; label: string; roles: string[] }[] = [
+    { id: 'ingreso', icon: '📦', label: 'Ingreso', roles: ['BODEGUERO','ADMIN'] },
+    { id: 'alertas', icon: '🚨', label: 'Alertas', roles: ['BODEGUERO','PERCHERO','ADMIN'] },
+    { id: 'inventario', icon: '📋', label: 'Inventario', roles: ['BODEGUERO','PERCHERO','ADMIN'] },
+    { id: 'caja', icon: '🧾', label: 'Caja', roles: ['BODEGUERO','ADMIN'] },
+    { id: 'reportes', icon: '📊', label: 'Reportes', roles: ['BODEGUERO','PERCHERO','ADMIN'] },
+    { id: 'aprobaciones', icon: '✅', label: 'Aprobar', roles: ['ADMIN'] },
+  ];
   return (
     <View style={styles.container}>
-      {/* Tab 1: Ingreso Lotes */}
-      <TouchableOpacity
-        style={[styles.tabBtn, activeTab === 'ingreso' && styles.tabBtnActive]}
-        onPress={() => onTabChange('ingreso')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.tabIcon}>📦</Text>
-        <Text style={[styles.tabText, activeTab === 'ingreso' && styles.tabTextActive]}>
-          Ingreso
-        </Text>
-      </TouchableOpacity>
-
-      {/* Tab 2: Alertas FEFO con Badge */}
-      <TouchableOpacity
-        style={[styles.tabBtn, activeTab === 'alertas' && styles.tabBtnActiveRed]}
-        onPress={() => onTabChange('alertas')}
-        activeOpacity={0.8}
-      >
-        <View style={styles.iconWithBadge}>
-          <Text style={styles.tabIcon}>🚨</Text>
-          {criticalAlertsCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{criticalAlertsCount}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={[styles.tabText, activeTab === 'alertas' && styles.tabTextActiveRed]}>
-          Alertas
-        </Text>
-      </TouchableOpacity>
-
-      {/* Tab 3: Inventario */}
-      <TouchableOpacity
-        style={[styles.tabBtn, activeTab === 'inventario' && styles.tabBtnActive]}
-        onPress={() => onTabChange('inventario')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.tabIcon}>📋</Text>
-        <Text style={[styles.tabText, activeTab === 'inventario' && styles.tabTextActive]}>
-          Inventario
-        </Text>
-      </TouchableOpacity>
-
-      {/* Tab 4: Caja SIACI */}
-      <TouchableOpacity
-        style={[styles.tabBtn, activeTab === 'caja' && styles.tabBtnActive]}
-        onPress={() => onTabChange('caja')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.tabIcon}>🧾</Text>
-        <Text style={[styles.tabText, activeTab === 'caja' && styles.tabTextActive]}>
-          Caja SIACI
-        </Text>
-      </TouchableOpacity>
+      {tabs.filter(tab => tab.roles.includes(role)).map(tab => <TouchableOpacity key={tab.id}
+        style={[styles.tabBtn, activeTab === tab.id && (tab.id === 'alertas' ? styles.tabBtnActiveRed : styles.tabBtnActive)]}
+        onPress={() => onTabChange(tab.id)} activeOpacity={0.8}>
+        <View style={styles.iconWithBadge}><Text style={styles.tabIcon}>{tab.icon}</Text>{tab.id === 'alertas' && criticalAlertsCount > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{criticalAlertsCount}</Text></View>}</View>
+        <Text style={[styles.tabText, activeTab === tab.id && (tab.id === 'alertas' ? styles.tabTextActiveRed : styles.tabTextActive)]}>{tab.label}</Text>
+      </TouchableOpacity>)}
     </View>
   );
 };

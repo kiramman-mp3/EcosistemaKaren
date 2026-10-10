@@ -52,7 +52,7 @@ export const NavbarMobile: React.FC<NavbarMobileProps> = ({
 
         {/* Right Actions */}
         <View style={styles.actionRow}>
-          {/* Consultar PIN de Reserva */}
+          {/* Historial de reservas */}
           {onOpenSearchReservation && (
             <TouchableOpacity
               style={styles.searchPassBtn}
@@ -60,7 +60,7 @@ export const NavbarMobile: React.FC<NavbarMobileProps> = ({
               activeOpacity={0.7}
             >
               <Text style={styles.searchPassIcon}>🔍</Text>
-              <Text style={styles.searchPassText}>PIN</Text>
+              <Text style={styles.searchPassText}>Reservas</Text>
             </TouchableOpacity>
           )}
 

@@ -1,13 +1,7 @@
 import React from 'react';
-import { ShieldCheck, Lock, KeyRound, ArrowLeft, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, KeyRound, Sparkles } from 'lucide-react';
 
-interface AntiOverbookingBannerProps {
-  onBackToAppSelector?: () => void;
-}
-
-export const AntiOverbookingBanner: React.FC<AntiOverbookingBannerProps> = ({
-  onBackToAppSelector,
-}) => {
+export const AntiOverbookingBanner: React.FC = () => {
   return (
     <section className="py-16 bg-[#F8FAFC]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -82,23 +76,6 @@ export const AntiOverbookingBanner: React.FC<AntiOverbookingBannerProps> = ({
                   </div>
                 </div>
 
-              </div>
-
-              {/* Botón inferior: '← Volver al selector de apps' */}
-              <div className="pt-4">
-                <a
-                  href="/index.html"
-                  onClick={(e) => {
-                    if (onBackToAppSelector) {
-                      e.preventDefault();
-                      onBackToAppSelector();
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 text-sm font-bold text-slate-300 hover:text-white transition-colors group cursor-pointer"
-                >
-                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                  <span>Volver al selector de apps</span>
-                </a>
               </div>
 
             </div>

@@ -1,4 +1,5 @@
-export type BodegaTab = 'ingreso' | 'alertas' | 'inventario' | 'caja';
+export type BodegaTab = 'ingreso' | 'alertas' | 'inventario' | 'caja' | 'reportes' | 'aprobaciones';
+export type StaffRole = 'BODEGUERO' | 'PERCHERO' | 'ADMIN';
 
 export type UbicacionLote = 'BODEGA' | 'PERCHA';
 export type NivelAlerta = 'ROJO' | 'AMARILLO' | 'NORMAL' | 'VENCIDO';
@@ -65,6 +66,35 @@ export interface BackendPromotion {
   estado?: 'PENDIENTE_APROBACION' | 'APROBADA' | 'RECHAZADA';
   cacheHit?: boolean;
   created_at?: string;
+  motivoRechazo?: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  loteId: string;
+  tipo: string;
+  cantidad: number;
+  disponibleAntes: number;
+  disponibleDespues: number;
+  reservadaAntes: number;
+  reservadaDespues: number;
+  ubicacionOrigen?: UbicacionLote | null;
+  ubicacionDestino?: UbicacionLote | null;
+  motivo?: string;
+  actorId?: string | null;
+  created_at: string;
+}
+
+export interface InventoryWaste {
+  id: string;
+  loteId: string;
+  movimientoId: string;
+  cantidad: number;
+  razon: string;
+  costoUnitario: number | null;
+  costoTotal: number | null;
+  registradaPor: string;
+  created_at: string;
 }
 
 export interface ReservationDetail {

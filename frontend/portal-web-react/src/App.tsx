@@ -6,12 +6,13 @@ import { AntiOverbookingBanner } from './components/AntiOverbookingBanner';
 import { ProductCatalog } from './components/ProductCatalog';
 import { FlashOffersSection } from './components/FlashOffersSection';
 import { ReservationModal } from './components/ReservationModal';
-import { SearchReservationModal } from './components/SearchReservationModal';
+import { MyReservationsModal } from './components/MyReservationsModal';
 import { CartDrawer } from './components/CartDrawer';
 import { LoginModal } from './components/LoginModal';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './types';
 import { CheckCircle, ShieldCheck, AlertTriangle } from 'lucide-react';
-import { api } from './api/client';
+import { api, BackendReservation } from './api/client';
+import { reservationToPass, selectActiveReservation } from './reservations/recovery';
 
 // Product image fallbacks by category
 const CATEGORY_IMAGES: Record<string, string> = {
@@ -32,14 +33,6 @@ function secondsUntilExpiration(expiration: string | undefined): number {
   return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
 }
 
-function createPassMatrix(code: string): number[][] {
-  let seed = [...code].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return Array.from({ length: 7 }, (_, row) => Array.from({ length: 7 }, (_, col) => {
-    seed = (seed * 9301 + 49297 + row * 7 + col) % 233280;
-    return seed % 2;
-  }));
-}
-
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('inicio');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Todos');
@@ -50,6 +43,8 @@ export const App: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   
   const [currentPass, setCurrentPass] = useState<ReservationPass | null>(null);
+  const [reservations, setReservations] = useState<BackendReservation[]>([]);
+  const [syncingReservations, setSyncingReservations] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol?: string } | null>(null);
   
   // Connection & loading flags
@@ -71,6 +66,22 @@ export const App: React.FC = () => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
+
+  const syncReservations = useCallback(async (user: { id: string; nombre: string }) => {
+    setSyncingReservations(true);
+    try {
+      const list = await api.getUserReservations(user.id);
+      setReservations(list);
+      const active = selectActiveReservation(list);
+      if (active) setCurrentPass(reservationToPass(active, user.nombre));
+      else {
+        setCurrentPass(null);
+        setIsPassModalOpen(false);
+      }
+    } catch {
+      // Conserva el último estado visible ante una desconexión temporal.
+    } finally { setSyncingReservations(false); }
+  }, []);
 
   // 1. Fetch Backend Heartbeat
   const checkHeartbeat = useCallback(async () => {
@@ -172,8 +183,12 @@ export const App: React.FC = () => {
   // Initial mount & periodic heartbeat sync
   useEffect(() => {
     // Check saved user session
-    const savedUser = api.getCurrentUser();
-    if (savedUser) setCurrentUser(savedUser);
+    void api.getCurrentUser().then(savedUser => {
+      if (savedUser) {
+        setCurrentUser(savedUser);
+        void syncReservations(savedUser);
+      }
+    });
 
     loadBackendData();
 
@@ -183,7 +198,31 @@ export const App: React.FC = () => {
     }, 20000);
 
     return () => clearInterval(hbInterval);
-  }, [loadBackendData, checkHeartbeat]);
+  }, [loadBackendData, checkHeartbeat, syncReservations]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const refresh = () => { void syncReservations(currentUser); };
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    const interval = window.setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [currentUser, syncReservations]);
+
+  useEffect(() => {
+    const clearExpiredSession = () => {
+      setCurrentUser(null);
+      setCurrentPass(null);
+      setReservations([]);
+    };
+    window.addEventListener('karen:session-expired', clearExpiredSession);
+    return () => window.removeEventListener('karen:session-expired', clearExpiredSession);
+  }, []);
 
   // Handle Manual Heartbeat Ping
   const handlePingHeartbeat = async () => {
@@ -279,7 +318,6 @@ export const App: React.FC = () => {
         remainingSeconds,
         customerName: currentUser?.nombre || 'Cliente Supermercado Karen',
         storeLocation: 'Sucursal Matriz - Calle Principal 102 (Caja SIACI)',
-        qrBlocks: createPassMatrix(result.codigoRetiro),
         items: cart.map(i => ({
           productName: i.product.name,
           quantity: i.quantity,
@@ -290,6 +328,7 @@ export const App: React.FC = () => {
       };
 
       setCurrentPass(newPass);
+      void syncReservations(currentUser);
       setCart([]);
       setIsCartOpen(false);
       setIsPassModalOpen(true);
@@ -339,7 +378,6 @@ export const App: React.FC = () => {
         remainingSeconds,
         customerName: currentUser?.nombre || 'Cliente Supermercado Karen',
         storeLocation: 'Sucursal Matriz - Sección Ofertas FEFO',
-        qrBlocks: createPassMatrix(result.codigoRetiro),
         items: [
           {
             productName: offer.title,
@@ -352,6 +390,7 @@ export const App: React.FC = () => {
       };
 
       setCurrentPass(newPass);
+      void syncReservations(currentUser);
       setIsPassModalOpen(true);
       showToast(`¡Oferta reservada! PIN: ${result.codigoRetiro}`);
       loadBackendData();
@@ -360,9 +399,12 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    api.logout();
+  const handleLogout = async () => {
+    await api.logout();
     setCurrentUser(null);
+    setCurrentPass(null);
+    setReservations([]);
+    setCart([]);
     showToast('Sesión cerrada correctamente.');
   };
 
@@ -406,7 +448,10 @@ export const App: React.FC = () => {
         isOnline={isOnline}
         user={currentUser}
         onLogout={handleLogout}
-        onOpenSearchReservation={() => setIsSearchReservationOpen(true)}
+        onOpenSearchReservation={() => {
+          setIsSearchReservationOpen(true);
+          if (currentUser) void syncReservations(currentUser);
+        }}
         onPingHeartbeat={handlePingHeartbeat}
       />
 
@@ -433,11 +478,7 @@ export const App: React.FC = () => {
               onSelectCategory={handleSelectCategory}
             />
 
-            <AntiOverbookingBanner
-              onBackToAppSelector={() => {
-                window.location.href = '../index.html';
-              }}
-            />
+            <AntiOverbookingBanner />
 
             {/* Quick Teaser of Products */}
             <div className="bg-white py-12 border-t border-slate-100">
@@ -551,9 +592,24 @@ export const App: React.FC = () => {
         />
       )}
 
-      <SearchReservationModal
+      <MyReservationsModal
         isOpen={isSearchReservationOpen}
         onClose={() => setIsSearchReservationOpen(false)}
+        authenticated={Boolean(currentUser)}
+        reservations={reservations}
+        syncing={syncingReservations}
+        onRefresh={async () => { if (currentUser) await syncReservations(currentUser); }}
+        onCancel={async id => {
+          await api.cancelReservation(id);
+          if (currentUser) await syncReservations(currentUser);
+          await loadBackendData();
+          showToast('Reserva cancelada y stock liberado.');
+        }}
+        onOpenPass={reservation => {
+          if (!currentUser) return;
+          setCurrentPass(reservationToPass(reservation, currentUser.nombre));
+          setIsPassModalOpen(true);
+        }}
       />
 
       <CartDrawer
@@ -575,6 +631,7 @@ export const App: React.FC = () => {
         onClose={() => setIsLoginOpen(false)}
         onLoginSuccess={(user) => {
           setCurrentUser(user);
+          void syncReservations(user);
           showToast(`¡Bienvenido, ${user.nombre}!`);
         }}
       />

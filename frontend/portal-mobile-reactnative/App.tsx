@@ -7,6 +7,7 @@ import {
   View,
   Text,
   Alert,
+  AppState,
 } from 'react-native';
 import { NavbarMobile } from './src/components/NavbarMobile';
 import { HeroSectionMobile } from './src/components/HeroSectionMobile';
@@ -17,7 +18,7 @@ import { FlashOffersMobile } from './src/components/FlashOffersMobile';
 import { PickupPassModal } from './src/components/PickupPassModal';
 import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
-import { SearchReservationModalMobile } from './src/components/SearchReservationModalMobile';
+import { MyReservationsModalMobile } from './src/components/MyReservationsModalMobile';
 import {
   NavTab,
   ProductCategory,
@@ -27,7 +28,8 @@ import {
   ReservationPass,
   DataLoadState,
 } from './src/types';
-import { api } from './src/api/client';
+import { api, BackendReservation } from './src/api/client';
+import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
 
@@ -36,16 +38,6 @@ function secondsUntilExpiration(expiration: string | undefined): number {
   const timestamp = new Date(expiration).getTime();
   if (!Number.isFinite(timestamp)) return APPROVED_RESERVATION_TTL_SECONDS;
   return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
-}
-
-function createPassMatrix(code: string): number[][] {
-  let seed = [...code].reduce((total, char) => total + char.charCodeAt(0), 0);
-  return Array.from({ length: 7 }, (_, row) =>
-    Array.from({ length: 7 }, (_, column) => {
-      seed = (seed * 1103515245 + 12345 + row + column) & 0x7fffffff;
-      return seed % 2;
-    })
-  );
 }
 
 const CATEGORY_IMAGES: Record<string, string> = {
@@ -65,6 +57,8 @@ export default function App() {
   const [offers, setOffers] = useState<FlashOffer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [pass, setPass] = useState<ReservationPass | null>(null);
+  const [reservations, setReservations] = useState<BackendReservation[]>([]);
+  const [syncingReservations, setSyncingReservations] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol?: string } | null>(null);
 
   // Connection & status
@@ -78,6 +72,22 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const syncReservations = useCallback(async (userId: string) => {
+    setSyncingReservations(true);
+    try {
+      const list = await api.getUserReservations(userId);
+      setReservations(list);
+      const active = selectActiveReservation(list);
+      if (active) setPass(reservationToPass(active));
+      else {
+        setPass(null);
+        setIsPassOpen(false);
+      }
+    } catch {
+      // Conserva el último estado visible ante una desconexión temporal.
+    } finally { setSyncingReservations(false); }
+  }, []);
 
   // 1. Fetch Backend Heartbeat
   const checkHeartbeat = useCallback(async () => {
@@ -162,10 +172,34 @@ export default function App() {
   }, [checkHeartbeat]);
 
   useEffect(() => {
+    void api.restoreSession().then(user => {
+      if (user) {
+        setCurrentUser(user);
+        void syncReservations(user.id);
+      }
+    });
+    const unsubscribe = api.onSessionExpired(() => {
+      setCurrentUser(null);
+      setPass(null);
+      setReservations([]);
+    });
     loadBackendData();
     const interval = setInterval(checkHeartbeat, 15000);
-    return () => clearInterval(interval);
-  }, [loadBackendData, checkHeartbeat]);
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
+  }, [loadBackendData, checkHeartbeat, syncReservations]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const refresh = () => { void syncReservations(currentUser.id); };
+    const interval = setInterval(refresh, 15000);
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') refresh();
+    });
+    return () => { clearInterval(interval); subscription.remove(); };
+  }, [currentUser, syncReservations]);
 
   const totalCartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -229,7 +263,6 @@ export default function App() {
         status: reservation.estado,
         remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
         storeLocation: 'Sucursal Matriz',
-        qrBlocks: createPassMatrix(reservation.codigoRetiro),
         items: cart.map((i) => ({
           productName: i.product.name,
           quantity: i.quantity,
@@ -237,6 +270,7 @@ export default function App() {
         })),
         total,
       });
+      void syncReservations(currentUser.id);
 
       setCart([]);
       setIsCartOpen(false);
@@ -273,10 +307,10 @@ export default function App() {
           status: reservation.estado,
           remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
           storeLocation: 'Sucursal Matriz',
-          qrBlocks: createPassMatrix(reservation.codigoRetiro),
           items: [{ productName: offer.title, quantity: 1, price: offer.price }],
           total: offer.price,
         });
+        void syncReservations(currentUser.id);
         setIsPassOpen(true);
         return;
       }
@@ -302,7 +336,10 @@ export default function App() {
         onOpenLogin={() => setIsLoginOpen(true)}
         isOnline={isOnline}
         userName={currentUser?.nombre}
-        onOpenSearchReservation={() => setIsSearchOpen(true)}
+        onOpenSearchReservation={() => {
+          setIsSearchOpen(true);
+          if (currentUser) void syncReservations(currentUser.id);
+        }}
       />
 
       {/* Main Content */}
@@ -385,13 +422,34 @@ export default function App() {
         visible={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
         currentUser={currentUser}
-        onLoginSuccess={(user) => setCurrentUser(user)}
-        onLogout={() => setCurrentUser(null)}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          void syncReservations(user.id);
+        }}
+        onLogout={() => {
+          setCurrentUser(null);
+          setPass(null);
+          setReservations([]);
+          setCart([]);
+        }}
       />
 
-      <SearchReservationModalMobile
+      <MyReservationsModalMobile
         visible={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        authenticated={Boolean(currentUser)}
+        reservations={reservations}
+        syncing={syncingReservations}
+        onRefresh={async () => { if (currentUser) await syncReservations(currentUser.id); }}
+        onCancel={async id => {
+          await api.cancelReservation(id);
+          if (currentUser) await syncReservations(currentUser.id);
+          await loadBackendData();
+        }}
+        onOpenPass={reservation => {
+          setPass(reservationToPass(reservation));
+          setIsPassOpen(true);
+        }}
       />
     </SafeAreaView>
   );

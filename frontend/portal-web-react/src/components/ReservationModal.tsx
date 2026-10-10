@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, MapPin, Copy, Check } from 'lucide-react';
 import { ReservationPass } from '../types';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface ReservationModalProps {
   pass: ReservationPass;
@@ -18,11 +19,12 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    setSecondsLeft(pass.remainingSeconds || 0);
     const interval = setInterval(() => {
       setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
-  }, [isOpen]);
+  }, [isOpen, pass.code, pass.remainingSeconds]);
 
   if (!isOpen) return null;
 
@@ -88,18 +90,9 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
           </div>
         </div>
 
-        {/* QR Block Matrix Visual */}
+        {/* QR estándar: contiene únicamente el PIN de retiro */}
         <div className="my-5 flex flex-col items-center justify-center bg-slate-900 rounded-2xl p-4 shadow-inner">
-          <div className="grid grid-cols-7 gap-1.5 w-36 h-36 p-2 bg-white rounded-xl">
-            {pass.qrBlocks.slice(0, 7).map((row, rIdx) =>
-              row.map((cell, cIdx) => (
-                <div
-                  key={`${rIdx}-${cIdx}`}
-                  className={`rounded-sm ${cell === 1 ? 'bg-slate-950' : 'bg-transparent'}`}
-                />
-              ))
-            )}
-          </div>
+          <div className="p-3 bg-white rounded-xl"><QRCodeSVG value={pass.code} size={144} level="M" /></div>
           <span className="text-[10px] text-slate-400 font-mono mt-2 tracking-widest">
             ESCANEAR EN CAJA O PERCHA
           </span>

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import { clearSession, loadSession, saveSession, StoredUser } from '../auth/secureSession';
 
 const getBaseUrl = (): string => {
   const configuredUrl = (globalThis as any)?.process?.env?.EXPO_PUBLIC_API_URL;
@@ -22,6 +23,7 @@ export const apiClient = axios.create({
 
 let inMemoryToken: string | null = null;
 let inMemoryUser: any = null;
+let sessionExpiredListener: (() => void) | null = null;
 
 apiClient.interceptors.request.use((config) => {
   if (inMemoryToken && config.headers) {
@@ -29,6 +31,19 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+apiClient.interceptors.response.use(
+  response => response,
+  async error => {
+    if (error.response?.status === 401) {
+      inMemoryToken = null;
+      inMemoryUser = null;
+      await clearSession();
+      sessionExpiredListener?.();
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface HeartbeatResponse {
   success: boolean;
@@ -184,6 +199,7 @@ export const api = {
     if (res.data.data?.token) {
       inMemoryToken = res.data.data.token;
       inMemoryUser = res.data.data.user;
+      await saveSession(inMemoryToken, inMemoryUser);
     }
     return res.data.data;
   },
@@ -193,13 +209,15 @@ export const api = {
     if (res.data.data?.token) {
       inMemoryToken = res.data.data.token;
       inMemoryUser = res.data.data.user;
+      await saveSession(inMemoryToken, inMemoryUser);
     }
     return res.data.data;
   },
 
-  logout() {
+  async logout() {
     inMemoryToken = null;
     inMemoryUser = null;
+    await clearSession();
   },
 
   getCurrentUser() {
@@ -209,5 +227,17 @@ export const api = {
   setToken(token: string | null, user: any = null) {
     inMemoryToken = token;
     inMemoryUser = user;
+  },
+
+  async restoreSession(): Promise<StoredUser | null> {
+    const session = await loadSession();
+    inMemoryToken = session?.token || null;
+    inMemoryUser = session?.user || null;
+    return inMemoryUser;
+  },
+
+  onSessionExpired(listener: (() => void) | null) {
+    sessionExpiredListener = listener;
+    return () => { if (sessionExpiredListener === listener) sessionExpiredListener = null; };
   },
 };

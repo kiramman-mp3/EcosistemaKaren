@@ -12,6 +12,7 @@ import {
 import { BackendProduct, UbicacionLote, CreateLotPayload } from '../types';
 import { api } from '../api/client';
 import { classifyExpiryDays } from '../config/businessRules';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 
 interface IngresoLoteScreenProps {
   products: BackendProduct[];
@@ -33,6 +34,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Set default expiration date 20 days ahead
   useEffect(() => {
@@ -98,7 +100,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
 
   const fefoStatus = getFefoBadge();
 
-  const handleSimulateScan = (code: string) => {
+  const handleScan = (code: string) => {
     setBarcode(code);
     const prod = products.find((p) => p.codigoBarras === code);
     if (prod) {
@@ -177,20 +179,12 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
         </Text>
       </View>
 
-      {/* Quick Scanner Emulation Bar */}
+      {/* Scanner de cámara o lector físico conectado al campo */}
       <View style={styles.scanSimBox}>
-        <Text style={styles.scanSimLabel}>⚡ PISTOLA LECTORA / SIMULADOR SCANNER:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scanRow}>
-          {products.slice(0, 4).map((p) => (
-            <TouchableOpacity
-              key={p.id}
-              style={styles.scanPill}
-              onPress={() => handleSimulateScan(p.codigoBarras)}
-            >
-              <Text style={styles.scanPillText}>📲 {p.nombre.split(' ')[0]} ({p.codigoBarras.slice(-4)})</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <Text style={styles.scanSimLabel}>LECTOR DE PRODUCTOS</Text>
+        <TouchableOpacity style={styles.scanPill} onPress={() => setScannerOpen(true)}>
+          <Text style={styles.scanPillText}>📷 Abrir escáner de cámara</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Form Card */}
@@ -375,6 +369,11 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
           )}
         </TouchableOpacity>
       </View>
+      <BarcodeScannerModal
+        visible={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanned={handleScan}
+      />
     </ScrollView>
   );
 };

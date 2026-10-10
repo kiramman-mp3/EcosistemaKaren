@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import EventSource from 'react-native-sse';
+import { clearSession, loadSession, saveSession, StoredStaffUser } from '../auth/secureSession';
 import {
   BackendLot,
   BackendProduct,
@@ -9,9 +11,13 @@ import {
   CreateLotPayload,
   WasteAuditResult,
   ExpiryAlertItem,
+  InventoryMovement,
+  InventoryWaste,
 } from '../types';
 
 const getBaseUrl = (): string => {
+  const configuredUrl = (globalThis as any)?.process?.env?.EXPO_PUBLIC_API_URL;
+  if (configuredUrl) return configuredUrl.replace(/\/$/, '');
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:4000/api/v1';
   }
@@ -19,13 +25,21 @@ const getBaseUrl = (): string => {
 };
 
 export const BASE_URL = getBaseUrl();
-const FALLBACK_URLS = [
-  'http://localhost:4000/api/v1',
-  'http://10.0.2.2:4000/api/v1',
-  'http://192.168.1.50:4000/api/v1',
-];
 
 let authToken: string | null = null;
+let sessionExpiredListener: (() => void) | null = null;
+
+axios.interceptors.response.use(
+  response => response,
+  async error => {
+    if (error.response?.status === 401) {
+      authToken = null;
+      await clearSession();
+      sessionExpiredListener?.();
+    }
+    return Promise.reject(error);
+  }
+);
 
 const authorizedConfig = (timeout: number) => ({
   timeout,
@@ -35,20 +49,6 @@ const authorizedConfig = (timeout: number) => ({
 export interface BodegaAuthResponse {
   user: { id: string; nombre: string; email: string; rol: string };
   token: string;
-}
-
-async function requestWithFallback<T>(fn: (url: string) => Promise<T>): Promise<T> {
-  const urls = [BASE_URL, ...FALLBACK_URLS.filter((u) => u !== BASE_URL)];
-  let lastError: any = null;
-
-  for (const url of urls) {
-    try {
-      return await fn(url);
-    } catch (err: any) {
-      lastError = err;
-    }
-  }
-  throw lastError;
 }
 
 export interface HeartbeatStatus {
@@ -63,9 +63,8 @@ export interface HeartbeatStatus {
 
 export const api = {
   async login(email: string, password: string): Promise<BodegaAuthResponse> {
-    return requestWithFallback(async (url) => {
       const res = await axios.post<{ success: boolean; data: BodegaAuthResponse }>(
-        `${url}/auth/login`,
+        `${BASE_URL}/auth/login`,
         { email, password },
         { timeout: 5000 }
       );
@@ -74,64 +73,67 @@ export const api = {
         throw new Error('Esta aplicación requiere un usuario operativo de bodega.');
       }
       authToken = result.token;
+      await saveSession(result.token, result.user);
       return result;
-    });
   },
 
-  logout() {
+  async logout() {
     authToken = null;
+    await clearSession();
+  },
+
+  async restoreSession(): Promise<StoredStaffUser | null> {
+    const session = await loadSession();
+    if (!session || !['BODEGUERO', 'PERCHERO', 'ADMIN'].includes(session.user.rol)) {
+      authToken = null;
+      if (session) await clearSession();
+      return null;
+    }
+    authToken = session.token;
+    return session.user;
+  },
+
+  onSessionExpired(listener: (() => void) | null) {
+    sessionExpiredListener = listener;
+    return () => { if (sessionExpiredListener === listener) sessionExpiredListener = null; };
   },
 
   // 1. Heartbeat Red Local
   async getHeartbeat(): Promise<HeartbeatStatus> {
-    return requestWithFallback(async (url) => {
-      const res = await axios.get<HeartbeatStatus>(`${url}/heartbeat`, { timeout: 3500 });
+      const res = await axios.get<HeartbeatStatus>(`${BASE_URL}/heartbeat`, { timeout: 3500 });
       return res.data;
-    });
   },
 
   async sendHeartbeat(): Promise<HeartbeatStatus> {
-    return requestWithFallback(async (url) => {
-      const res = await axios.post<HeartbeatStatus>(
-        `${url}/heartbeat`,
-        {},
-        authorizedConfig(3500)
-      );
-      return res.data;
-    });
+    const res = await axios.post<HeartbeatStatus>(
+      `${BASE_URL}/heartbeat`, {}, authorizedConfig(3500)
+    );
+    return res.data;
   },
 
   // 2. Catálogo de Productos
   async getProducts(): Promise<BackendProduct[]> {
-    return requestWithFallback(async (url) => {
-      const res = await axios.get<{ success: boolean; data: BackendProduct[] }>(`${url}/products`, { timeout: 4000 });
+      const res = await axios.get<{ success: boolean; data: BackendProduct[] }>(`${BASE_URL}/products`, { timeout: 4000 });
       return res.data.data || [];
-    });
   },
 
   async getProductByBarcode(barcode: string): Promise<BackendProduct | null> {
-    return requestWithFallback(async (url) => {
       const res = await axios.get<{ success: boolean; data: BackendProduct }>(
-        `${url}/products/barcode/${encodeURIComponent(barcode.trim())}`,
+        `${BASE_URL}/products/barcode/${encodeURIComponent(barcode.trim())}`,
         { timeout: 4000 }
       );
       return res.data.data || null;
-    });
   },
 
   async getCategories(): Promise<BackendCategory[]> {
-    return requestWithFallback(async (url) => {
-      const res = await axios.get<{ success: boolean; data: BackendCategory[] }>(`${url}/categories`, { timeout: 4000 });
+      const res = await axios.get<{ success: boolean; data: BackendCategory[] }>(`${BASE_URL}/categories`, { timeout: 4000 });
       return res.data.data || [];
-    });
   },
 
   // 3. Gestión de Lotes (Bodega e Inventario)
   async getLots(): Promise<BackendLot[]> {
-    return requestWithFallback(async (url) => {
-      const res = await axios.get<{ success: boolean; data: BackendLot[] }>(`${url}/lots`, authorizedConfig(5000));
+      const res = await axios.get<{ success: boolean; data: BackendLot[] }>(`${BASE_URL}/lots`, authorizedConfig(5000));
       return res.data.data || [];
-    });
   },
 
   async createLot(payload: CreateLotPayload): Promise<BackendLot> {
@@ -157,10 +159,37 @@ export const api = {
 
   // 4. Alertas de Caducidad FEFO
   async getAlerts(): Promise<ExpiryAlertItem[]> {
-    return requestWithFallback(async (url) => {
-      const res = await axios.get<{ success: boolean; data: ExpiryAlertItem[] }>(`${url}/alerts`, authorizedConfig(5000));
+      const res = await axios.get<{ success: boolean; data: ExpiryAlertItem[] }>(`${BASE_URL}/alerts`, authorizedConfig(5000));
       return res.data.data || [];
+  },
+
+  subscribeAlerts(onAlert: (event: unknown) => void, onConnectionChange: (connected: boolean) => void) {
+    if (!authToken) throw new Error('Se requiere una sesión activa para abrir el canal SSE.');
+    const source = new EventSource(`${BASE_URL}/alerts/stream`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      pollingInterval: 5000,
     });
+    source.addEventListener('open', () => onConnectionChange(true));
+    source.addEventListener('message', (event) => {
+      if (!event.data) return;
+      try { onAlert(JSON.parse(event.data)); } catch { /* heartbeat o mensaje inválido */ }
+    });
+    source.addEventListener('error', () => onConnectionChange(false));
+    return () => source.close();
+  },
+
+  async getInventoryMovements(limit = 200): Promise<InventoryMovement[]> {
+    const res = await axios.get<{ success: boolean; data: InventoryMovement[] }>(
+      `${BASE_URL}/inventory/movements`, { ...authorizedConfig(7000), params: { limit } }
+    );
+    return res.data.data || [];
+  },
+
+  async getInventoryWastes(limit = 200): Promise<InventoryWaste[]> {
+    const res = await axios.get<{ success: boolean; data: InventoryWaste[] }>(
+      `${BASE_URL}/inventory/wastes`, { ...authorizedConfig(7000), params: { limit } }
+    );
+    return res.data.data || [];
   },
 
   // 5. Asistente IA Gemini (Promoción para lote cercano a vencer)
@@ -173,15 +202,34 @@ export const api = {
     return res.data.data;
   },
 
+  async getPendingPromotions(): Promise<BackendPromotion[]> {
+    const res = await axios.get<{ success: boolean; data: BackendPromotion[] }>(
+      `${BASE_URL}/promotions/pending`, authorizedConfig(7000)
+    );
+    return res.data.data || [];
+  },
+
+  async approvePromotion(id: string): Promise<BackendPromotion> {
+    const res = await axios.post<{ success: boolean; data: BackendPromotion }>(
+      `${BASE_URL}/promotions/${id}/approve`, {}, authorizedConfig(7000)
+    );
+    return res.data.data;
+  },
+
+  async rejectPromotion(id: string, motivoRechazo: string): Promise<BackendPromotion> {
+    const res = await axios.post<{ success: boolean; data: BackendPromotion }>(
+      `${BASE_URL}/promotions/${id}/reject`, { motivoRechazo }, authorizedConfig(7000)
+    );
+    return res.data.data;
+  },
+
   // 6. Validación de Caja SIACI
   async getReservationByCode(code: string): Promise<BackendReservation> {
-    return requestWithFallback(async (url) => {
       const res = await axios.get<{ success: boolean; data: BackendReservation }>(
-        `${url}/reservations/code/${encodeURIComponent(code.trim().toUpperCase())}`,
+        `${BASE_URL}/reservations/code/${encodeURIComponent(code.trim().toUpperCase())}`,
         authorizedConfig(5000)
       );
       return res.data.data;
-    });
   },
 
   async confirmReservation(reservationId: string): Promise<BackendReservation> {

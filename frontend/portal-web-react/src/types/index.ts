@@ -49,7 +49,6 @@ export interface ReservationPass {
   remainingSeconds: number;
   customerName: string;
   storeLocation: string;
-  qrBlocks: number[][]; // 2D matrix for custom QR block rendering
   items: {
     productName: string;
     quantity: number;

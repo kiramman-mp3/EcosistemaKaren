@@ -7,18 +7,21 @@ export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'X-Session-Mode': 'cookie',
   },
   timeout: 8000,
+  withCredentials: true,
 });
 
-// Attach authorization token if present in localStorage
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('karen_token');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+apiClient.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('karen:session-expired'));
+    }
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 export interface HeartbeatResponse {
   success: boolean;
@@ -109,7 +112,7 @@ export interface AuthResponse {
     email: string;
     rol: string;
   };
-  token: string;
+  token?: string;
 }
 
 // ============================================================================
@@ -216,10 +219,6 @@ export const api = {
   async login(credentials: { email: string; password: string }): Promise<AuthResponse> {
     try {
       const res = await apiClient.post<{ success: boolean; data: AuthResponse }>('/auth/login', credentials);
-      if (res.data.data.token) {
-        localStorage.setItem('karen_token', res.data.data.token);
-        localStorage.setItem('karen_user', JSON.stringify(res.data.data.user));
-      }
       return res.data.data;
     } catch (err: any) {
       if (err.response?.data?.message) {
@@ -232,10 +231,6 @@ export const api = {
   async register(data: { nombre: string; email: string; password: string; rol?: string }): Promise<AuthResponse> {
     try {
       const res = await apiClient.post<{ success: boolean; data: AuthResponse }>('/auth/register', data);
-      if (res.data.data.token) {
-        localStorage.setItem('karen_token', res.data.data.token);
-        localStorage.setItem('karen_user', JSON.stringify(res.data.data.user));
-      }
       return res.data.data;
     } catch (err: any) {
       if (err.response?.data?.message) {
@@ -245,16 +240,28 @@ export const api = {
     }
   },
 
-  logout() {
-    localStorage.removeItem('karen_token');
-    localStorage.removeItem('karen_user');
+  async logout() {
+    await apiClient.post('/auth/logout');
   },
 
-  getCurrentUser(): { id: string; nombre: string; email: string; rol: string } | null {
-    const raw = localStorage.getItem('karen_user');
-    if (!raw) return null;
+  async getUserReservations(userId: string): Promise<BackendReservation[]> {
+    const response = await apiClient.get<{ success: boolean; data: BackendReservation[] }>(
+      `/reservations/user/${encodeURIComponent(userId)}`
+    );
+    return response.data.data || [];
+  },
+
+  async cancelReservation(id: string): Promise<BackendReservation> {
+    const response = await apiClient.post<{ success: boolean; data: BackendReservation }>(
+      `/reservations/${encodeURIComponent(id)}/cancel`
+    );
+    return response.data.data;
+  },
+
+  async getCurrentUser(): Promise<{ id: string; nombre: string; email: string; rol: string } | null> {
     try {
-      return JSON.parse(raw);
+      const response = await apiClient.get<{ success: boolean; data: { user: { id: string; nombre: string; email: string; rol: string } } }>('/auth/me');
+      return response.data.data.user;
     } catch {
       return null;
     }

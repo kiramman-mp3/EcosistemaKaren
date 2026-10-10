@@ -5,6 +5,7 @@ import {
   StyleSheet,
   View,
   Text,
+  ActivityIndicator,
 } from 'react-native';
 import { HeaderBodega } from './src/components/HeaderBodega';
 import { TabNavBodega } from './src/components/TabNavBodega';
@@ -13,6 +14,8 @@ import { AlertasCaducidadScreen } from './src/screens/AlertasCaducidadScreen';
 import { InventarioLotesScreen } from './src/screens/InventarioLotesScreen';
 import { CajaSiaciScreen } from './src/screens/CajaSiaciScreen';
 import { BodegaLoginScreen } from './src/screens/BodegaLoginScreen';
+import { ReportesScreen } from './src/screens/ReportesScreen';
+import { AprobacionesScreen } from './src/screens/AprobacionesScreen';
 import { AiPromoModal } from './src/components/AiPromoModal';
 import { MermaModal } from './src/components/MermaModal';
 import {
@@ -25,97 +28,16 @@ import {
 import { api } from './src/api/client';
 import { classifyExpiryDays } from './src/config/businessRules';
 
-// Initial sample data for fallback
-const INITIAL_PRODUCTS: BackendProduct[] = [
-  {
-    id: 'prod-01',
-    categoriaId: 'cat-01',
-    codigoBarras: '7861000100011',
-    nombre: 'Leche Entera Vita 1 Litro',
-    descripcion: 'Lácteos',
-    precioVenta: 0.95,
-    minStockAlerta: 20,
-  },
-  {
-    id: 'prod-02',
-    categoriaId: 'cat-01',
-    codigoBarras: '7861000200022',
-    nombre: 'Yogurt Griego Toni Natural 500g',
-    descripcion: 'Lácteos',
-    precioVenta: 2.50,
-    minStockAlerta: 15,
-  },
-  {
-    id: 'prod-03',
-    categoriaId: 'cat-02',
-    codigoBarras: '7862000300033',
-    nombre: 'Pechuga de Pollo Fresca 1kg',
-    descripcion: 'Carnes',
-    precioVenta: 4.80,
-    minStockAlerta: 10,
-  },
-  {
-    id: 'prod-04',
-    categoriaId: 'cat-03',
-    codigoBarras: '7863000400044',
-    nombre: 'Pan de Molde Integral 500g',
-    descripcion: 'Panadería',
-    precioVenta: 1.75,
-    minStockAlerta: 15,
-  },
-];
-
-const INITIAL_LOTS: BackendLot[] = [
-  {
-    id: 'lot-01',
-    productoId: 'prod-02',
-    productoNombre: 'Yogurt Griego Toni Natural 500g',
-    codigoBarras: '7861000200022',
-    numeroLote: 'LOT-YG-2026-01',
-    fechaCaducidad: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    cantidadIngresada: 50,
-    cantidadDisponible: 45,
-    cantidadReservada: 5,
-    ubicacion: 'PERCHA',
-    estado: 'ACTIVO',
-  },
-  {
-    id: 'lot-02',
-    productoId: 'prod-01',
-    productoNombre: 'Leche Entera Vita 1 Litro',
-    codigoBarras: '7861000100011',
-    numeroLote: 'LOT-VT-2026-02',
-    fechaCaducidad: new Date(Date.now() + 11 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    cantidadIngresada: 100,
-    cantidadDisponible: 90,
-    cantidadReservada: 0,
-    ubicacion: 'BODEGA',
-    estado: 'ACTIVO',
-  },
-  {
-    id: 'lot-03',
-    productoId: 'prod-03',
-    productoNombre: 'Pechuga de Pollo Fresca 1kg',
-    codigoBarras: '7862000300033',
-    numeroLote: 'LOT-PL-2026-05',
-    fechaCaducidad: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    cantidadIngresada: 30,
-    cantidadDisponible: 12,
-    cantidadReservada: 4,
-    ubicacion: 'PERCHA',
-    estado: 'ACTIVO',
-  },
-];
-
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol: string } | null>(null);
   const [activeTab, setActiveTab] = useState<BodegaTab>('ingreso');
   const [isOnline, setIsOnline] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [restoringSession, setRestoringSession] = useState(true);
 
   // Core data states
-  const [products, setProducts] = useState<BackendProduct[]>(INITIAL_PRODUCTS);
-  const [lots, setLots] = useState<BackendLot[]>(INITIAL_LOTS);
+  const [products, setProducts] = useState<BackendProduct[]>([]);
+  const [lots, setLots] = useState<BackendLot[]>([]);
   const [alerts, setAlerts] = useState<ExpiryAlertItem[]>([]);
 
   // Modals state
@@ -128,6 +50,19 @@ export default function App() {
   } | null>(null);
 
   // Check server connection
+  useEffect(() => {
+    const unsubscribe = api.onSessionExpired(() => setCurrentUser(null));
+    void api.restoreSession()
+      .then(user => {
+        if (user) {
+          setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
+          setCurrentUser(user);
+        }
+      })
+      .finally(() => setRestoringSession(false));
+    return unsubscribe;
+  }, []);
+
   const checkHeartbeat = useCallback(async () => {
     try {
       const hb = await api.getHeartbeat();
@@ -190,25 +125,16 @@ export default function App() {
       await checkHeartbeat();
 
       const [prodsData, lotsData, alertsData] = await Promise.all([
-        api.getProducts().catch(() => [] as BackendProduct[]),
-        api.getLots().catch(() => [] as BackendLot[]),
-        api.getAlerts().catch(() => [] as ExpiryAlertItem[]),
+        api.getProducts(), api.getLots(), api.getAlerts(),
       ]);
-
-      const activeProds = prodsData && prodsData.length > 0 ? prodsData : INITIAL_PRODUCTS;
-      setProducts(activeProds);
-
-      const activeLots = lotsData && lotsData.length > 0 ? lotsData : INITIAL_LOTS;
-      setLots(activeLots);
-
-      if (alertsData && alertsData.length > 0) {
-        setAlerts(alertsData);
-      } else {
-        setAlerts(computeAlertsFromLots(activeLots, activeProds));
-      }
+      setProducts(prodsData);
+      setLots(lotsData);
+      setAlerts(alertsData.length ? alertsData : computeAlertsFromLots(lotsData, prodsData));
     } catch {
-      // Fallback local
-      setAlerts(computeAlertsFromLots(lots, products));
+      setIsOnline(false);
+      setProducts([]);
+      setLots([]);
+      setAlerts([]);
     } finally {
       setRefreshing(false);
     }
@@ -222,6 +148,14 @@ export default function App() {
     const interval = setInterval(heartbeatAction, 30000);
     return () => clearInterval(interval);
   }, [loadData, checkHeartbeat, sendHeartbeat, currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    return api.subscribeAlerts(
+      () => { void loadData(); },
+      connected => { if (connected) setIsOnline(true); }
+    );
+  }, [currentUser, loadData]);
 
   const handleOpenMerma = (lotId: string, lotNumber: string, maxUnits: number) => {
     setMermaTarget({ lotId, lotNumber, maxUnits });
@@ -237,8 +171,18 @@ export default function App() {
     (a) => a.nivel === 'ROJO' || a.nivel === 'VENCIDO'
   ).length;
 
+  if (restoringSession) {
+    return <SafeAreaView style={styles.loadingSession}>
+      <ActivityIndicator size="large" color="#FFFFFF" />
+      <Text style={styles.loadingSessionText}>Restaurando sesión segura…</Text>
+    </SafeAreaView>;
+  }
+
   if (!currentUser) {
-    return <BodegaLoginScreen onLogin={({ user }) => setCurrentUser(user)} />;
+    return <BodegaLoginScreen onLogin={({ user }) => {
+      setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
+      setCurrentUser(user);
+    }} />;
   }
 
   return (
@@ -252,19 +196,22 @@ export default function App() {
         refreshing={refreshing}
         operatorName={currentUser.nombre}
         onLogout={() => {
-          api.logout();
+          void api.logout();
           setCurrentUser(null);
         }}
       />
 
       {/* Main Screen Body */}
       <View style={styles.body}>
-        {activeTab === 'ingreso' && (
+        {activeTab === 'ingreso' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
           <IngresoLoteScreen
             products={products}
             onLotCreated={loadData}
           />
         )}
+
+        {activeTab === 'reportes' && <ReportesScreen />}
+        {activeTab === 'aprobaciones' && currentUser.rol === 'ADMIN' && <AprobacionesScreen />}
 
         {activeTab === 'alertas' && (
           <AlertasCaducidadScreen
@@ -282,7 +229,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'caja' && (
+        {activeTab === 'caja' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
           <CajaSiaciScreen
             onReservationUpdated={loadData}
           />
@@ -294,6 +241,7 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         criticalAlertsCount={criticalAlertsCount}
+        role={currentUser.rol}
       />
 
       {/* Modals */}
@@ -321,6 +269,8 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  loadingSession: { flex: 1, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingSessionText: { color: '#CBD5E1', fontWeight: '700' },
   safeArea: {
     flex: 1,
     backgroundColor: '#1E293B',

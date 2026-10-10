@@ -72,8 +72,8 @@ export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
     }
   };
 
-  const handleLogoutAction = () => {
-    api.logout();
+  const handleLogoutAction = async () => {
+    await api.logout();
     if (onLogout) onLogout();
     onClose();
   };

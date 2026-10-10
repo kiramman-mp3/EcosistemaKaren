@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { BackendReservation } from '../types';
 import { api } from '../api/client';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 
 interface CajaSiaciScreenProps {
   onReservationUpdated?: () => void;
@@ -25,6 +26,7 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
   const [reservation, setReservation] = useState<BackendReservation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const handleSearch = async () => {
     if (!code.trim()) {
@@ -150,17 +152,9 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
             )}
           </TouchableOpacity>
         </View>
-
-        {/* Quick demo PIN buttons */}
-        <View style={styles.quickPinsRow}>
-          <Text style={styles.quickPinsLabel}>Pines sugeridos:</Text>
-          <TouchableOpacity
-            style={styles.quickPinBtn}
-            onPress={() => setCode('KR-X7Y9Z2')}
-          >
-            <Text style={styles.quickPinText}>KR-X7Y9Z2</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.scannerBtn} onPress={() => setScannerOpen(true)}>
+          <Text style={styles.scannerBtnText}>📷 Escanear QR o código del retiro</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Messages */}
@@ -261,6 +255,12 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
           )}
         </View>
       )}
+      <BarcodeScannerModal
+        visible={scannerOpen}
+        title="Escanear código de retiro"
+        onClose={() => setScannerOpen(false)}
+        onScanned={(value) => setCode(value.trim().toUpperCase())}
+      />
     </ScrollView>
   );
 };
@@ -367,6 +367,18 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontWeight: '700',
     color: '#475569',
+  },
+  scannerBtn: {
+    marginTop: 10,
+    backgroundColor: '#E0F2FE',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  scannerBtnText: {
+    color: '#0369A1',
+    fontSize: 12,
+    fontWeight: '800',
   },
   errorBox: {
     backgroundColor: '#FEE2E2',
