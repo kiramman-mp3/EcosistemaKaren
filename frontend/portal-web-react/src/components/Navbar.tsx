@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Menu, X, User } from 'lucide-react';
+import { ShoppingCart, Menu, X, User, Search, Wifi, WifiOff, LogOut } from 'lucide-react';
 import { NavTab } from '../types';
 
 interface NavbarProps {
@@ -8,6 +8,11 @@ interface NavbarProps {
   cartCount: number;
   onOpenCart: () => void;
   onOpenLogin: () => void;
+  isOnline?: boolean;
+  user?: { id: string; nombre: string; email: string; rol?: string } | null;
+  onLogout?: () => void;
+  onOpenSearchReservation?: () => void;
+  onPingHeartbeat?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -16,6 +21,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   cartCount,
   onOpenCart,
   onOpenLogin,
+  isOnline = true,
+  user = null,
+  onLogout,
+  onOpenSearchReservation,
+  onPingHeartbeat
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -94,22 +104,74 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Botones de Acción Derecha */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Botón Iniciar Sesión (outline azul) */}
+            {/* Live Backend Connection Indicator */}
             <button
-              onClick={onOpenLogin}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-navy border-2 border-navy hover:bg-navy/5 active:scale-95 transition-all shadow-sm"
+              onClick={onPingHeartbeat}
+              title={isOnline ? 'Servidor de tienda en línea' : 'Servidor desconectado. Haz clic para reconectar.'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                isOnline
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-red-50 text-red-700 border border-red-200 animate-pulse'
+              }`}
             >
-              <User className="w-4 h-4" />
-              <span>Iniciar sesión</span>
+              {isOnline ? (
+                <>
+                  <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Tienda Online</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3.5 h-3.5 text-red-600" />
+                  <span>Tienda Offline (Reconectar)</span>
+                </>
+              )}
             </button>
 
-            {/* Botón Explorar Tienda (rojo filled) */}
-            <button
-              onClick={() => handleNavClick('productos')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-karenRed hover:bg-karenRed-hover active:scale-95 transition-all shadow-glow-red"
-            >
-              <span>Explorar tienda</span>
-            </button>
+            {/* Historial de reservas */}
+            {onOpenSearchReservation && (
+              <button
+                onClick={onOpenSearchReservation}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all border border-slate-200/80"
+                title="Consultar y administrar mis reservas"
+              >
+                <Search className="w-3.5 h-3.5 text-navy" />
+                <span>Mis reservas</span>
+              </button>
+            )}
+
+            {/* Iniciar Sesión / Usuario Logueado */}
+            {user ? (
+              <div className="flex items-center gap-2 bg-navy/5 px-3 py-1.5 rounded-xl border border-navy/10">
+                <div className="w-7 h-7 rounded-full bg-navy text-white text-xs font-bold flex items-center justify-center">
+                  {user.nombre.charAt(0).toUpperCase()}
+                </div>
+                <div className="text-left leading-tight">
+                  <span className="text-xs font-bold text-navy block max-w-[100px] truncate">
+                    {user.nombre}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block uppercase font-mono">
+                    {user.rol || 'Cliente'}
+                  </span>
+                </div>
+                {onLogout && (
+                  <button
+                    onClick={onLogout}
+                    className="p-1 text-slate-400 hover:text-karenRed transition-colors ml-1"
+                    title="Cerrar sesión"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={onOpenLogin}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-navy border-2 border-navy hover:bg-navy/5 active:scale-95 transition-all shadow-sm"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Ingresar</span>
+              </button>
+            )}
 
             {/* Botón Carrito */}
             <button
@@ -156,47 +218,87 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-6 space-y-3 shadow-lg">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <button
+              onClick={onPingHeartbeat}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${
+                isOnline ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></span>
+              <span>{isOnline ? 'Tienda Online' : 'Tienda Desconectada'}</span>
+            </button>
+
+            {onOpenSearchReservation && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenSearchReservation();
+                }}
+                className="text-xs font-bold text-navy flex items-center gap-1 bg-slate-100 px-3 py-1 rounded-lg"
+              >
+                <Search className="w-3 h-3" />
+                <span>Mis reservas</span>
+              </button>
+            )}
+          </div>
+
           <button
             onClick={() => handleNavClick('inicio')}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-base font-semibold ${
-              activeTab === 'inicio' ? 'bg-slate-100 text-navy font-bold' : 'text-slate-600'
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold ${
+              activeTab === 'inicio' ? 'bg-slate-100 text-navy' : 'text-slate-600'
             }`}
           >
             Inicio
           </button>
           <button
             onClick={() => handleNavClick('productos')}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-base font-semibold ${
-              activeTab === 'productos' ? 'bg-slate-100 text-navy font-bold' : 'text-slate-600'
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold ${
+              activeTab === 'productos' ? 'bg-slate-100 text-navy' : 'text-slate-600'
             }`}
           >
             Productos
           </button>
           <button
             onClick={() => handleNavClick('ofertas')}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-base font-semibold flex items-center justify-between ${
-              activeTab === 'ofertas' ? 'bg-red-50 text-karenRed font-bold' : 'text-slate-600'
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold ${
+              activeTab === 'ofertas' ? 'bg-red-50 text-karenRed' : 'text-slate-600'
             }`}
           >
-            <span>Ofertas Relámpago</span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-karenRed text-white">
-              IA 🔥
-            </span>
+            Ofertas IA 🔥
           </button>
 
-          <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
-            <button
-              onClick={() => { onOpenLogin(); setMobileMenuOpen(false); }}
-              className="w-full py-2.5 rounded-xl text-sm font-bold text-navy border-2 border-navy text-center"
-            >
-              Iniciar sesión
-            </button>
-            <button
-              onClick={() => handleNavClick('productos')}
-              className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-karenRed hover:bg-karenRed-hover text-center"
-            >
-              Explorar tienda
-            </button>
+          <div className="pt-2 border-t border-slate-100">
+            {user ? (
+              <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl">
+                <div>
+                  <span className="text-xs font-bold text-navy block">{user.nombre}</span>
+                  <span className="text-[10px] text-slate-400">{user.email}</span>
+                </div>
+                {onLogout && (
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="text-xs text-karenRed font-bold flex items-center gap-1"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Salir</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenLogin();
+                }}
+                className="w-full py-2.5 rounded-xl text-sm font-bold text-navy border-2 border-navy text-center"
+              >
+                Iniciar sesión
+              </button>
+            )}
           </div>
         </div>
       )}

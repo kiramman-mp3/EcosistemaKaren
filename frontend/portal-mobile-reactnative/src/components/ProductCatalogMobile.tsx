@@ -8,8 +8,7 @@ import {
   Image,
   StyleSheet,
 } from 'react-native';
-import { Product, ProductCategory } from '../types';
-import { PRODUCTS_CATALOG } from '../data/mockData';
+import { DataLoadState, Product, ProductCategory } from '../types';
 
 interface ProductCatalogMobileProps {
   selectedCategory: ProductCategory;
@@ -17,17 +16,12 @@ interface ProductCatalogMobileProps {
   onAddToCart: (prod: Product) => void;
   onOpenCart: () => void;
   cartCount: number;
+  products: Product[];
+  categories: ProductCategory[];
+  state: DataLoadState;
+  error?: string;
+  onRetry: () => void;
 }
-
-const CATEGORY_PILLS: ProductCategory[] = [
-  'Todos',
-  'Carnes',
-  'Lácteos',
-  'Frutas',
-  'Panadería',
-  'Verduras',
-  'Conservas',
-];
 
 export const ProductCatalogMobile: React.FC<ProductCatalogMobileProps> = ({
   selectedCategory,
@@ -35,19 +29,27 @@ export const ProductCatalogMobile: React.FC<ProductCatalogMobileProps> = ({
   onAddToCart,
   onOpenCart,
   cartCount,
+  products,
+  categories,
+  state,
+  error,
+  onRetry,
 }) => {
   const [search, setSearch] = useState('');
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
+  const activeCategories = categories.length > 0 ? categories : ['Todos'];
+
   const filtered = useMemo(() => {
-    return PRODUCTS_CATALOG.filter((p) => {
+    return products.filter((p) => {
       const matchCat = selectedCategory === 'Todos' || p.category === selectedCategory;
       const matchSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.category.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [selectedCategory, search]);
+  }, [products, selectedCategory, search]);
+
 
   const handleAdd = (prod: Product) => {
     onAddToCart(prod);
@@ -95,7 +97,7 @@ export const ProductCatalogMobile: React.FC<ProductCatalogMobileProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.pillsScroll}
       >
-        {CATEGORY_PILLS.map((cat) => {
+        {activeCategories.map((cat) => {
           const isActive = selectedCategory === cat;
           return (
             <TouchableOpacity
@@ -111,9 +113,17 @@ export const ProductCatalogMobile: React.FC<ProductCatalogMobileProps> = ({
         })}
       </ScrollView>
 
-      {/* Grid de Productos */}
+      {state === 'loading' && <Text style={styles.stateText}>Cargando catálogo...</Text>}
+      {(state === 'offline' || state === 'error') && (
+        <View style={styles.stateBox}>
+          <Text style={styles.stateTitle}>{state === 'offline' ? 'Sin conexión' : 'No se pudo cargar el catálogo'}</Text>
+          <Text style={styles.stateText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={onRetry}><Text style={styles.retryText}>Reintentar</Text></TouchableOpacity>
+        </View>
+      )}
+      {state === 'empty' && <Text style={styles.stateText}>No hay productos publicados en este momento.</Text>}
       <View style={styles.grid}>
-        {filtered.map((item) => {
+        {state === 'ready' && filtered.map((item) => {
           const isAdded = justAddedId === item.id;
           return (
             <View key={item.id} style={styles.productCard}>
@@ -164,6 +174,11 @@ export const ProductCatalogMobile: React.FC<ProductCatalogMobileProps> = ({
 };
 
 const styles = StyleSheet.create({
+  stateBox: { margin: 16, padding: 18, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center' },
+  stateTitle: { fontSize: 16, fontWeight: '800', color: '#1D3557', marginBottom: 6 },
+  stateText: { color: '#64748B', textAlign: 'center', paddingVertical: 16 },
+  retryButton: { backgroundColor: '#1D3557', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 10 },
+  retryText: { color: '#FFFFFF', fontWeight: '800' },
   container: {
     paddingVertical: 14,
     backgroundColor: '#F8FAFC',

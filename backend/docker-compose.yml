@@ -1,34 +1,38 @@
 services:
   postgres:
-    image: postgres:14-alpine
-    container_name: karen_postgres
-    restart: always
+    image: postgres:14-alpine@sha256:727876d274666da0b92a445390ba093c84b8e9f8343e1c53cd4e9a7ab2d85310
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ecosistema_karen
-      POSTGRES_USER: karen_user
-      POSTGRES_PASSWORD: karen_pass
+      POSTGRES_DB: ${DB_NAME:-ecosistema_karen}
+      POSTGRES_USER: ${DB_USER:-karen_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-karen_pass}
     ports:
-      - "5433:5432"
+      - "${DB_EXPOSED_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d
     networks:
       - karen_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: karen_pgadmin
-    restart: always
+    image: dpage/pgadmin4@sha256:2f4ce946ddf8360680d7eff4eaba1d91859eb6b4003e6623bad5c63a322c2f4d
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@karen.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@karen.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change_me_for_local_use}
       PGADMIN_LISTEN_PORT: 80
     ports:
-      - "5051:80"
+      - "${PGADMIN_PORT:-5051}:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - karen_network
 

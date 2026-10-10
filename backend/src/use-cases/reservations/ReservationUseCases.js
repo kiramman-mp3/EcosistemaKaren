@@ -1,80 +1,55 @@
-const { NotFoundException, ValidationException, OverbookingException } = require('../../domain/exceptions/DomainExceptions');
+const { NotFoundException, ValidationException, ForbiddenException } = require('../../domain/exceptions/DomainExceptions');
 const Reservation = require('../../domain/entities/Reservation');
+const { RESERVATION_TTL_MINUTES } = require('../../domain/policies/BusinessRules');
 
 class ReservarStock {
-  constructor(reservationRepository, lotRepository, productRepository) {
+  constructor(reservationRepository, heartbeatMonitor) {
     this.reservationRepository = reservationRepository;
-    this.lotRepository = lotRepository;
-    this.productRepository = productRepository;
+    this.heartbeatMonitor = heartbeatMonitor;
   }
 
   async execute({ usuarioId, items }) {
     if (!usuarioId) {
-      throw new ValidationException('El usuarioId es requerido para realizar la reserva.');
+      throw new ValidationException('El usuario autenticado es requerido para realizar la reserva.');
     }
-
     if (!Array.isArray(items) || items.length === 0) {
-      throw new ValidationException('La reserva debe contener al menos un producto (items).');
+      throw new ValidationException('La reserva debe contener al menos un producto.');
     }
 
-    // 1. Validar disponibilidad y recopilar lotes asignados por FEFO
-    const asignacionesLotes = []; // [{ lot, cantidad, precioUnitario }]
-
+    // Agrupar productos repetidos y ordenar los bloqueos evita asignaciones dobles
+    // dentro de la misma solicitud y reduce el riesgo de deadlocks concurrentes.
+    const quantitiesByProduct = new Map();
     for (const item of items) {
-      const { productoId, cantidad } = item;
-      const qtyRequested = parseInt(cantidad, 10);
-      if (isNaN(qtyRequested) || qtyRequested <= 0) {
-        throw new ValidationException(`Cantidad inválida (${cantidad}) para el producto '${productoId}'.`);
+      if (!item || !item.productoId) {
+        throw new ValidationException('Cada item debe incluir productoId.');
       }
-
-      const product = await this.productRepository.findById(productoId);
-      if (!product) {
-        throw new NotFoundException(`El producto con ID '${productoId}' no existe.`);
-      }
-
-      // Obtener lotes activos ordenados por FEFO (First Expired, First Out)
-      const lotesDisponibles = await this.lotRepository.findActiveByProductIdOrderedByExpiration(productoId);
-      const totalDisponible = lotesDisponibles.reduce((sum, l) => sum + l.cantidadDisponible, 0);
-
-      if (totalDisponible < qtyRequested) {
-        throw new OverbookingException(
-          `Stock insuficiente para '${product.nombre}'. Solicitado: ${qtyRequested}, Disponible en tienda: ${totalDisponible}`
+      const quantity = Number(item.cantidad);
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        throw new ValidationException(
+          `Cantidad inválida (${item.cantidad}) para el producto '${item.productoId}'.`
         );
       }
-
-      let restantePorAsignar = qtyRequested;
-      for (const lot of lotesDisponibles) {
-        if (restantePorAsignar <= 0) break;
-        if (lot.cantidadDisponible <= 0) continue;
-
-        const cantidadTomada = Math.min(lot.cantidadDisponible, restantePorAsignar);
-        lot.reservar(cantidadTomada);
-        asignacionesLotes.push({
-          lote: lot,
-          cantidad: cantidadTomada,
-          precioUnitario: product.precioVenta
-        });
-        restantePorAsignar -= cantidadTomada;
-      }
+      quantitiesByProduct.set(
+        item.productoId,
+        (quantitiesByProduct.get(item.productoId) || 0) + quantity
+      );
     }
 
-    // 2. Crear cabecera de reserva
-    const nuevaReserva = new Reservation({
+    const normalizedItems = [...quantitiesByProduct.entries()]
+      .map(([productoId, cantidad]) => ({ productoId, cantidad }))
+      .sort((a, b) => a.productoId.localeCompare(b.productoId));
+
+    // La reserva no puede comenzar si la tienda no ha reportado conectividad
+    // recientemente. Se comprueba justo antes de abrir la transacción de stock.
+    this.heartbeatMonitor.assertReservationsAvailable();
+
+    const reservation = new Reservation({
       usuarioId,
       estado: 'PENDIENTE',
-      fechaExpiracion: Reservation.calcularFechaExpiracionDefault(10)
+      fechaExpiracion: Reservation.calcularFechaExpiracionDefault(RESERVATION_TTL_MINUTES)
     });
 
-    // 3. Crear detalles de reserva
-    nuevaReserva.detalles = asignacionesLotes.map(asig => ({
-      loteId: asig.lote.id,
-      cantidad: asig.cantidad,
-      precioUnitario: asig.precioUnitario
-    }));
-
-    // 4. Guardar en repositorio (persiste reserva y actualiza estado de lotes)
-    const savedReservation = await this.reservationRepository.saveWithDetails(nuevaReserva, asignacionesLotes.map(a => a.lote));
-    return savedReservation;
+    return this.reservationRepository.createWithLockedStock(reservation, normalizedItems);
   }
 }
 
@@ -93,58 +68,51 @@ class GetReservationByCode {
 }
 
 class ConfirmReservation {
-  constructor(reservationRepository, lotRepository) {
+  constructor(reservationRepository) {
     this.reservationRepository = reservationRepository;
-    this.lotRepository = lotRepository;
   }
 
-  async execute(reservationId) {
-    const reservation = await this.reservationRepository.findById(reservationId);
-    if (!reservation) {
-      throw new NotFoundException(`Reserva con ID '${reservationId}' no encontrada.`);
+  async execute(reservationId, actor) {
+    if (!actor || !['BODEGUERO', 'ADMIN'].includes(actor.rol)) {
+      throw new ForbiddenException('Solo BODEGUERO o ADMIN puede confirmar ventas reservadas.');
     }
-
-    reservation.confirmar();
-
-    // Confirmar venta en los lotes involucrados
-    for (const detalle of reservation.detalles) {
-      const lot = await this.lotRepository.findById(detalle.loteId);
-      if (lot) {
-        lot.confirmarVentaReservada(detalle.cantidad);
-        await this.lotRepository.update(lot);
-      }
-    }
-
-    return await this.reservationRepository.update(reservation);
+    return this.reservationRepository.confirmWithLockedStock(reservationId, actor);
   }
 }
 
 class CleanExpiredReservations {
-  constructor(reservationRepository, lotRepository) {
+  constructor(reservationRepository) {
     this.reservationRepository = reservationRepository;
-    this.lotRepository = lotRepository;
   }
 
   async execute() {
-    const expiredReservations = await this.reservationRepository.findExpiredPending();
-    let countLiberadas = 0;
+    return this.reservationRepository.expirePendingWithLockedStock();
+  }
+}
 
-    for (const reservation of expiredReservations) {
-      reservation.marcarExpirada();
-      await this.reservationRepository.update(reservation);
+class CancelReservation {
+  constructor(reservationRepository) {
+    this.reservationRepository = reservationRepository;
+  }
 
-      // Devuelve stock reservado a stock libre
-      for (const detalle of reservation.detalles) {
-        const lot = await this.lotRepository.findById(detalle.loteId);
-        if (lot) {
-          lot.liberar(detalle.cantidad);
-          await this.lotRepository.update(lot);
-        }
-      }
-      countLiberadas++;
+  async execute(reservationId, actor) {
+    if (!actor || !actor.id || !actor.rol) {
+      throw new ValidationException('La identidad del usuario es requerida para cancelar.');
     }
+    return this.reservationRepository.cancelWithLockedStock(reservationId, actor);
+  }
+}
 
-    return { countLiberadas };
+class GetReservationsByUser {
+  constructor(reservationRepository) {
+    this.reservationRepository = reservationRepository;
+  }
+
+  async execute(usuarioId, pagination = {}) {
+    if (!usuarioId) {
+      throw new ValidationException('El usuarioId es requerido.');
+    }
+    return this.reservationRepository.findByUserId(usuarioId, pagination);
   }
 }
 
@@ -152,5 +120,7 @@ module.exports = {
   ReservarStock,
   GetReservationByCode,
   ConfirmReservation,
-  CleanExpiredReservations
+  CleanExpiredReservations,
+  CancelReservation,
+  GetReservationsByUser
 };

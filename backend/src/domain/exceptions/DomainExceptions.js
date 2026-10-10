@@ -30,10 +30,24 @@ class UnauthorizedException extends DomainException {
   }
 }
 
+class ForbiddenException extends DomainException {
+  constructor(message = 'No tiene permisos para realizar esta operación') {
+    super(message, 403);
+  }
+}
+
+class ServiceUnavailableException extends DomainException {
+  constructor(message = 'Servicio temporalmente no disponible') {
+    super(message, 503);
+  }
+}
+
 module.exports = {
   DomainException,
   NotFoundException,
   ValidationException,
   OverbookingException,
-  UnauthorizedException
+  UnauthorizedException,
+  ForbiddenException,
+  ServiceUnavailableException
 };

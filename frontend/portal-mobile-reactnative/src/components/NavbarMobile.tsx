@@ -8,6 +8,9 @@ interface NavbarMobileProps {
   cartCount: number;
   onOpenCart: () => void;
   onOpenLogin: () => void;
+  isOnline?: boolean;
+  userName?: string | null;
+  onOpenSearchReservation?: () => void;
 }
 
 export const NavbarMobile: React.FC<NavbarMobileProps> = ({
@@ -16,6 +19,9 @@ export const NavbarMobile: React.FC<NavbarMobileProps> = ({
   cartCount,
   onOpenCart,
   onOpenLogin,
+  isOnline = true,
+  userName = null,
+  onOpenSearchReservation,
 }) => {
   return (
     <View style={styles.container}>
@@ -35,19 +41,38 @@ export const NavbarMobile: React.FC<NavbarMobileProps> = ({
               <Text style={styles.brandTitle}>Supermercado </Text>
               <Text style={styles.brandTitleKaren}>Karen</Text>
             </View>
-            <Text style={styles.brandSubtitle}>Reservas Anti-Overbooking</Text>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusDot, { backgroundColor: isOnline ? '#10B981' : '#EF4444' }]} />
+              <Text style={styles.brandSubtitle}>
+                {isOnline ? 'Tienda En Línea' : 'Sin Conexión Tienda'}
+              </Text>
+            </View>
           </View>
         </TouchableOpacity>
 
         {/* Right Actions */}
         <View style={styles.actionRow}>
-          {/* Iniciar sesión (outline azul) */}
+          {/* Historial de reservas */}
+          {onOpenSearchReservation && (
+            <TouchableOpacity
+              style={styles.searchPassBtn}
+              onPress={onOpenSearchReservation}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.searchPassIcon}>🔍</Text>
+              <Text style={styles.searchPassText}>Reservas</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Iniciar sesión / Perfil */}
           <TouchableOpacity 
-            style={styles.loginOutlineBtn} 
+            style={[styles.loginOutlineBtn, userName ? styles.loginActiveBtn : null]} 
             onPress={onOpenLogin}
             activeOpacity={0.7}
           >
-            <Text style={styles.loginOutlineText}>Acceder</Text>
+            <Text style={[styles.loginOutlineText, userName ? styles.loginActiveText : null]} numberOfLines={1}>
+              {userName ? `👤 ${userName.split(' ')[0]}` : 'Acceder'}
+            </Text>
           </TouchableOpacity>
 
           {/* Botón Carrito */}
@@ -176,23 +201,63 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
   },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 1,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  searchPassBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  searchPassIcon: {
+    fontSize: 11,
+  },
+  searchPassText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1D3557',
   },
   loginOutlineBtn: {
     borderWidth: 1.5,
     borderColor: '#1D3557',
     borderRadius: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 6,
+    maxWidth: 90,
+  },
+  loginActiveBtn: {
+    backgroundColor: '#EBF4FF',
+    borderColor: '#2563EB',
   },
   loginOutlineText: {
     color: '#1D3557',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
+  loginActiveText: {
+    color: '#2563EB',
+    fontWeight: '800',
+  },
+
   cartBtn: {
     backgroundColor: '#F1F5F9',
     borderRadius: 10,

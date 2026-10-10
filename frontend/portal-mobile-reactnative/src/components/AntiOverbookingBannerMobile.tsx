@@ -1,36 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { SAMPLE_QR_MATRIX } from '../data/mockData';
 
 interface AntiOverbookingBannerMobileProps {
   onBackToSelector?: () => void;
+  isOnline?: boolean;
 }
 
 export const AntiOverbookingBannerMobile: React.FC<AntiOverbookingBannerMobileProps> = ({
   onBackToSelector,
+  isOnline = true,
 }) => {
-  const [seconds, setSeconds] = useState(585);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSeconds((prev) => (prev > 0 ? prev - 1 : 585));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (total: number) => {
-    const m = Math.floor(total / 60).toString().padStart(2, '0');
-    const s = (total % 60).toString().padStart(2, '0');
-    return `${m}m:${s}s`;
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.bannerCard}>
         
-        {/* Badge Sistema Patentado */}
-        <View style={styles.patentBadge}>
-          <Text style={styles.patentBadgeText}>✨ Sistema patentado</Text>
+        {/* Badge Sistema Patentado & Live Status */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <View style={styles.patentBadge}>
+            <Text style={styles.patentBadgeText}>✨ Sistema patentado</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: isOnline ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isOnline ? '#10B981' : '#EF4444' }} />
+            <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>
+              {isOnline ? 'SIACI Sincronizado' : 'Tienda Offline'}
+            </Text>
+          </View>
         </View>
 
         {/* Title */}
@@ -75,38 +69,25 @@ export const AntiOverbookingBannerMobile: React.FC<AntiOverbookingBannerMobilePr
           <View style={styles.passHeader}>
             <Text style={styles.passBrand}>SK Supermercado Karen</Text>
             <View style={styles.activeDotBadge}>
-              <Text style={styles.activeDotText}>🟢 ACTIVO</Text>
+              <Text style={styles.activeDotText}>AL RESERVAR</Text>
             </View>
           </View>
 
           <View style={styles.pinBox}>
             <Text style={styles.pinLabel}>CÓDIGO PIN CAJA SIACI</Text>
-            <Text style={styles.pinCode}>KR-X7Y9Z2</Text>
+            <Text style={styles.pinCode}>SE GENERA AL RESERVAR</Text>
           </View>
 
-          {/* QR Blocks */}
           <View style={styles.qrContainer}>
             <View style={styles.qrGrid}>
-              {SAMPLE_QR_MATRIX.map((row, rIdx) => (
-                <View key={rIdx} style={styles.qrRow}>
-                  {row.map((cell, cIdx) => (
-                    <View
-                      key={cIdx}
-                      style={[
-                        styles.qrCell,
-                        cell === 1 ? styles.qrCellBlack : styles.qrCellWhite,
-                      ]}
-                    />
-                  ))}
-                </View>
-              ))}
+              <Text style={styles.passIcon}>🛡️</Text>
             </View>
           </View>
 
           {/* Countdown: 🔴 09m:45s restantes */}
           <View style={styles.countdownBox}>
             <Text style={styles.countdownText}>
-              🔴 {formatTime(seconds)} restantes
+              Vigencia: 10 minutos desde la reserva
             </Text>
           </View>
         </View>
@@ -262,6 +243,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 6,
     borderRadius: 8,
+    width: 130,
+    height: 130,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passIcon: {
+    fontSize: 58,
   },
   qrRow: {
     flexDirection: 'row',

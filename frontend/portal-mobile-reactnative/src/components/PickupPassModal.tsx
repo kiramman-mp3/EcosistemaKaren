@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { ReservationPass } from '../types';
+import QRCode from 'react-native-qrcode-svg';
 
 interface PickupPassModalProps {
   pass: ReservationPass;
@@ -17,11 +18,12 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({
 
   useEffect(() => {
     if (!visible) return;
+    setSeconds(pass.remainingSeconds || 0);
     const timer = setInterval(() => {
       setSeconds((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, [visible]);
+  }, [visible, pass.code, pass.remainingSeconds]);
 
   const formatTime = (total: number) => {
     const m = Math.floor(total / 60).toString().padStart(2, '0');
@@ -52,23 +54,9 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({
             <Text style={styles.pinCode}>{pass.code}</Text>
           </View>
 
-          {/* QR */}
+          {/* QR estándar: contiene únicamente el PIN de retiro */}
           <View style={styles.qrContainer}>
-            <View style={styles.qrGrid}>
-              {pass.qrBlocks.map((row, rIdx) => (
-                <View key={rIdx} style={styles.qrRow}>
-                  {row.map((cell, cIdx) => (
-                    <View
-                      key={cIdx}
-                      style={[
-                        styles.qrCell,
-                        cell === 1 ? styles.qrCellBlack : styles.qrCellWhite,
-                      ]}
-                    />
-                  ))}
-                </View>
-              ))}
-            </View>
+            <View style={styles.qrGrid}><QRCode value={pass.code} size={168} ecl="M" /></View>
             <Text style={styles.qrSub}>ESCANEAR EN CAJA O PERCHA</Text>
           </View>
 
@@ -175,21 +163,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 6,
     borderRadius: 8,
-  },
-  qrRow: {
-    flexDirection: 'row',
-  },
-  qrCell: {
-    width: 14,
-    height: 14,
-    margin: 1,
-    borderRadius: 2,
-  },
-  qrCellBlack: {
-    backgroundColor: '#000000',
-  },
-  qrCellWhite: {
-    backgroundColor: '#FFFFFF',
   },
   qrSub: {
     color: '#94A3B8',

@@ -31,7 +31,7 @@ Este documento define la arquitectura de separación del canal de usuario entre 
 * **Propósito**: Gestión rigurosa del inventario bajo la relación **Producto → Lote → Caducidad**, trazabilidad **FEFO**, notificaciones en vivo SSE para percheros y validación de cobros en caja SIACI.
 * **Características de UX/UI**:
   * Alta densidad de información, tablas compactas y controles accesibles por teclado o lectores de código de barras.
-  * Colores de alerta contrastados por semáforo de caducidad (**Rojo** < 7 días, **Amarillo** < 15 días).
+  * Colores de alerta contrastados por semáforo de caducidad (**Vencido** ≤ 0 días, **Rojo** 1–6 días, **Amarillo** 7–14 días y **Normal/Verde** ≥ 15 días).
   * Funcionamiento garantizado ante caídas de Internet externo.
 
 ---
@@ -227,6 +227,6 @@ Este documento define la arquitectura de separación del canal de usuario entre 
 | **Dispositivo** | PCs de bodega/caja, Pantalla táctil LAN | Smartphones, Tablets, Laptops (Web) |
 | **Autenticación** | Login con Rol (`BODEGUERO`, `PERCHERO`, `ADMIN`) | Acceso libre / Login de cliente |
 | **Acceso a Datos** | CRUD completo de Lotes, Productos y Mermas | Solo Lectura de Catálogo y Creación de Reservas |
-| **Notificaciones** | Real-time SSE Stream (< 7d ROJO, < 15d AMARILLO) | Toasts de confirmación de reserva |
+| **Notificaciones** | Real-time SSE Stream (ROJO 1–6d, AMARILLO 7–14d) | Toasts de confirmación de reserva |
 | **Algoritmos** | Registro por Lotes, FEFO, Sweeper de mermas | Asignación FEFO transparente + Temporizador TTL |
 | **Resiliencia** | Opera 100% offline si falla el Internet externo | Se bloquea si se pierde el **Heartbeat** de la tienda física |

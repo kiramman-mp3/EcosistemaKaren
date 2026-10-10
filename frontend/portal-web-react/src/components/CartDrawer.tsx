@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trash2, Plus, Minus, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { CartItem } from '../types';
 
 interface CartDrawerProps {
@@ -9,6 +9,8 @@ interface CartDrawerProps {
   onUpdateQuantity: (productId: string, delta: number) => void;
   onRemoveItem: (productId: string) => void;
   onConfirmReservation: () => void;
+  isSubmitting?: boolean;
+  error?: string | null;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -18,6 +20,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onUpdateQuantity,
   onRemoveItem,
   onConfirmReservation,
+  isSubmitting = false,
+  error = null,
 }) => {
   if (!isOpen) return null;
 
@@ -54,6 +58,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {error && (
+            <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           {items.length === 0 ? (
             <div className="py-20 text-center space-y-3">
               <div className="w-16 h-16 rounded-full bg-slate-100 mx-auto flex items-center justify-center text-slate-400">
@@ -103,6 +114,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <button
                       onClick={() => onRemoveItem(product.id)}
                       className="p-1 text-slate-400 hover:text-karenRed transition-colors"
+                      title="Eliminar producto"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -130,15 +142,25 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-100">
               <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-              <span>Garantía anti-overbooking: el stock se reserva por 10 min.</span>
+              <span>Garantía anti-overbooking: el stock se aparta vía FEFO por 10 min.</span>
             </div>
 
             <button
               onClick={onConfirmReservation}
-              className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-karenRed hover:bg-karenRed-hover active:scale-98 transition-all shadow-glow-red flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-karenRed hover:bg-karenRed-hover active:scale-98 transition-all shadow-glow-red flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <span>Confirmar Reserva y Obtener PIN</span>
-              <span className="text-xs font-mono">→</span>
+              {isSubmitting ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <span>Bloqueando stock en tienda...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirmar Reserva y Obtener PIN</span>
+                  <span className="text-xs font-mono">→</span>
+                </>
+              )}
             </button>
           </div>
         )}

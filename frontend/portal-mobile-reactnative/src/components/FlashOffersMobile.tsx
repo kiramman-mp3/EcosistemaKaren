@@ -1,31 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { FLASH_OFFERS_DATA } from '../data/mockData';
-import { FlashOffer } from '../types';
+import { DataLoadState, FlashOffer } from '../types';
 
 interface FlashOffersMobileProps {
   onReserveOffer: (offer: FlashOffer) => void;
+  offers: FlashOffer[];
+  state: DataLoadState;
+  error?: string;
+  onRetry: () => void;
 }
 
 export const FlashOffersMobile: React.FC<FlashOffersMobileProps> = ({
   onReserveOffer,
+  offers,
+  state,
+  error,
+  onRetry,
 }) => {
-  const [renewalSeconds, setRenewalSeconds] = useState(9257); // 02:34:17
   const [reservedId, setReservedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRenewalSeconds((prev) => (prev > 0 ? prev - 1 : 9257));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTimer = (total: number) => {
-    const h = Math.floor(total / 3600).toString().padStart(2, '0');
-    const m = Math.floor((total % 3600) / 60).toString().padStart(2, '0');
-    const s = (total % 60).toString().padStart(2, '0');
-    return `${h}:${m}:${s}`;
-  };
 
   const handleReserve = (offer: FlashOffer) => {
     setReservedId(offer.id);
@@ -48,14 +40,23 @@ export const FlashOffersMobile: React.FC<FlashOffersMobileProps> = ({
 
         {/* Widget Contador: PRÓXIMA RENOVACIÓN (02:34:17) */}
         <View style={styles.counterBox}>
-          <Text style={styles.counterLabel}>PRÓXIMA RENOVACIÓN</Text>
-          <Text style={styles.counterTime}>{formatTimer(renewalSeconds)}</Text>
+          <Text style={styles.counterLabel}>DATOS EN TIEMPO REAL</Text>
+          <Text style={styles.counterTime}>FEFO + IA</Text>
         </View>
       </View>
 
       {/* Lista de Ofertas */}
       <View style={styles.offersList}>
-        {FLASH_OFFERS_DATA.map((offer) => {
+        {state === 'loading' && <Text style={styles.stateText}>Cargando ofertas...</Text>}
+        {(state === 'offline' || state === 'error') && (
+          <View style={styles.stateBox}>
+            <Text style={styles.stateTitle}>{state === 'offline' ? 'Sin conexión' : 'No se pudieron cargar las ofertas'}</Text>
+            <Text style={styles.stateText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={onRetry}><Text style={styles.retryText}>Reintentar</Text></TouchableOpacity>
+          </View>
+        )}
+        {state === 'empty' && <Text style={styles.stateText}>No hay ofertas activas en este momento.</Text>}
+        {state === 'ready' && offers.map((offer) => {
           const stockPercent = Math.round(
             ((offer.stockTotal - offer.stockAvailable) / offer.stockTotal) * 100
           );
@@ -137,6 +138,11 @@ export const FlashOffersMobile: React.FC<FlashOffersMobileProps> = ({
 };
 
 const styles = StyleSheet.create({
+  stateBox: { padding: 18, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center' },
+  stateTitle: { fontSize: 16, fontWeight: '800', color: '#1D3557', marginBottom: 6 },
+  stateText: { color: '#64748B', textAlign: 'center', paddingVertical: 16 },
+  retryButton: { backgroundColor: '#1D3557', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 10 },
+  retryText: { color: '#FFFFFF', fontWeight: '800' },
   container: {
     paddingVertical: 14,
     backgroundColor: '#F8FAFC',

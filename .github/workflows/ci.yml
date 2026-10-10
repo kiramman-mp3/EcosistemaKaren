@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm audit --omit=dev
+
+  portal-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/portal-web-react
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/portal-web-react/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  portal-mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/portal-mobile-reactnative
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/portal-mobile-reactnative/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npx --yes expo-doctor@1.20.4
+      - run: npx expo export --platform android --output-dir /tmp/portal-mobile-export
+
+  bodega-mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/bodega-mobile-reactnative
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/bodega-mobile-reactnative/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npx --yes expo-doctor@1.20.4
+      - run: npx expo export --platform android --output-dir /tmp/bodega-mobile-export
