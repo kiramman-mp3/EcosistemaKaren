@@ -40,7 +40,14 @@ const schemas = {
     nombre: text(3, 200, 'El nombre'),
     descripcion: text(1, 1000, 'La descripción').nullable().optional(),
     precioVenta: money,
+    impuestoPorcentaje: z.coerce.number().finite().min(0).max(100).optional(),
     minStockAlerta: z.coerce.number().int().min(0).max(10_000_000).optional()
+  }),
+  productQuery: z.strictObject({
+    q: z.string().trim().max(120).optional(),
+    categoriaId: entityId.optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(30),
+    offset: z.coerce.number().int().min(0).max(1_000_000).default(0)
   }),
   barcodeParams: z.strictObject({ barcode }),
   lotBody: z.strictObject({
@@ -75,7 +82,8 @@ const schemas = {
     usuarioId: entityId.optional(),
     items: z.array(z.strictObject({
       productoId: entityId,
-      cantidad: positiveInteger(10_000)
+      cantidad: positiveInteger(10_000),
+      promocionId: entityId.optional()
     })).min(1, 'La reserva debe contener al menos un producto.').max(100, 'Una reserva no puede superar 100 líneas.')
   }).superRefine((data, ctx) => {
     const total = data.items.reduce((sum, item) => sum + item.cantidad, 0);
@@ -91,6 +99,14 @@ const schemas = {
   }),
   promotionBody: z.strictObject({ loteId: entityId }),
   rejectionBody: z.strictObject({ motivoRechazo: text(3, 500, 'El motivo de rechazo') }),
+  promotionAdminQuery: z.strictObject({
+    estado: z.enum(['PENDIENTE_APROBACION', 'APROBADA', 'RECHAZADA']).optional(),
+    activa: z.enum(['true', 'false']).transform(value => value === 'true').optional()
+  }),
+  promotionUpdateBody: z.strictObject({
+    descuentoPorcentaje: z.coerce.number().finite().min(5).max(50),
+    frasePromocional: text(3, 180, 'La frase promocional')
+  }),
   registerBody: z.strictObject({
     nombre: text(2, 120, 'El nombre'),
     email: z.string().trim().email('El correo electrónico no es válido.').max(254).transform(value => value.toLowerCase()),

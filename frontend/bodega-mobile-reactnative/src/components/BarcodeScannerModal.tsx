@@ -30,18 +30,23 @@ export const BarcodeScannerModal: React.FC<Props> = ({ visible, title = 'Escanea
             </TouchableOpacity>
           </View>
         ) : (
-          <CameraView
-            style={styles.camera}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] }}
-            onBarcodeScanned={locked ? undefined : ({ data }) => {
-              setLocked(true);
-              onScanned(data);
-              close();
-            }}
-          >
-            <View style={styles.frame}><Text style={styles.frameText}>Centra el código dentro del marco</Text></View>
-          </CameraView>
+          <View style={styles.cameraContainer}>
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] }}
+              onBarcodeScanned={locked ? undefined : ({ data }) => {
+                setLocked(true);
+                onScanned(data);
+                close();
+              }}
+            />
+            <View pointerEvents="none" style={styles.cameraOverlay}>
+              <View style={styles.frame}>
+                <Text style={styles.frameText}>Centra el código dentro del marco</Text>
+              </View>
+            </View>
+          </View>
         )}
         <TouchableOpacity style={styles.close} onPress={close}><Text style={styles.closeText}>Cancelar</Text></TouchableOpacity>
       </View>
@@ -52,7 +57,8 @@ export const BarcodeScannerModal: React.FC<Props> = ({ visible, title = 'Escanea
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0F172A', padding: 20, paddingTop: 50 },
   title: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', marginBottom: 16, textAlign: 'center' },
-  camera: { flex: 1, borderRadius: 20, overflow: 'hidden', justifyContent: 'center', padding: 24 },
+  cameraContainer: { flex: 1, borderRadius: 20, overflow: 'hidden' },
+  cameraOverlay: { position: 'absolute', inset: 0, justifyContent: 'center', padding: 24 },
   frame: { height: 190, borderWidth: 3, borderColor: '#22C55E', borderRadius: 18, justifyContent: 'flex-end' },
   frameText: { color: '#FFFFFF', textAlign: 'center', backgroundColor: 'rgba(0,0,0,.65)', padding: 8 },
   permissionBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 },

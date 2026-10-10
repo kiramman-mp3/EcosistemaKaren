@@ -39,7 +39,8 @@ const {
   GetPromotions,
   GetPendingPromotions,
   ApprovePromotion,
-  RejectPromotion
+  RejectPromotion,
+  ManagePromotions
 } = require('../../use-cases/promotions/PromotionUseCases');
 const { RegisterUser, LoginUser } = require('../../use-cases/auth/AuthUseCases');
 
@@ -169,6 +170,7 @@ async function createServer() {
   const getPendingPromotionsUC = new GetPendingPromotions(promotionRepo);
   const approvePromotionUC = new ApprovePromotion(promotionRepo);
   const rejectPromotionUC = new RejectPromotion(promotionRepo);
+  const managePromotionsUC = new ManagePromotions(promotionRepo);
 
   const registerUserUC = new RegisterUser(userRepo, process.env.JWT_SECRET);
   const loginUserUC = new LoginUser(userRepo, process.env.JWT_SECRET);
@@ -191,6 +193,7 @@ async function createServer() {
     getPendingPromotionsUC,
     approvePromotionUC,
     rejectPromotionUC,
+    managePromotionsUC,
     aiMetrics
   );
   const authController = new AuthController(registerUserUC, loginUserUC);

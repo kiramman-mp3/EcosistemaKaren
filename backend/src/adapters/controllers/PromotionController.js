@@ -15,6 +15,7 @@ class PromotionController {
     getPendingPromotionsUC,
     approvePromotionUC,
     rejectPromotionUC,
+    managePromotionsUC,
     aiMetrics,
   ) {
     this.generarPromocionesIAUC  = generarPromocionesIAUC;
@@ -22,6 +23,7 @@ class PromotionController {
     this.getPendingPromotionsUC  = getPendingPromotionsUC;
     this.approvePromotionUC      = approvePromotionUC;
     this.rejectPromotionUC       = rejectPromotionUC;
+    this.managePromotionsUC      = managePromotionsUC;
     this.aiMetrics               = aiMetrics;
   }
 
@@ -103,6 +105,34 @@ class PromotionController {
     } catch (err) {
       return next(err);
     }
+  }
+
+  async getOperationalPromotions(req, res, next) {
+    try {
+      const data = await this.managePromotionsUC.list(req.query, req.user);
+      return res.json({ success: true, count: data.length, data: data.map(item => item.toOperationalDTO()) });
+    } catch (err) { return next(err); }
+  }
+
+  async updatePromotion(req, res, next) {
+    try {
+      const data = await this.managePromotionsUC.update({ promotionId: req.params.id, ...req.body }, req.user);
+      return res.json({ success: true, message: 'Borrador actualizado.', data: data.toOperationalDTO() });
+    } catch (err) { return next(err); }
+  }
+
+  async deactivatePromotion(req, res, next) {
+    try {
+      const data = await this.managePromotionsUC.deactivate(req.params.id, req.user);
+      return res.json({ success: true, message: 'Promoción finalizada.', data: data.toOperationalDTO() });
+    } catch (err) { return next(err); }
+  }
+
+  async deletePromotionDraft(req, res, next) {
+    try {
+      await this.managePromotionsUC.deleteDraft(req.params.id, req.user);
+      return res.status(204).send();
+    } catch (err) { return next(err); }
   }
 
   // ─── GET /metrics/ai  (ADMIN) ─────────────────────────────────────────────

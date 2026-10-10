@@ -7,13 +7,16 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { ExpiryAlertItem, BackendPromotion } from '../types';
 import { api } from '../api/client';
+import { Ionicons } from '@expo/vector-icons';
 
 interface AlertasCaducidadScreenProps {
   alerts: ExpiryAlertItem[];
   onRefresh: () => void;
+  refreshing: boolean;
   onOpenAiPromo: (promo: BackendPromotion) => void;
   onOpenMerma: (lotId: string, lotNumber: string, maxUnits: number) => void;
 }
@@ -21,6 +24,7 @@ interface AlertasCaducidadScreenProps {
 export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
   alerts,
   onRefresh,
+  refreshing,
   onOpenAiPromo,
   onOpenMerma,
 }) => {
@@ -76,7 +80,12 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      alwaysBounceVertical
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#DC2626" colors={['#DC2626']} />}
+    >
       {/* Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.badgeTop}>
@@ -104,7 +113,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
           onPress={() => setFilter('ROJO')}
         >
           <Text style={[styles.chipText, filter === 'ROJO' && styles.chipTextActiveRed]}>
-            🔴 Críticos &lt; 7d ({criticalCount})
+            Críticos &lt; 7d ({criticalCount})
           </Text>
         </TouchableOpacity>
 
@@ -113,7 +122,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
           onPress={() => setFilter('AMARILLO')}
         >
           <Text style={[styles.chipText, filter === 'AMARILLO' && styles.chipTextActiveYellow]}>
-            🟡 Preventivos &lt; 15d ({warningCount})
+            Preventivos &lt; 15d ({warningCount})
           </Text>
         </TouchableOpacity>
       </View>
@@ -121,7 +130,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
       {/* Alerts List */}
       {filtered.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyIcon}>🎉</Text>
+          <Ionicons name="checkmark-circle-outline" size={46} color="#16A34A" />
           <Text style={styles.emptyTitle}>Sin alertas en esta categoría</Text>
           <Text style={styles.emptySub}>
             Los lotes cuentan con fechas de caducidad saludables.
@@ -156,7 +165,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
                         { color: isRed ? '#DC2626' : '#D97706' },
                       ]}
                     >
-                      {isRed ? '🔴 CRÍTICO' : '🟡 PREVENTIVO'} • {item.diasParaVencer} DÍAS RESTANTES
+                      {isRed ? 'CRÍTICO' : 'PREVENTIVO'} • {item.diasParaVencer} DÍAS RESTANTES
                     </Text>
                   </View>
 
@@ -211,7 +220,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
                       onPress={() => handleMoverPercha(item)}
                       disabled={isProcessing}
                     >
-                      <Text style={styles.actionBtnTextBlue}>🚚 Pasar a Percha</Text>
+                      <Ionicons name="arrow-forward-circle-outline" size={17} color="#4F46E5" /><Text style={styles.actionBtnTextBlue}>Pasar a Percha</Text>
                     </TouchableOpacity>
                   )}
 
@@ -220,9 +229,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
                     onPress={() => handleGenerateAiPromo(item)}
                     disabled={isProcessing || isExpired}
                   >
-                    <Text style={[styles.actionBtnTextPurple, isExpired && styles.actionBtnTextDisabled]}>
-                      {isExpired ? 'No promocionable' : '✨ Promo Gemini IA'}
-                    </Text>
+                    {!isExpired && <Ionicons name="sparkles-outline" size={17} color="#7C3AED" />}<Text style={[styles.actionBtnTextPurple, isExpired && styles.actionBtnTextDisabled]}>{isExpired ? 'No promocionable' : 'Crear promoción'}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -232,7 +239,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
                     }
                     disabled={isProcessing}
                   >
-                    <Text style={styles.actionBtnTextRed}>⚠️ Merma</Text>
+                    <Ionicons name="warning-outline" size={17} color="#DC2626" /><Text style={styles.actionBtnTextRed}>Merma</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -450,6 +457,9 @@ const styles = StyleSheet.create({
   },
   actionBtnBlue: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
     backgroundColor: '#EEF2FF',
     paddingVertical: 8,
     borderRadius: 10,
@@ -464,6 +474,9 @@ const styles = StyleSheet.create({
   },
   actionBtnPurple: {
     flex: 1.2,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
     backgroundColor: '#FAF5FF',
     paddingVertical: 8,
     borderRadius: 10,
@@ -485,6 +498,9 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   actionBtnRed: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 8,
     backgroundColor: '#FEF2F2',

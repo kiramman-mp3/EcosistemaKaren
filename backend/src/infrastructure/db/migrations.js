@@ -17,6 +17,14 @@ const MIGRATIONS = [
   {
     version: '005_refresh_demo_lots',
     file: path.resolve(__dirname, '../../../init-db/05-refresh-demo-lots.sql')
+  },
+  {
+    version: '006_fix_demo_barcodes',
+    file: path.resolve(__dirname, '../../../init-db/06-fix-demo-barcodes.sql')
+  },
+  {
+    version: '007_product_tax',
+    file: path.resolve(__dirname, '../../../init-db/07-product-tax.sql')
   }
 ];
 

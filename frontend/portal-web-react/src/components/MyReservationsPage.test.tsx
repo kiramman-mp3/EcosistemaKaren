@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { MyReservationsModal } from './MyReservationsModal';
+import { MyReservationsPage } from './MyReservationsPage';
 
 const pending = {
   id: 'res-1', usuarioId: 'user-1', codigoRetiro: 'KR-LIVE01', estado: 'PENDIENTE' as const,
@@ -8,11 +8,21 @@ const pending = {
   detalles: [{ loteId: 'lot-1', cantidad: 2, precioUnitario: 1.25 }],
 };
 
-describe('MyReservationsModal', () => {
+const baseProps = {
+  authenticated: true,
+  reservations: [pending],
+  syncing: false,
+  onRefresh: async () => {},
+  onCancel: async () => {},
+  onOpenPass: () => {},
+  onLogin: () => {},
+  onExplore: () => {},
+};
+
+describe('MyReservationsPage', () => {
   it('muestra historial y permite abrir el pase vigente', () => {
     const onOpenPass = vi.fn();
-    render(<MyReservationsModal isOpen onClose={() => {}} authenticated reservations={[pending]}
-      syncing={false} onRefresh={async () => {}} onCancel={async () => {}} onOpenPass={onOpenPass} />);
+    render(<MyReservationsPage {...baseProps} onOpenPass={onOpenPass} />);
     expect(screen.getByText('KR-LIVE01')).toBeInTheDocument();
     expect(screen.getByText(/Total reservado/)).toHaveTextContent('$2.50');
     fireEvent.click(screen.getByText('Ver pase QR'));
@@ -22,8 +32,7 @@ describe('MyReservationsModal', () => {
   it('confirma y ejecuta la cancelación', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     const onCancel = vi.fn().mockResolvedValue(undefined);
-    render(<MyReservationsModal isOpen onClose={() => {}} authenticated reservations={[pending]}
-      syncing={false} onRefresh={async () => {}} onCancel={onCancel} onOpenPass={() => {}} />);
+    render(<MyReservationsPage {...baseProps} onCancel={onCancel} />);
     fireEvent.click(screen.getByText('Cancelar reserva'));
     await waitFor(() => expect(onCancel).toHaveBeenCalledWith('res-1'));
   });

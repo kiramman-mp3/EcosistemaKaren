@@ -74,6 +74,27 @@ test('limita reservas y pagina consultas con valores numéricos seguros', async 
   assert.equal(invalid.body.details.length, 2);
 });
 
+test('pagina y filtra el catálogo con límites seguros', async () => {
+  const app = validationApp('get', '/products', { query: schemas.productQuery });
+  const valid = await request(app).get('/products?q= leche &limit=30&offset=60');
+  assert.equal(valid.status, 200);
+  assert.deepEqual(valid.body.query, { q: 'leche', limit: 30, offset: 60 });
+
+  const invalid = await request(app).get('/products?limit=500&offset=-1');
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.body.details.length, 2);
+});
+
+test('acepta impuesto de producto únicamente en el rango de 0 a 100', async () => {
+  const app = validationApp('post', '/products', { body: schemas.productBody });
+  const base = {
+    categoriaId: 'categoria-1', codigoBarras: '7862108350431', nombre: 'Producto nuevo',
+    precioVenta: 2.5, minStockAlerta: 10
+  };
+  assert.equal((await request(app).post('/products').send({ ...base, impuestoPorcentaje: 15 })).status, 200);
+  assert.equal((await request(app).post('/products').send({ ...base, impuestoPorcentaje: 101 })).status, 400);
+});
+
 test('rechaza códigos de retiro y filtros de auditoría mal formados', async () => {
   const codeApp = validationApp('get', '/reservations/:code', { params: schemas.reservationCodeParams });
   assert.equal((await request(codeApp).get('/reservations/../../etc')).status, 404);

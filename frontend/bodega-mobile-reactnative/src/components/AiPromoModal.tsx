@@ -1,17 +1,20 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { BackendPromotion } from '../types';
+import { Ionicons } from '@expo/vector-icons';
 
 interface AiPromoModalProps {
   visible: boolean;
   promotion: BackendPromotion | null;
   onClose: () => void;
+  onReview: () => void;
 }
 
 export const AiPromoModal: React.FC<AiPromoModalProps> = ({
   visible,
   promotion,
   onClose,
+  onReview,
 }) => {
   if (!promotion) return null;
 
@@ -20,17 +23,17 @@ export const AiPromoModal: React.FC<AiPromoModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.card}>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={24} color="#94A3B8" />
           </TouchableOpacity>
 
           <View style={styles.iconCircle}>
-            <Text style={styles.icon}>✨</Text>
+            <Ionicons name="sparkles-outline" size={28} color="#6366F1" />
           </View>
 
           <Text style={styles.badge}>ALGORITMO GEMINI IA • BORRADOR</Text>
           <Text style={styles.title}>Promoción Generada</Text>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>⏳ PENDIENTE DE APROBACIÓN POR ADMIN</Text>
+            <Ionicons name="time-outline" size={15} color="#B45309" /><Text style={styles.statusText}>PENDIENTE DE APROBACIÓN POR ADMIN</Text>
           </View>
           <Text style={styles.subtitle}>
             Borrador generado en base a FEFO. Requiere aprobación de un Administrador antes de publicarse en tienda.
@@ -53,8 +56,11 @@ export const AiPromoModal: React.FC<AiPromoModalProps> = ({
             </View>
           )}
 
+          <TouchableOpacity style={styles.reviewBtn} onPress={onReview}>
+            <Text style={styles.doneBtnText}>Revisar y editar promoción</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
-            <Text style={styles.doneBtnText}>Entendido (Pendiente de Aprobación)</Text>
+            <Text style={styles.secondaryBtnText}>Guardar como borrador</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -191,17 +197,23 @@ const styles = StyleSheet.create({
   },
   doneBtn: {
     width: '100%',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginTop: 8,
   },
+  reviewBtn: { width: '100%', backgroundColor: '#1E293B', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
   doneBtnText: {
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 13,
   },
+  secondaryBtnText: { color: '#334155', fontWeight: '800', fontSize: 13 },
   statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: '#FEF3C7',
     paddingVertical: 4,
     paddingHorizontal: 10,

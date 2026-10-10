@@ -38,20 +38,24 @@ responde `503 Service Unavailable` sin modificar el inventario.
 ## 1. Productos (`/products`)
 
 ### `GET /products`
-Obtiene el catálogo completo de productos con datos de categoría.
+Consulta el catálogo con búsqueda y paginación. Admite `q`, `categoriaId`, `limit` (máximo 100) y `offset`.
 * **Respuesta (200 OK)**:
 ```json
 {
   "success": true,
   "count": 2,
+  "total": 1200,
+  "limit": 30,
+  "offset": 0,
   "data": [
     {
       "id": "c8a4d2e1-...",
       "categoriaId": "f1b2c3...",
-      "codigoBarras": "7861000100011",
+      "codigoBarras": "7861000100014",
       "nombre": "Leche Entera Vita 1 Litro",
       "descripcion": "Leche pasteurizada UHT",
       "precioVenta": 0.95,
+      "impuestoPorcentaje": 15,
       "minStockAlerta": 20
     }
   ]
@@ -68,10 +72,11 @@ Crea un nuevo producto en catálogo.
 ```json
 {
   "categoriaId": "f1b2c3...",
-  "codigoBarras": "786999900011",
+  "codigoBarras": "786999900018",
   "nombre": "Queso Crema Toni 200g",
   "descripcion": "Queso untable",
   "precioVenta": 1.95,
+  "impuestoPorcentaje": 15,
   "minStockAlerta": 10
 }
 ```

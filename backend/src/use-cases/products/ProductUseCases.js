@@ -6,8 +6,8 @@ class GetProducts {
     this.productRepository = productRepository;
   }
 
-  async execute() {
-    return await this.productRepository.findAll();
+  async execute(filters = {}) {
+    return await this.productRepository.findAll(filters);
   }
 }
 

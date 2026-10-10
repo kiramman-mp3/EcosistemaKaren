@@ -8,19 +8,23 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { BackendLot } from '../types';
 import { api } from '../api/client';
 import { classifyExpiryDays } from '../config/businessRules';
+import { Ionicons } from '@expo/vector-icons';
 
 interface InventarioLotesScreenProps {
   lots: BackendLot[];
   onRefresh: () => void;
+  refreshing: boolean;
 }
 
 export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
   lots,
   onRefresh,
+  refreshing,
 }) => {
   const [search, setSearch] = useState('');
   const [locationFilter, setLocationFilter] = useState<'ALL' | 'BODEGA' | 'PERCHA'>('ALL');
@@ -76,7 +80,7 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
 
         {/* Search Input */}
         <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={20} color="#64748B" />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar por producto, lote o EAN..."
@@ -86,7 +90,7 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
           />
           {search ? (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Text style={styles.clearText}>✕</Text>
+              <Ionicons name="close" size={20} color="#64748B" />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -106,27 +110,28 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
             style={[styles.pill, locationFilter === 'BODEGA' && styles.pillActive]}
             onPress={() => setLocationFilter('BODEGA')}
           >
-            <Text style={[styles.pillText, locationFilter === 'BODEGA' && styles.pillTextActive]}>
-              📦 Bodega ({lots.filter((l) => l.ubicacion === 'BODEGA').length})
-            </Text>
+            <Ionicons name="cube-outline" size={16} color={locationFilter === 'BODEGA' ? '#FFF' : '#64748B'} /><Text style={[styles.pillText, locationFilter === 'BODEGA' && styles.pillTextActive]}>Bodega ({lots.filter((l) => l.ubicacion === 'BODEGA').length})</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.pill, locationFilter === 'PERCHA' && styles.pillActive]}
             onPress={() => setLocationFilter('PERCHA')}
           >
-            <Text style={[styles.pillText, locationFilter === 'PERCHA' && styles.pillTextActive]}>
-              🏪 Percha ({lots.filter((l) => l.ubicacion === 'PERCHA').length})
-            </Text>
+            <Ionicons name="storefront-outline" size={16} color={locationFilter === 'PERCHA' ? '#FFF' : '#64748B'} /><Text style={[styles.pillText, locationFilter === 'PERCHA' && styles.pillTextActive]}>Percha ({lots.filter((l) => l.ubicacion === 'PERCHA').length})</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Lots List */}
-      <ScrollView style={styles.listScroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.listScroll}
+        showsVerticalScrollIndicator={false}
+        alwaysBounceVertical
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1E293B" colors={['#1E293B']} />}
+      >
         {filteredLots.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyIcon}>📦</Text>
+            <Ionicons name="cube-outline" size={42} color="#94A3B8" />
             <Text style={styles.emptyTitle}>No se encontraron lotes</Text>
             <Text style={styles.emptySub}>Prueba ajustando los filtros de búsqueda.</Text>
           </View>
@@ -162,7 +167,7 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
                           },
                         ]}
                       >
-                        {lot.ubicacion === 'BODEGA' ? '📦 BODEGA' : '🏪 PERCHA'}
+                        {lot.ubicacion}
                       </Text>
                     </View>
                   </View>
@@ -234,12 +239,14 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
                     style={styles.switchBtn}
                     onPress={() => handleToggleLocation(lot)}
                     disabled={isMoving}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Mover lote a ${lot.ubicacion === 'BODEGA' ? 'Percha' : 'Bodega'}`}
                   >
                     {isMoving ? (
                       <ActivityIndicator size="small" color="#1E293B" />
                     ) : (
                       <Text style={styles.switchBtnText}>
-                        🔄 Mover a {lot.ubicacion === 'BODEGA' ? '🏪 PERCHA' : '📦 BODEGA'}
+                        Mover a {lot.ubicacion === 'BODEGA' ? 'Percha' : 'Bodega'}
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -323,6 +330,9 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,

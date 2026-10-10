@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ShoppingCart, Check, Plus, AlertCircle, RefreshCw } from 'lucide-react';
-import { DataLoadState, Product, ProductCategory } from '../types';
+import { Search, ShoppingCart, Check, Plus, AlertCircle, RefreshCw, Flame, Clock } from 'lucide-react';
+import { DataLoadState, FlashOffer, Product, ProductCategory } from '../types';
 
 interface ProductCatalogProps {
   products: Product[];
@@ -14,6 +14,8 @@ interface ProductCatalogProps {
   state: DataLoadState;
   errorMessage?: string | null;
   onRefresh?: () => void;
+  offers?: FlashOffer[];
+  onReserveOffer?: (offer: FlashOffer) => void | Promise<void>;
 }
 
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
@@ -27,13 +29,28 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   loading = false,
   state,
   errorMessage,
-  onRefresh
+  onRefresh,
+  offers = [],
+  onReserveOffer,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [addedItemIds, setAddedItemIds] = useState<Record<string, boolean>>({});
 
   const catalogItems = products;
   const categoryPills = categories.length > 0 ? categories : ['Todos'];
+  const offersByProduct = useMemo(() => {
+    const result = new Map<string, FlashOffer>();
+    for (const offer of offers) {
+      if (!offer.productId) continue;
+      const current = result.get(offer.productId);
+      const discount = Number.parseFloat(offer.discountBadge.replace(/[^0-9.]/g, '')) || 0;
+      const currentDiscount = current
+        ? Number.parseFloat(current.discountBadge.replace(/[^0-9.]/g, '')) || 0
+        : -1;
+      if (!current || discount > currentDiscount) result.set(offer.productId, offer);
+    }
+    return result;
+  }, [offers]);
 
   const filteredProducts = useMemo(() => {
     return catalogItems.filter((p) => {
@@ -190,10 +207,15 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) => {
                 const isAdded = addedItemIds[product.id];
+                const activeOffer = offersByProduct.get(product.id);
                 return (
                   <div
                     key={product.id}
-                    className="group bg-white rounded-2xl p-5 border border-slate-100 shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
+                    className={`group rounded-2xl p-5 shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between ${
+                      activeOffer
+                        ? 'bg-gradient-to-b from-red-50 via-white to-white border-2 border-karenRed/60 shadow-glow-red'
+                        : 'bg-white border border-slate-100'
+                    }`}
                   >
                     <div>
                       {/* Foto del Producto con ratio elegante */}
@@ -204,10 +226,19 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           loading="lazy"
                         />
-                        {/* Categoría: Badge Gris */}
-                        <div className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg">
-                          {product.badge || product.category}
-                        </div>
+                        {/* En "Todos" la categoría aporta contexto; dentro de una categoría sería redundante. */}
+                        {selectedCategory === 'Todos' && (
+                          <div className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+                            {product.badge || product.category}
+                          </div>
+                        )}
+                        {activeOffer && (
+                          <div className="absolute top-3 right-3">
+                            <span className="bg-karenRed text-white px-3 py-1 rounded-xl text-xs font-black shadow-glow-red">
+                              {activeOffer.discountBadge}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Título de Producto */}
@@ -218,14 +249,18 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                       {/* Precio en Azul Bold ($X.XX) & Stock con Punto Verde */}
                       <div className="mt-3 flex items-center justify-between">
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-xl font-display font-black text-navy">
-                            ${product.price.toFixed(2)}
+                          <span className={`text-xl font-display font-black ${activeOffer ? 'text-karenRed' : 'text-navy'}`}>
+                            ${(activeOffer?.price ?? product.price).toFixed(2)}
                           </span>
-                          {product.originalPrice && (
+                          {activeOffer ? (
+                            <span className="text-xs text-slate-400 line-through font-medium">
+                              ${activeOffer.originalPrice.toFixed(2)}
+                            </span>
+                          ) : product.originalPrice ? (
                             <span className="text-xs text-slate-400 line-through font-medium">
                               ${product.originalPrice.toFixed(2)}
                             </span>
-                          )}
+                          ) : null}
                           {product.unit && (
                             <span className="text-[11px] text-slate-400 font-medium">
                               / {product.unit}
@@ -239,19 +274,37 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           <span>{product.stock} un.</span>
                         </div>
                       </div>
+                      {activeOffer && (
+                        <div className="mt-3 rounded-xl border border-red-100 bg-red-50/80 px-3 py-2">
+                          <p className="text-xs font-bold text-red-700 line-clamp-2">{activeOffer.title}</p>
+                          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-red-600">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>{activeOffer.expiryText}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Botón CTA full-width '+ Añadir a lista' */}
                     <div className="mt-5 pt-4 border-t border-slate-100">
                       <button
-                        onClick={() => handleAddClick(product)}
+                        onClick={() => activeOffer && onReserveOffer
+                          ? void onReserveOffer(activeOffer)
+                          : handleAddClick(product)}
                         className={`w-full py-2.5 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 active:scale-98 ${
-                          isAdded
+                          activeOffer
+                            ? 'bg-karenRed hover:bg-karenRed-hover text-white shadow-glow-red'
+                            : isAdded
                             ? 'bg-emerald-600 text-white shadow-sm'
                             : 'bg-navy/5 hover:bg-navy hover:text-white text-navy'
                         }`}
                       >
-                        {isAdded ? (
+                        {activeOffer ? (
+                          <>
+                            <Flame className="w-4 h-4" />
+                            <span>Añadir oferta al carrito</span>
+                          </>
+                        ) : isAdded ? (
                           <>
                             <Check className="w-4 h-4 text-white" />
                             <span>¡Añadido!</span>
@@ -259,7 +312,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         ) : (
                           <>
                             <Plus className="w-4 h-4" />
-                            <span>+ Añadir a lista</span>
+                            <span>Añadir a lista</span>
                           </>
                         )}
                       </button>

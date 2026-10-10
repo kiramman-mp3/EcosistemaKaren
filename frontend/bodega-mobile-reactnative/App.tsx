@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   View,
   Text,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { HeaderBodega } from './src/components/HeaderBodega';
 import { TabNavBodega } from './src/components/TabNavBodega';
 import { IngresoLoteScreen } from './src/screens/IngresoLoteScreen';
@@ -16,6 +16,7 @@ import { CajaSiaciScreen } from './src/screens/CajaSiaciScreen';
 import { BodegaLoginScreen } from './src/screens/BodegaLoginScreen';
 import { ReportesScreen } from './src/screens/ReportesScreen';
 import { AprobacionesScreen } from './src/screens/AprobacionesScreen';
+import { CatalogoProductosScreen } from './src/screens/CatalogoProductosScreen';
 import { AiPromoModal } from './src/components/AiPromoModal';
 import { MermaModal } from './src/components/MermaModal';
 import {
@@ -172,29 +173,37 @@ export default function App() {
   ).length;
 
   if (restoringSession) {
-    return <SafeAreaView style={styles.loadingSession}>
-      <ActivityIndicator size="large" color="#FFFFFF" />
-      <Text style={styles.loadingSessionText}>Restaurando sesión segura…</Text>
-    </SafeAreaView>;
+    return <SafeAreaProvider>
+      <SafeAreaView style={styles.loadingSession}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text style={styles.loadingSessionText}>Restaurando sesión segura…</Text>
+      </SafeAreaView>
+    </SafeAreaProvider>;
   }
 
   if (!currentUser) {
-    return <BodegaLoginScreen onLogin={({ user }) => {
-      setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
-      setCurrentUser(user);
-    }} />;
+    return <SafeAreaProvider>
+      <BodegaLoginScreen onLogin={({ user }) => {
+        setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
+        setCurrentUser(user);
+      }} />
+    </SafeAreaProvider>;
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#1E293B" />
 
       {/* Header Bodega */}
       <HeaderBodega
         isOnline={isOnline}
-        onRefresh={loadData}
-        refreshing={refreshing}
         operatorName={currentUser.nombre}
+        operatorRole={currentUser.rol}
+        criticalAlertsCount={criticalAlertsCount}
+        alertsActive={activeTab === 'alertas'}
+        onOpenAlerts={() => setActiveTab('alertas')}
+        onOpenReports={() => setActiveTab('reportes')}
         onLogout={() => {
           void api.logout();
           setCurrentUser(null);
@@ -207,16 +216,24 @@ export default function App() {
           <IngresoLoteScreen
             products={products}
             onLotCreated={loadData}
+            onOpenCatalog={() => setActiveTab('catalogo')}
+            onRefresh={loadData}
+            refreshing={refreshing}
           />
         )}
 
+        {activeTab === 'catalogo' && (
+          <CatalogoProductosScreen role={currentUser.rol} onCatalogChanged={loadData} />
+        )}
+
         {activeTab === 'reportes' && <ReportesScreen />}
-        {activeTab === 'aprobaciones' && currentUser.rol === 'ADMIN' && <AprobacionesScreen />}
+        {activeTab === 'promociones' && currentUser.rol === 'ADMIN' && <AprobacionesScreen />}
 
         {activeTab === 'alertas' && (
           <AlertasCaducidadScreen
             alerts={alerts}
             onRefresh={loadData}
+            refreshing={refreshing}
             onOpenAiPromo={(promo) => setSelectedPromo(promo)}
             onOpenMerma={handleOpenMerma}
           />
@@ -226,12 +243,15 @@ export default function App() {
           <InventarioLotesScreen
             lots={lots}
             onRefresh={loadData}
+            refreshing={refreshing}
           />
         )}
 
         {activeTab === 'caja' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
           <CajaSiaciScreen
             onReservationUpdated={loadData}
+            onRefresh={loadData}
+            refreshing={refreshing}
           />
         )}
       </View>
@@ -240,7 +260,6 @@ export default function App() {
       <TabNavBodega
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        criticalAlertsCount={criticalAlertsCount}
         role={currentUser.rol}
       />
 
@@ -249,6 +268,10 @@ export default function App() {
         visible={Boolean(selectedPromo)}
         promotion={selectedPromo}
         onClose={() => setSelectedPromo(null)}
+        onReview={() => {
+          setSelectedPromo(null);
+          setActiveTab('promociones');
+        }}
       />
 
       {mermaTarget && (
@@ -264,7 +287,8 @@ export default function App() {
           onConfirmMerma={handleConfirmMerma}
         />
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

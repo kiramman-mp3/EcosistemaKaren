@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --lan",
+    "start:clear": "expo start --lan --clear",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
@@ -12,13 +13,16 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
+    "@expo/vector-icons": "^15.0.2",
     "axios": "^1.20.0",
     "expo": "^57.0.9",
     "expo-camera": "~57.0.6",
+    "expo-font": "~57.0.4",
     "expo-secure-store": "~57.0.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
     "react-native-sse": "^1.2.1",
     "react-native-web": "^0.21.0"
   },

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Flame, ShieldAlert, Check, Clock, RefreshCw, AlertCircle, Bot } from 'lucide-react';
+import { Flame, ShieldAlert, Check, Clock, RefreshCw, AlertCircle, Bot } from 'lucide-react';
 import { DataLoadState, FlashOffer } from '../types';
 
 interface FlashOffersSectionProps {
@@ -139,13 +139,6 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
                         {offer.discountBadge}
                       </span>
 
-                      {/* IA Tag */}
-                      {offer.aiBadge && (
-                        <span className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-2.5 py-1 rounded-xl text-xs font-extrabold shadow-sm flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-amber-300" />
-                          <span>Gemini IA</span>
-                        </span>
-                      )}
                     </div>
 
                     {/* Urgency Badge */}
@@ -209,12 +202,12 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
                     {isJustReserved ? (
                       <>
                         <Check className="w-4 h-4 text-white" />
-                        <span>¡Pase PIN Generado!</span>
+                        <span>¡Añadida al carrito!</span>
                       </>
                     ) : (
                       <>
                         <Flame className="w-4 h-4" />
-                        <span>Reservar Oferta Flash (10 min)</span>
+                        <span>Añadir oferta al carrito</span>
                       </>
                     )}
                   </button>

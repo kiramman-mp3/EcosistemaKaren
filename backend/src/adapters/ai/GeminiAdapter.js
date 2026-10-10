@@ -37,7 +37,9 @@ class GeminiAdapter {
    * @param {string} [opts.model]       - default GEMINI_MODEL or 'gemini-3.8-flash'
    */
   constructor(apiKey, { timeoutMs, model, client } = {}) {
-    this._apiKey = apiKey || process.env.GEMINI_API_KEY || '';
+    // An explicitly injected empty value is intentional (for example, when
+    // verifying the controlled CONFIG error) and must not fall back to env.
+    this._apiKey = apiKey !== undefined ? apiKey : (process.env.GEMINI_API_KEY || '');
     const configuredTimeout = timeoutMs ?? (parseInt(process.env.GEMINI_TIMEOUT_MS, 10) || 10000);
     if (!Number.isInteger(configuredTimeout) || configuredTimeout <= 0) {
       throw new Error('GEMINI_TIMEOUT_MS debe ser un entero positivo.');

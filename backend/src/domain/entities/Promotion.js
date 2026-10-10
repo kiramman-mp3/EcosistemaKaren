@@ -22,6 +22,10 @@ class Promotion {
     rechazadaPor,
     rechazadaAt,
     motivoRechazo,
+    productoNombre,
+    numeroLote,
+    fechaCaducidad,
+    cantidadDisponible,
     created_at,
   }) {
     if (!loteId) {
@@ -71,6 +75,10 @@ class Promotion {
     this.rechazadaPor = rechazadaPor || null;
     this.rechazadaAt = rechazadaAt || null;
     this.motivoRechazo = motivoRechazo || null;
+    this.productoNombre = productoNombre || null;
+    this.numeroLote = numeroLote || null;
+    this.fechaCaducidad = fechaCaducidad || null;
+    this.cantidadDisponible = cantidadDisponible === undefined ? null : Number(cantidadDisponible);
 
     this.created_at = created_at || new Date();
   }
@@ -103,6 +111,11 @@ class Promotion {
       activa: this.activa,
       estado: this.estado,
       cacheHit: this.cacheHit,
+      productoNombre: this.productoNombre,
+      numeroLote: this.numeroLote,
+      fechaCaducidad: this.fechaCaducidad,
+      cantidadDisponible: this.cantidadDisponible,
+      motivoRechazo: this.motivoRechazo,
       created_at: this.created_at,
     };
   }

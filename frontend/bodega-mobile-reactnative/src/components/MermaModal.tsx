@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   View,
   Text,
@@ -7,6 +8,7 @@ import {
   Modal,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 
 interface MermaModalProps {
@@ -31,9 +33,30 @@ export const MermaModal: React.FC<MermaModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!visible) return;
+    setCantidad('1');
+    setRazon('Producto caducado en percha');
+    setError(null);
+  }, [visible, lotId]);
+
   if (!lotId) return null;
 
-  const handleConfirm = async () => {
+  const submitMerma = async (qty: number) => {
+    if (!lotId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await onConfirmMerma(lotId, qty, razon.trim());
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Error al registrar la merma');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirm = () => {
     const qty = parseInt(cantidad, 10);
     if (isNaN(qty) || qty <= 0) {
       setError('Ingresa una cantidad mayor a 0');
@@ -48,16 +71,19 @@ export const MermaModal: React.FC<MermaModalProps> = ({
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    try {
-      await onConfirmMerma(lotId, qty, razon.trim());
-      onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al registrar la merma');
-    } finally {
-      setLoading(false);
+    if (qty === maxUnits) {
+      Alert.alert(
+        'Dar de baja todo el lote',
+        `Se registrarán como merma las ${maxUnits} unidades disponibles. Esta operación quedará auditada.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Dar de baja todo', style: 'destructive', onPress: () => void submitMerma(qty) },
+        ]
+      );
+      return;
     }
+
+    void submitMerma(qty);
   };
 
   return (
@@ -65,11 +91,11 @@ export const MermaModal: React.FC<MermaModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.card}>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={24} color="#94A3B8" />
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <Text style={styles.icon}>⚠️</Text>
+            <Ionicons name="warning-outline" size={42} color="#D97706" />
             <Text style={styles.title}>Registrar Merma / Baja</Text>
             <Text style={styles.subtitle}>
               Lote: <Text style={styles.boldText}>{lotNumber}</Text> (Disp: {maxUnits} un.)
@@ -78,12 +104,26 @@ export const MermaModal: React.FC<MermaModalProps> = ({
 
           {error && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠️ {error}</Text>
+              <Ionicons name="alert-circle-outline" size={17} color="#DC2626" /><Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
           <View style={styles.field}>
-            <Text style={styles.label}>CANTIDAD A DAR DE BAJA:</Text>
+            <View style={styles.quantityHeader}>
+              <Text style={styles.label}>CANTIDAD A DAR DE BAJA:</Text>
+              <TouchableOpacity
+                style={[styles.allUnitsBtn, cantidad === String(maxUnits) && styles.allUnitsBtnActive]}
+                onPress={() => {
+                  setCantidad(String(maxUnits));
+                  setError(null);
+                }}
+                disabled={loading || maxUnits <= 0}
+              >
+                <Text style={[styles.allUnitsBtnText, cantidad === String(maxUnits) && styles.allUnitsBtnTextActive]}>
+                  Usar todo ({maxUnits} un.)
+                </Text>
+              </TouchableOpacity>
+            </View>
             <TextInput
               style={styles.input}
               value={cantidad}
@@ -91,6 +131,7 @@ export const MermaModal: React.FC<MermaModalProps> = ({
               keyboardType="numeric"
               placeholder="Ej: 5"
             />
+            <Text style={styles.quantityHelp}>Recomendado cuando todo el saldo se retira por caducidad.</Text>
           </View>
 
           <View style={styles.field}>
@@ -190,6 +231,37 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 4,
   },
+  quantityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  allUnitsBtn: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  allUnitsBtnActive: {
+    backgroundColor: '#F87171',
+    borderColor: '#F87171',
+  },
+  allUnitsBtnText: {
+    color: '#B91C1C',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  allUnitsBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  quantityHelp: {
+    color: '#94A3B8',
+    fontSize: 9,
+    marginTop: 4,
+  },
   input: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
@@ -206,7 +278,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   submitBtn: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#F87171',
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',

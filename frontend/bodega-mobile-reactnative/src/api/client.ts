@@ -6,6 +6,7 @@ import {
   BackendLot,
   BackendProduct,
   BackendCategory,
+  CreateProductPayload,
   BackendPromotion,
   BackendReservation,
   CreateLotPayload,
@@ -113,8 +114,17 @@ export const api = {
 
   // 2. Catálogo de Productos
   async getProducts(): Promise<BackendProduct[]> {
-      const res = await axios.get<{ success: boolean; data: BackendProduct[] }>(`${BASE_URL}/products`, { timeout: 4000 });
+      const res = await axios.get<{ success: boolean; data: BackendProduct[] }>(`${BASE_URL}/products`, {
+        params: { limit: 100, offset: 0 }, timeout: 4000
+      });
       return res.data.data || [];
+  },
+
+  async getProductsPage(params: { q?: string; categoriaId?: string; limit?: number; offset?: number }): Promise<{ items: BackendProduct[]; total: number }> {
+    const res = await axios.get<{ success: boolean; data: BackendProduct[]; total: number }>(`${BASE_URL}/products`, {
+      params, timeout: 5000
+    });
+    return { items: res.data.data || [], total: Number(res.data.total || 0) };
   },
 
   async getProductByBarcode(barcode: string): Promise<BackendProduct | null> {
@@ -128,6 +138,20 @@ export const api = {
   async getCategories(): Promise<BackendCategory[]> {
       const res = await axios.get<{ success: boolean; data: BackendCategory[] }>(`${BASE_URL}/categories`, { timeout: 4000 });
       return res.data.data || [];
+  },
+
+  async createCategory(payload: { nombre: string; descripcion?: string }): Promise<BackendCategory> {
+    const res = await axios.post<{ success: boolean; data: BackendCategory }>(
+      `${BASE_URL}/categories`, payload, authorizedConfig(5000)
+    );
+    return res.data.data;
+  },
+
+  async createProduct(payload: CreateProductPayload): Promise<BackendProduct> {
+    const res = await axios.post<{ success: boolean; data: BackendProduct }>(
+      `${BASE_URL}/products`, payload, authorizedConfig(6000)
+    );
+    return res.data.data;
   },
 
   // 3. Gestión de Lotes (Bodega e Inventario)
@@ -207,6 +231,31 @@ export const api = {
       `${BASE_URL}/promotions/pending`, authorizedConfig(7000)
     );
     return res.data.data || [];
+  },
+
+  async getManagedPromotions(params: { estado?: string; activa?: boolean } = {}): Promise<BackendPromotion[]> {
+    const res = await axios.get<{ success: boolean; data: BackendPromotion[] }>(
+      `${BASE_URL}/promotions/manage`, { ...authorizedConfig(7000), params }
+    );
+    return res.data.data || [];
+  },
+
+  async updatePromotion(id: string, payload: { descuentoPorcentaje: number; frasePromocional: string }): Promise<BackendPromotion> {
+    const res = await axios.patch<{ success: boolean; data: BackendPromotion }>(
+      `${BASE_URL}/promotions/${id}`, payload, authorizedConfig(7000)
+    );
+    return res.data.data;
+  },
+
+  async deactivatePromotion(id: string): Promise<BackendPromotion> {
+    const res = await axios.post<{ success: boolean; data: BackendPromotion }>(
+      `${BASE_URL}/promotions/${id}/deactivate`, {}, authorizedConfig(7000)
+    );
+    return res.data.data;
+  },
+
+  async deletePromotionDraft(id: string): Promise<void> {
+    await axios.delete(`${BASE_URL}/promotions/${id}`, authorizedConfig(7000));
   },
 
   async approvePromotion(id: string): Promise<BackendPromotion> {

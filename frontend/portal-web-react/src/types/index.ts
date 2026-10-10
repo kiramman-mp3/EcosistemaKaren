@@ -1,4 +1,4 @@
-export type NavTab = 'inicio' | 'productos' | 'ofertas';
+export type NavTab = 'inicio' | 'productos' | 'ofertas' | 'reservas';
 
 export type ProductCategory = string;
 
@@ -14,6 +14,10 @@ export interface Product {
   expiryDate?: string;
   unit?: string;
   barcode?: string;
+  reservationProductId?: string;
+  promotionId?: string;
+  offerLotId?: string;
+  isOffer?: boolean;
 }
 
 export interface FlashOffer {

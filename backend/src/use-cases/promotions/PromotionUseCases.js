@@ -5,6 +5,7 @@ const {
   assertPromotableLot
 } = require('../../domain/policies/PromotionPolicy');
 const metrics = require('../../infrastructure/metrics/AiMetricsCollector');
+const Promotion = require('../../domain/entities/Promotion');
 
 // ─── Metric helper (metrics failures must never fail the business workflow) ─
 function safeMetric(fn) {
@@ -190,6 +191,32 @@ class GetPendingPromotions {
   }
 }
 
+class ManagePromotions {
+  constructor(promotionRepository) { this.promotionRepository = promotionRepository; }
+  _admin(user) { if (!user || user.rol !== 'ADMIN') throw new ForbiddenException('Solo un administrador puede gestionar promociones.'); }
+  async list(filters, user) { this._admin(user); return this.promotionRepository.findAllOperational(filters); }
+  async update({ promotionId, ...data }, user) {
+    this._admin(user);
+    const current = await this.promotionRepository.findById(promotionId);
+    if (!current) throw new NotFoundException('La promoción no existe.');
+    if (current.estado !== 'PENDIENTE_APROBACION') throw new ValidationException('Solo se pueden editar promociones pendientes.');
+    const validated = new Promotion({ ...current, ...data });
+    return this.promotionRepository.updateDraft(promotionId, validated);
+  }
+  async deactivate(promotionId, user) {
+    this._admin(user);
+    const result = await this.promotionRepository.deactivate(promotionId);
+    if (!result) throw new ValidationException('Solo se puede finalizar una promoción aprobada y activa.');
+    return result;
+  }
+  async deleteDraft(promotionId, user) {
+    this._admin(user);
+    const deleted = await this.promotionRepository.deleteDraft(promotionId);
+    if (!deleted) throw new ValidationException('Solo se pueden eliminar borradores pendientes.');
+    return true;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ApprovePromotion Use Case  (ADMIN only)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -276,4 +303,5 @@ module.exports = {
   GetPendingPromotions,
   ApprovePromotion,
   RejectPromotion,
+  ManagePromotions,
 };
