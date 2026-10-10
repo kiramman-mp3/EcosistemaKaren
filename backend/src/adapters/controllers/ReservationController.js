@@ -89,9 +89,14 @@ class ReservationController {
       if (!this.getReservationsByUserUC) {
         return res.json({ success: true, data: [] });
       }
-      const reservations = await this.getReservationsByUserUC.execute(userId);
+      const reservations = await this.getReservationsByUserUC.execute(userId, req.query);
       res.json({
         success: true,
+        pagination: {
+          limit: req.query.limit,
+          offset: req.query.offset,
+          returned: reservations.length
+        },
         data: reservations
       });
     } catch (err) {

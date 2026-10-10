@@ -12,19 +12,21 @@ function createAuthMiddleware(jwtSecret) {
   function authenticate(req, res, next) {
     const authorization = req.get('authorization') || '';
     const [scheme, token] = authorization.split(' ');
+    const sessionToken = scheme === 'Bearer' && token ? token : req.cookies?.karen_session;
 
-    if (scheme !== 'Bearer' || !token) {
+    if (!sessionToken) {
       return next(new UnauthorizedException('Debe autenticarse con un token Bearer válido.'));
     }
 
     try {
-      const payload = jwt.verify(token, jwtSecret, { algorithms: ['HS256'] });
+      const payload = jwt.verify(sessionToken, jwtSecret, { algorithms: ['HS256'] });
       if (!payload || typeof payload !== 'object' || !payload.id || !payload.rol) {
         throw new Error('Token sin identidad o rol.');
       }
 
       req.user = {
         id: payload.id,
+        nombre: payload.nombre,
         email: payload.email,
         rol: String(payload.rol).toUpperCase()
       };

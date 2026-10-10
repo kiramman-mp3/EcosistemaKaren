@@ -94,7 +94,7 @@ class InMemoryRepositories {
       this.lots.push(lot);
     }
 
-    const demoPasswordHash = '$2a$10$2t02iry3fpfeLbiyW6fEouQMk5n6EPyKcokmWEWpq/BZ0hTdGriGS';
+    const demoPasswordHash = '$2a$10$Ndinx2G0HgZgjtc4N3Q4B.2dHgih47xC7LtiJ.if4rsg3wp/RMtP.';
     this.users.push(
       new User({
         id: 'd8a7b6c5-1111-2222-3333-444455556666',
@@ -308,7 +308,10 @@ class InMemoryRepositories {
     return {
       findByCode: async (code) => this.reservations.find(r => r.codigoRetiro === code) || null,
       findById: async (id) => this.reservations.find(r => r.id === id) || null,
-      findByUserId: async (userId) => this.reservations.filter(r => r.usuarioId === userId),
+      findByUserId: async (userId, { limit = 50, offset = 0 } = {}) => this.reservations
+        .filter(r => r.usuarioId === userId)
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        .slice(offset, offset + limit),
       findExpiredPending: async () => {
         const now = new Date();
         return this.reservations.filter(r => r.estado === 'PENDIENTE' && new Date(r.fechaExpiracion) < now);

@@ -1,4 +1,5 @@
 const swaggerUi = require('swagger-ui-express');
+const crypto = require('node:crypto');
 
 const swaggerDocument = {
   openapi: '3.0.0',
@@ -534,9 +535,49 @@ const swaggerDocument = {
   }
 };
 
-function setupSwagger(app) {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-  console.log('📖 Documentación Swagger UI disponible en: http://localhost:4000/api-docs');
+function safeEqual(actual, expected) {
+  const actualHash = crypto.createHash('sha256').update(actual).digest();
+  const expectedHash = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(actualHash, expectedHash);
+}
+
+function swaggerBasicAuth(username, password) {
+  return (req, res, next) => {
+    const authorization = req.get('authorization') || '';
+    const [scheme, encoded] = authorization.split(' ');
+    let suppliedUser = '';
+    let suppliedPassword = '';
+    if (scheme === 'Basic' && encoded) {
+      try {
+        [suppliedUser, suppliedPassword] = Buffer.from(encoded, 'base64').toString('utf8').split(':', 2);
+      } catch { /* credencial inválida */ }
+    }
+    if (safeEqual(suppliedUser || '', username) && safeEqual(suppliedPassword || '', password)) return next();
+    res.setHeader('WWW-Authenticate', 'Basic realm="Ecosistema Karen API"');
+    return res.status(401).json({ success: false, message: 'Autenticación requerida para consultar la documentación.', requestId: req.id });
+  };
+}
+
+function setupSwagger(app, env = process.env) {
+  const production = env.NODE_ENV === 'production';
+  const enabled = production ? env.SWAGGER_ENABLED === 'true' : env.SWAGGER_ENABLED !== 'false';
+  if (!enabled) return false;
+
+  swaggerDocument.servers = [{
+    url: env.SWAGGER_API_URL || 'http://localhost:4000/api/v1',
+    description: production ? 'API desplegada' : 'Servidor local de desarrollo'
+  }];
+
+  const middleware = [];
+  if (production) {
+    if (!env.SWAGGER_USERNAME || !env.SWAGGER_PASSWORD) {
+      throw new Error('SWAGGER_USERNAME y SWAGGER_PASSWORD son obligatorios al habilitar Swagger en producción.');
+    }
+    middleware.push(swaggerBasicAuth(env.SWAGGER_USERNAME, env.SWAGGER_PASSWORD));
+  }
+  app.use('/api-docs', ...middleware, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  return true;
 }
 
 module.exports = setupSwagger;
+module.exports.swaggerBasicAuth = swaggerBasicAuth;

@@ -24,7 +24,7 @@ class RegisterUser {
     const savedUser = await this.userRepository.save(user);
 
     const token = jwt.sign(
-      { id: savedUser.id, email: savedUser.email, rol: savedUser.rol },
+      { id: savedUser.id, nombre: savedUser.nombre, email: savedUser.email, rol: savedUser.rol },
       this.jwtSecret,
       { expiresIn: '24h' }
     );
@@ -63,7 +63,7 @@ class LoginUser {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, rol: user.rol },
+      { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol },
       this.jwtSecret,
       { expiresIn: '24h' }
     );

@@ -108,11 +108,11 @@ class GetReservationsByUser {
     this.reservationRepository = reservationRepository;
   }
 
-  async execute(usuarioId) {
+  async execute(usuarioId, pagination = {}) {
     if (!usuarioId) {
       throw new ValidationException('El usuarioId es requerido.');
     }
-    return this.reservationRepository.findByUserId(usuarioId);
+    return this.reservationRepository.findByUserId(usuarioId, pagination);
   }
 }
 

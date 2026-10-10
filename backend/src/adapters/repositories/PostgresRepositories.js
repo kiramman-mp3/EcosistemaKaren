@@ -816,14 +816,15 @@ class PostgresReservationRepository {
     return reservation;
   }
 
-  async findByUserId(userId) {
+  async findByUserId(userId, { limit = 50, offset = 0 } = {}) {
     const resHead = await this.pool.query(`
       SELECT id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
              estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
       FROM reservas
       WHERE usuario_id = $1
       ORDER BY created_at DESC
-    `, [userId]);
+      LIMIT $2 OFFSET $3
+    `, [userId, limit, offset]);
 
     const list = [];
     for (const row of resHead.rows) {

@@ -41,6 +41,26 @@ Los lotes con fecha de caducidad igual o anterior al día actual nunca participa
 Un worker los marca como `VENCIDO` al arrancar y cada 60 segundos; el filtro SQL de las
 consultas de inventario actúa además como protección inmediata entre barridos.
 
+## Seguridad HTTP en producción
+
+El backend incorpora Helmet, identificadores `X-Request-Id`, protección contra parameter
+pollution y prototype pollution, límite configurable para JSON y rate limiting por IP.
+Autenticación, reservas y generación con IA tienen límites adicionales independientes.
+Las respuestas `400`, `413` y `429` incluyen el `requestId` para correlacionarlas con logs.
+
+En producción son obligatorios un `JWT_SECRET` aleatorio de al menos 32 caracteres y una
+lista explícita `CORS_ORIGINS`; el servidor rechaza el arranque ante `*` o configuración
+insegura. Si existe un reverse proxy, `TRUST_PROXY_HOPS` debe ser el número exacto de
+saltos confiables para que los límites por IP no puedan falsificarse.
+
+El portal web usa una cookie `HttpOnly`, `Secure` y `SameSite=Strict`. Las operaciones
+mutables autenticadas por cookie validan además el encabezado `Origin` como protección
+CSRF. Los clientes móviles continúan usando `Authorization: Bearer` y no reciben cookies.
+
+Swagger está deshabilitado por defecto en producción. Para habilitarlo se requieren
+`SWAGGER_ENABLED=true`, `SWAGGER_USERNAME` y una `SWAGGER_PASSWORD` de al menos 16
+caracteres. Todos los parámetros disponibles están documentados en `.env.example`.
+
 ## Migraciones
 
 Al conectarse a PostgreSQL, el backend ejecuta las migraciones incrementales pendientes

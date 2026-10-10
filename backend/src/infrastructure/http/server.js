@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const { testConnection, getPool } = require('../db/postgres');
@@ -7,6 +8,7 @@ const { runMigrations } = require('../db/migrations');
 const setupSwagger = require('../swagger/swaggerDoc');
 const errorHandler = require('./middlewares/errorHandler');
 const createAuthMiddleware = require('./middlewares/auth');
+const { createSecurityMiddlewares, validateProductionSecurity, cookieCsrfProtection } = require('./middlewares/security');
 const AlertStreamManager = require('../sse/AlertStreamManager');
 const ReservationCleanerWorker = require('../workers/ReservationCleanerWorker');
 const LotExpiryWorker = require('../workers/LotExpiryWorker');
@@ -53,11 +55,42 @@ const HeartbeatController = require('../../adapters/controllers/HeartbeatControl
 const createApiRouter = require('./routes/router');
 
 async function createServer() {
+  validateProductionSecurity(process.env);
   const app = express();
+  const httpSecurity = createSecurityMiddlewares(process.env);
 
-  // Middlewares estándar
-  app.use(cors());
-  app.use(express.json());
+  const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
+  if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) app.set('trust proxy', trustProxyHops);
+
+  // Seguridad HTTP común
+  app.disable('x-powered-by');
+  app.use(httpSecurity.requestId);
+  app.use(httpSecurity.headers);
+  const allowedOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',').map(value => value.trim()).filter(Boolean);
+  app.use(cors({
+    credentials: true,
+    origin(origin, callback) {
+      if (!origin || process.env.NODE_ENV !== 'production' || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      const error = new Error('Origen no permitido por CORS.');
+      error.statusCode = 403;
+      return callback(error);
+    }
+  }));
+  app.use('/api/v1', httpSecurity.general);
+  app.use('/api/v1/auth', httpSecurity.auth);
+  app.use('/api/v1/reservations', httpSecurity.reservations);
+  app.use('/api/v1/promotions/generate', httpSecurity.ai);
+  app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb', strict: true }));
+  app.use(httpSecurity.normalizeJsonBody);
+  app.use(cookieParser());
+  app.use(cookieCsrfProtection(allowedOrigins, process.env.NODE_ENV === 'production'));
+  app.use('/api/v1/auth', (req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
+  app.use('/api/v1/reservations', (req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
+  app.use(httpSecurity.hpp);
+  app.use(httpSecurity.rejectDangerousKeys);
 
   // Probar conexión PostgreSQL
   const dbConnected = await testConnection();
@@ -171,7 +204,8 @@ async function createServer() {
   lotExpiryWorker.start();
 
   // Configurar Swagger UI
-  setupSwagger(app);
+  const swaggerEnabled = setupSwagger(app, process.env);
+  app.locals.swaggerEnabled = swaggerEnabled;
 
   // Montar Router `/api/v1`
   const apiRouter = createApiRouter({
@@ -193,7 +227,7 @@ async function createServer() {
       name: 'Ecosistema Karen - Backend Server API',
       version: '1.0.0',
       status: 'ONLINE',
-      swaggerDocs: '/api-docs',
+      swaggerDocs: swaggerEnabled ? '/api-docs' : null,
       apiBaseUrl: '/api/v1'
     });
   });

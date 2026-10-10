@@ -138,9 +138,9 @@ INSERT INTO productos (id, categoria_id, codigo_barras, nombre, descripcion, pre
 ON CONFLICT (codigo_barras) DO NOTHING;
 
 INSERT INTO usuarios (id, nombre, email, rol, password_hash) VALUES
-('d8a7b6c5-1111-2222-3333-444455556666', 'Cliente Demo', 'cliente@karen.com', 'CLIENTE', '$2a$10$2t02iry3fpfeLbiyW6fEouQMk5n6EPyKcokmWEWpq/BZ0hTdGriGS'),
-('d8a7b6c5-1111-2222-3333-444455556667', 'Nancy Alvares (Bodega)', 'bodega@karen.com', 'BODEGUERO', '$2a$10$2t02iry3fpfeLbiyW6fEouQMk5n6EPyKcokmWEWpq/BZ0hTdGriGS'),
-('d8a7b6c5-1111-2222-3333-444455556668', 'Admin Supermercado', 'admin@karen.com', 'ADMIN', '$2a$10$2t02iry3fpfeLbiyW6fEouQMk5n6EPyKcokmWEWpq/BZ0hTdGriGS')
+('d8a7b6c5-1111-2222-3333-444455556666', 'Cliente Demo', 'cliente@karen.com', 'CLIENTE', '$2a$10$Ndinx2G0HgZgjtc4N3Q4B.2dHgih47xC7LtiJ.if4rsg3wp/RMtP.'),
+('d8a7b6c5-1111-2222-3333-444455556667', 'Nancy Alvares (Bodega)', 'bodega@karen.com', 'BODEGUERO', '$2a$10$Ndinx2G0HgZgjtc4N3Q4B.2dHgih47xC7LtiJ.if4rsg3wp/RMtP.'),
+('d8a7b6c5-1111-2222-3333-444455556668', 'Admin Supermercado', 'admin@karen.com', 'ADMIN', '$2a$10$Ndinx2G0HgZgjtc4N3Q4B.2dHgih47xC7LtiJ.if4rsg3wp/RMtP.')
 ON CONFLICT (email) DO NOTHING;
 
 -- Lotes iniciales para pruebas (uno crítico < 7 días, uno advertencia < 15 días, uno normal)
