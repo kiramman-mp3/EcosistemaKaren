@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { confirmAction, notify } from '../utils/dialogs';
+import { formatDateTime } from '../utils/dates';
 import type { BackendReservation } from '../api/client';
 
 interface Props {
@@ -15,14 +17,15 @@ interface Props {
 
 export const MyReservationsModalMobile: React.FC<Props> = props => {
   const [cancelling, setCancelling] = useState<string | null>(null);
-  const cancel = (id: string) => Alert.alert('Cancelar reserva', 'El stock será liberado inmediatamente.', [
-    { text: 'Volver', style: 'cancel' },
-    { text: 'Cancelar reserva', style: 'destructive', onPress: async () => {
-      setCancelling(id);
-      try { await props.onCancel(id); } catch (error: any) { Alert.alert('No se pudo cancelar', error?.message || 'Intenta nuevamente.'); }
-      finally { setCancelling(null); }
-    } },
-  ]);
+  const cancel = async (id: string) => {
+    const confirmed = await confirmAction('Cancelar reserva', 'El stock será liberado inmediatamente.', {
+      confirmLabel: 'Cancelar reserva', cancelLabel: 'Volver', destructive: true,
+    });
+    if (!confirmed) return;
+    setCancelling(id);
+    try { await props.onCancel(id); } catch (error: any) { notify('No se pudo cancelar', error?.message || 'Intenta nuevamente.'); }
+    finally { setCancelling(null); }
+  };
 
   return <Modal visible={props.visible} transparent animationType="slide" onRequestClose={props.onClose}>
     <View style={styles.overlay}><View style={styles.sheet}>
@@ -33,7 +36,7 @@ export const MyReservationsModalMobile: React.FC<Props> = props => {
         <ScrollView>{props.reservations.map(reservation => {
           const pending = reservation.estado === 'PENDIENTE' && new Date(reservation.fechaExpiracion).getTime() > Date.now();
           const total = reservation.detalles.reduce((sum, item) => sum + Number(item.cantidad) * Number(item.precioUnitario), 0);
-          return <View key={reservation.id} style={styles.card}><View style={styles.cardTop}><Text style={styles.code}>{reservation.codigoRetiro}</Text><Text style={[styles.status, pending && styles.statusPending]}>{reservation.estado === 'PENDIENTE' && !pending ? 'EXPIRADA' : reservation.estado}</Text></View><Text style={styles.date}>Expira: {new Date(reservation.fechaExpiracion).toLocaleString()}</Text><Text style={styles.detail}>{reservation.detalles.length} lote(s) · ${total.toFixed(2)}</Text>{pending && <View style={styles.actions}><TouchableOpacity style={styles.passButton} onPress={() => props.onOpenPass(reservation)}><Text style={styles.passText}>Ver pase QR</Text></TouchableOpacity><TouchableOpacity style={styles.cancelButton} disabled={cancelling === reservation.id} onPress={() => cancel(reservation.id)}><Text style={styles.cancelText}>{cancelling === reservation.id ? 'Cancelando…' : 'Cancelar'}</Text></TouchableOpacity></View>}</View>;
+          return <View key={reservation.id} style={styles.card}><View style={styles.cardTop}><Text style={styles.code}>{reservation.codigoRetiro}</Text><Text style={[styles.status, pending && styles.statusPending]}>{reservation.estado === 'PENDIENTE' && !pending ? 'EXPIRADA' : reservation.estado}</Text></View><Text style={styles.date}>Expira: {formatDateTime(reservation.fechaExpiracion)}</Text><Text style={styles.detail}>{reservation.detalles.length} lote(s) · ${total.toFixed(2)}</Text>{pending && <View style={styles.actions}><TouchableOpacity style={styles.passButton} onPress={() => props.onOpenPass(reservation)}><Text style={styles.passText}>Ver pase QR</Text></TouchableOpacity><TouchableOpacity style={styles.cancelButton} disabled={cancelling === reservation.id} onPress={() => void cancel(reservation.id)}><Text style={styles.cancelText}>{cancelling === reservation.id ? 'Cancelando…' : 'Cancelar'}</Text></TouchableOpacity></View>}</View>;
         })}</ScrollView>
       </>}
     </View></View>

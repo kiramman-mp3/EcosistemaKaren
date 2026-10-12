@@ -6,7 +6,6 @@ import {
   StyleSheet,
   View,
   Text,
-  Alert,
   AppState,
 } from 'react-native';
 import { NavbarMobile } from './src/components/NavbarMobile';
@@ -30,6 +29,8 @@ import {
 } from './src/types';
 import { api, BackendReservation } from './src/api/client';
 import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
+import { formatDate } from './src/utils/dates';
+import { notify } from './src/utils/dialogs';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
 
@@ -112,9 +113,7 @@ export default function App() {
       setCategoriesList(Array.from(new Set(['Todos', ...backendCats.map((category) => category.nombre)])));
 
       const mappedProducts: Product[] = backendProds.map((bp) => {
-          const matchingLots = backendLots.filter(
-            (l) => l.productoId === bp.id || l.productoNombre === bp.nombre
-          );
+          const matchingLots = backendLots.filter((l) => l.productoId === bp.id);
           const totalStock = matchingLots.reduce(
             (sum, l) => sum + (l.cantidadDisponible || 0),
             0
@@ -150,9 +149,9 @@ export default function App() {
             urgencyBadge: `${relatedLot.cantidadDisponible} disponibles`,
             price: Number(discountedPrice.toFixed(2)),
             originalPrice,
-            stockTotal: relatedLot.cantidadIngresada,
+            stockTotal: Math.max(relatedLot.cantidadIngresada || 0, relatedLot.cantidadDisponible),
             stockAvailable: relatedLot.cantidadDisponible,
-            expiryText: `Caduca: ${new Date(relatedLot.fechaCaducidad).toLocaleDateString()}`,
+            expiryText: `Caduca: ${formatDate(relatedLot.fechaCaducidad)}`,
             image:
               'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
             loteId: relatedLot.id,
@@ -206,12 +205,13 @@ export default function App() {
   const handleAddToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
+      // Nunca más unidades que el stock disponible: la reserva fallaría por sobreventa.
       if (existing) {
         return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.product.id === product.id ? { ...i, quantity: Math.min(i.quantity + 1, i.product.stock) } : i
         );
       }
-      return [...prev, { product, quantity: 1 }];
+      return product.stock > 0 ? [...prev, { product, quantity: 1 }] : prev;
     });
   };
 
@@ -220,7 +220,7 @@ export default function App() {
       prev
         .map((i) => {
           if (i.product.id === id) {
-            const next = i.quantity + delta;
+            const next = Math.min(i.quantity + delta, i.product.stock);
             return next > 0 ? { ...i, quantity: next } : null;
           }
           return i;
@@ -238,7 +238,7 @@ export default function App() {
   const handleConfirmReservation = async () => {
     if (cart.length === 0) return;
     if (!currentUser) {
-      Alert.alert('Inicio de sesión requerido', 'Debes iniciar sesión para reservar stock.');
+      notify('Inicio de sesión requerido', 'Debes iniciar sesión para reservar stock.');
       setIsLoginOpen(true);
       return;
     }
@@ -257,8 +257,9 @@ export default function App() {
       });
 
       const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+      const saved = await api.getReservationByCode(reservation.codigoRetiro).catch(() => null);
 
-      setPass({
+      setPass(saved ? reservationToPass(saved) : {
         code: reservation.codigoRetiro,
         status: reservation.estado,
         remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
@@ -276,7 +277,7 @@ export default function App() {
       setIsCartOpen(false);
       setIsPassOpen(true);
     } catch (err: any) {
-      Alert.alert(
+      notify(
         'No se pudo crear la reserva',
         err.message || 'Comprueba tu sesión y la conexión con la tienda.'
       );
@@ -288,7 +289,7 @@ export default function App() {
   // Reserve single flash offer
   const handleReserveOffer = async (offer: FlashOffer) => {
     if (!currentUser) {
-      Alert.alert('Inicio de sesión requerido', 'Debes iniciar sesión para reservar esta oferta.');
+      notify('Inicio de sesión requerido', 'Debes iniciar sesión para reservar esta oferta.');
       setIsLoginOpen(true);
       return;
     }
@@ -297,25 +298,28 @@ export default function App() {
       const matchingProduct = products.find((p) => p.id === offer.productId);
 
       if (matchingProduct) {
+        // promocionId hace que el backend cobre el precio con descuento y use el lote en oferta.
         const reservation = await api.createReservation({
           usuarioId: userId,
-          items: [{ productoId: matchingProduct.id, cantidad: 1 }],
+          items: [{ productoId: matchingProduct.id, cantidad: 1, promocionId: offer.id }],
         });
+        const saved = await api.getReservationByCode(reservation.codigoRetiro).catch(() => null);
 
-        setPass({
+        setPass(saved ? reservationToPass(saved) : {
           code: reservation.codigoRetiro,
           status: reservation.estado,
           remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
           storeLocation: 'Sucursal Matriz',
-          items: [{ productName: offer.title, quantity: 1, price: offer.price }],
+          items: [{ productName: matchingProduct.name, quantity: 1, price: offer.price }],
           total: offer.price,
         });
         void syncReservations(currentUser.id);
+        void loadBackendData();
         setIsPassOpen(true);
         return;
       }
     } catch (err: any) {
-      Alert.alert(
+      notify(
         'No se pudo reservar la oferta',
         err.message || 'Comprueba tu sesión y la conexión con la tienda.'
       );
@@ -350,7 +354,7 @@ export default function App() {
               onNavigate={setActiveTab}
               onOpenPassPreview={() => pass
                 ? setIsPassOpen(true)
-                : Alert.alert('Sin reserva activa', 'Crea una reserva para consultar tu pase de retiro.')}
+                : notify('Sin reserva activa', 'Crea una reserva para consultar tu pase de retiro.')}
             />
             <CategoriesGridMobile
               onSelectCategory={handleSelectCategory}
