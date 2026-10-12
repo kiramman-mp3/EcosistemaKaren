@@ -29,6 +29,10 @@ import {
 import { api } from './src/api/client';
 import { classifyExpiryDays } from './src/config/businessRules';
 import { daysUntil } from './src/utils/dates';
+import { useFonts, Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold } from '@expo-google-fonts/archivo';
+import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow';
+import { Doto_900Black } from '@expo-google-fonts/doto';
+import { colors, fonts } from './src/theme/tokens';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol: string } | null>(null);
@@ -36,6 +40,10 @@ export default function App() {
   const [isOnline, setIsOnline] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [restoringSession, setRestoringSession] = useState(true);
+  const [fontsLoaded, fontError] = useFonts({
+    Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold,
+    ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold, Doto_900Black,
+  });
 
   // Core data states
   const [products, setProducts] = useState<BackendProduct[]>([]);
@@ -172,11 +180,12 @@ export default function App() {
     (a) => a.nivel === 'ROJO' || a.nivel === 'VENCIDO'
   ).length;
 
-  if (restoringSession) {
+  // Sin fuentes la app sigue funcionando con las del sistema (fontError).
+  if (restoringSession || (!fontsLoaded && !fontError)) {
     return <SafeAreaProvider>
       <SafeAreaView style={styles.loadingSession}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
-        <Text style={styles.loadingSessionText}>Restaurando sesión segura…</Text>
+        <ActivityIndicator size="large" color={colors.white} />
+        <Text style={[styles.loadingSessionText, fontsLoaded && { fontFamily: fonts.medium }]}>Abriendo Bodega Karen…</Text>
       </SafeAreaView>
     </SafeAreaProvider>;
   }
@@ -193,16 +202,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E293B" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.ink} />
 
       {/* Header Bodega */}
       <HeaderBodega
         isOnline={isOnline}
         operatorName={currentUser.nombre}
         operatorRole={currentUser.rol}
-        criticalAlertsCount={criticalAlertsCount}
-        alertsActive={activeTab === 'alertas'}
-        onOpenAlerts={() => setActiveTab('alertas')}
         onOpenReports={() => setActiveTab('reportes')}
         onLogout={() => {
           void api.logout();
@@ -266,12 +272,14 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         role={currentUser.rol}
+        criticalAlertsCount={criticalAlertsCount}
       />
 
       {/* Modals */}
       <AiPromoModal
         visible={Boolean(selectedPromo)}
         promotion={selectedPromo}
+        canReview={currentUser.rol === 'ADMIN'}
         onClose={() => setSelectedPromo(null)}
         onReview={() => {
           setSelectedPromo(null);
@@ -298,14 +306,14 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  loadingSession: { flex: 1, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  loadingSessionText: { color: '#CBD5E1', fontWeight: '700' },
+  loadingSession: { flex: 1, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingSessionText: { color: 'rgba(255,255,255,0.8)', fontSize: 15 },
   safeArea: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.ink,
   },
   body: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.aisle,
   },
 });

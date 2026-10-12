@@ -1,18 +1,9 @@
 import React, { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api, BodegaAuthResponse } from '../api/client';
-import { Ionicons } from '@expo/vector-icons';
+import { Button, Field, Notice } from '../components/ui';
+import { colors, fonts, radius } from '../theme/tokens';
 
 interface Props {
   onLogin: (auth: BodegaAuthResponse) => void;
@@ -26,12 +17,16 @@ export const BodegaLoginScreen: React.FC<Props> = ({ onLogin }) => {
   const passwordInputRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      setError('Escribe tu correo y tu contraseña.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       onLogin(await api.login(email.trim(), password));
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'No se pudo iniciar sesión.');
+      setError(err.response?.data?.message || err.message || 'No se pudo iniciar sesión. Revisa la conexión con la tienda.');
     } finally {
       setLoading(false);
     }
@@ -39,54 +34,45 @@ export const BodegaLoginScreen: React.FC<Props> = ({ onLogin }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.keyboardArea}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
-          alwaysBounceVertical={false}
         >
-          <View style={styles.card}>
-            <View style={styles.icon}><Ionicons name="storefront-outline" size={42} color="#DC2626" /></View>
-            <Text style={styles.title}>Bodega Karen</Text>
-            <Text style={styles.subtitle}>Acceso exclusivo para personal autorizado</Text>
+          <View style={styles.inner}>
+            <View style={styles.logo}><Text style={styles.logoText}>K</Text></View>
+            <Text style={styles.brand}>Bodega Karen</Text>
+            <Text style={styles.lead}>Recepción de lotes, percha y caja.{'\n'}Solo personal de la tienda.</Text>
 
-            <Text style={styles.label}>Correo</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!loading}
-              returnKeyType="next"
-              onSubmitEditing={() => passwordInputRef.current?.focus()}
-            />
-
-            <Text style={styles.label}>Contraseña</Text>
-            <TextInput
-              ref={passwordInputRef}
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!loading}
-              returnKeyType="done"
-              onSubmitEditing={handleLogin}
-            />
-
-            {error && <Text style={styles.error}>{error}</Text>}
-
-            <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-              {loading
-                ? <ActivityIndicator color="#FFFFFF" />
-                : <Text style={styles.buttonText}>Iniciar sesión</Text>}
-            </TouchableOpacity>
+            <View style={styles.card}>
+              {error && <Notice tone="error" text={error} />}
+              <Field
+                label="Correo"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                editable={!loading}
+                returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+              />
+              <Field
+                ref={passwordInputRef}
+                label="Contraseña"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoComplete="password"
+                editable={!loading}
+                returnKeyType="done"
+                onSubmitEditing={() => void handleLogin()}
+              />
+              <Button label="Ingresar" onPress={() => void handleLogin()} loading={loading} variant="danger" />
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -95,16 +81,16 @@ export const BodegaLoginScreen: React.FC<Props> = ({ onLogin }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0F172A' },
-  keyboardArea: { flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24 },
-  icon: { fontSize: 42, textAlign: 'center', marginBottom: 8 },
-  title: { fontSize: 25, fontWeight: '900', color: '#1E293B', textAlign: 'center' },
-  subtitle: { color: '#64748B', textAlign: 'center', marginTop: 4, marginBottom: 24 },
-  label: { color: '#334155', fontWeight: '700', marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, padding: 12, marginBottom: 16 },
-  error: { color: '#B91C1C', backgroundColor: '#FEE2E2', padding: 10, borderRadius: 8, marginBottom: 14 },
-  button: { backgroundColor: '#F87171', padding: 14, borderRadius: 10, alignItems: 'center' },
-  buttonText: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },
+  safeArea: { flex: 1, backgroundColor: colors.ink },
+  flex: { flex: 1 },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
+  inner: { width: '100%', maxWidth: 420, alignSelf: 'center' },
+  logo: {
+    width: 56, height: 56, borderRadius: radius.tag, backgroundColor: colors.karen,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+  },
+  logoText: { fontFamily: fonts.tag, fontSize: 38, lineHeight: 42, color: colors.white },
+  brand: { fontFamily: fonts.tag, fontSize: 44, lineHeight: 46, color: colors.white },
+  lead: { fontFamily: fonts.body, fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.75)', marginTop: 8, marginBottom: 24 },
+  card: { backgroundColor: colors.white, borderRadius: radius.tag, padding: 20, paddingBottom: 22 },
 });
