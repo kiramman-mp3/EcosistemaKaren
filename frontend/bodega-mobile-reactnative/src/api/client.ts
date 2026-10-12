@@ -27,6 +27,13 @@ const getBaseUrl = (): string => {
 
 export const BASE_URL = getBaseUrl();
 
+/** Las imágenes llegan como rutas del backend (/api/v1/media/...); la app nativa necesita la URL completa. */
+export function mediaUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return BASE_URL.replace(/\/api\/v1$/, '') + path;
+}
+
 let authToken: string | null = null;
 let sessionExpiredListener: (() => void) | null = null;
 
