@@ -1,4 +1,9 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+const { businessTimezone } = require('../../domain/policies/BusinessDates');
+
+// DATE (OID 1082) llega como 'AAAA-MM-DD': es un día calendario y no debe convertirse
+// a medianoche de la zona horaria del servidor Node.
+types.setTypeParser(1082, value => value);
 
 let pool = null;
 
@@ -12,7 +17,9 @@ function getPool() {
       password: process.env.DB_PASSWORD || 'karen_pass',
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 3000
+      connectionTimeoutMillis: 3000,
+      // CURRENT_DATE debe ser el día del negocio, no el del contenedor (normalmente UTC).
+      options: `-c TimeZone=${businessTimezone()}`
     });
 
     pool.on('error', (err) => {

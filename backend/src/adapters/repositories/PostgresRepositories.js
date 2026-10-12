@@ -5,6 +5,7 @@ const User = require('../../domain/entities/User');
 const Reservation = require('../../domain/entities/Reservation');
 const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
+const { toDateOnly } = require('../../domain/policies/BusinessDates');
 const {
   buildPromotionCacheKey,
   assertPromotableLot
@@ -234,7 +235,7 @@ class PostgresLotRepository {
                    costo_unitario as "costoUnitario", cantidad_ingresada as "cantidadIngresada",
                    cantidad_disponible as "cantidadDisponible", cantidad_reservada as "cantidadReservada",
                    ubicacion, estado, created_at, updated_at`,
-        [lot.productoId, lot.numeroLote, lot.fechaElaboracion, lot.fechaCaducidad, lot.costoUnitario,
+        [lot.productoId, lot.numeroLote, toDateOnly(lot.fechaElaboracion), toDateOnly(lot.fechaCaducidad), lot.costoUnitario,
           lot.cantidadIngresada, lot.cantidadDisponible, lot.cantidadReservada, lot.ubicacion, lot.estado]
       );
       const row = res.rows[0];
