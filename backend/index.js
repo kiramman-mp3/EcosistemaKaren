@@ -9,7 +9,7 @@ async function bootstrap() {
     app.listen(PORT, () => {
       console.log(`\n🚀 Servidor Ecosistema Karen iniciado correctamente en puerto ${PORT}`);
       console.log(`🌐 Base URL: http://localhost:${PORT}/api/v1`);
-      console.log(`📖 Documentación Swagger UI: http://localhost:${PORT}/api-docs\n`);
+      if (app.locals.swaggerEnabled) console.log(`📖 Documentación Swagger UI: http://localhost:${PORT}/api-docs\n`);
     });
   } catch (error) {
     console.error('❌ Error fatal al iniciar el servidor:', error);

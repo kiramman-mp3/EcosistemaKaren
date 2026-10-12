@@ -1,4 +1,5 @@
 const { ValidationException } = require('../exceptions/DomainExceptions');
+const { RESERVATION_TTL_MINUTES } = require('../policies/BusinessRules');
 
 class Reservation {
   constructor({
@@ -25,7 +26,9 @@ class Reservation {
     this.usuarioId = usuarioId;
     this.codigoRetiro = codigoRetiro || Reservation.generarCodigoRetiro();
     this.estado = estadoUpper;
-    this.fechaExpiracion = fechaExpiracion ? new Date(fechaExpiracion) : Reservation.calcularFechaExpiracionDefault(10);
+    this.fechaExpiracion = fechaExpiracion
+      ? new Date(fechaExpiracion)
+      : Reservation.calcularFechaExpiracionDefault();
     this.created_at = created_at || new Date();
     this.updated_at = updated_at || new Date();
     this.detalles = detalles;
@@ -40,7 +43,7 @@ class Reservation {
     return code;
   }
 
-  static calcularFechaExpiracionDefault(ttlMinutos = 10) {
+  static calcularFechaExpiracionDefault(ttlMinutos = RESERVATION_TTL_MINUTES) {
     const date = new Date();
     date.setMinutes(date.getMinutes() + ttlMinutos);
     return date;

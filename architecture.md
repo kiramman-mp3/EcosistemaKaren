@@ -52,7 +52,7 @@ graph TD
 * **Propósito**: Contiene el modelo mental y las reglas de negocio indispensables del Supermercado Karen.
 * **Componentes**:
   * `Producto.js`: Entidad con reglas de validación de código de barras y precios.
-  * `Lote.js`: Entidad núcleo que calcula días para caducar, determina niveles de alerta (`ROJO` < 7d, `AMARILLO` < 15d), gestiona stock disponible vs reservado y mermas.
+  * `Lote.js`: Entidad núcleo que calcula días para caducar y aplica la política única: `VENCIDO` ≤ 0d, `ROJO` 1–6d, `AMARILLO` 7–14d y `NORMAL` ≥ 15d; además gestiona stock disponible, reservado y mermas.
   * `Reserva.js`: Entidad que administra el ciclo de vida de la reserva temporal, generación de PIN de cobro en caja SIACI y temporizador TTL (10 minutos).
   * `DomainException.js`: Excepción base de negocio.
 * **Regla**: No importa ninguna librería externa ni cliente de base de datos.

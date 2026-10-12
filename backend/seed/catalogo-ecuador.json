@@ -1,0 +1,3847 @@
+{
+  "fuente": "Open Food Facts / Open Beauty Facts / Open Products Facts (ODbL). PVP referenciales de supermercados de Ecuador, IVA 15% o 0% según bien.",
+  "categorias": [
+    "Lácteos y Derivados",
+    "Embutidos y Carnes",
+    "Bebidas y Jugos",
+    "Panadería y Tortillas",
+    "Galletas y Snacks",
+    "Confitería y Chocolates",
+    "Cereales, Avenas y Granolas",
+    "Aceites, Margarinas y Grasas",
+    "Pastas, Harinas y Sopas",
+    "Salsas, Untables y Condimentos",
+    "Enlatados y Conservas",
+    "Café, Té y Cocoa",
+    "Azúcar y Endulzantes",
+    "Bebés e Infantes",
+    "Vinos y Licores",
+    "Cuidado Personal",
+    "Limpieza y Hogar",
+    "Congelados y Helados",
+    "Nutrición y Suplementos",
+    "Frutos Secos y Semillas"
+  ],
+  "productos": [
+    {
+      "codigoBarras": "7861091155573",
+      "nombre": "Galleta de Sal Nestlé 135 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.85,
+      "iva": 15,
+      "marca": "Nestlé",
+      "contenido": "135 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/109/115/5573/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001236712",
+      "nombre": "Chocolate Galak Blanco con Arroz Crocante",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": "Galak, Nestle",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/123/6712/front_fr.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861004911036",
+      "nombre": "Galletas Integrales Siluet con Linaza 28 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.3,
+      "iva": 15,
+      "marca": "Siluet",
+      "contenido": "28",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/491/1036/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861033001036",
+      "nombre": "Queso Mozzarella La Holandesa 300 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 4.35,
+      "iva": 0,
+      "marca": "holandesa",
+      "contenido": "300g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/103/300/1036/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "0722776020012",
+      "nombre": "Endulzante Splenda Original 50 sobres",
+      "categoria": "Azúcar y Endulzantes",
+      "pvp": 3.99,
+      "iva": 15,
+      "marca": "Splenda",
+      "contenido": "50 g (50 sobres x 1 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/072/277/602/0012/front_es.49.400.jpg"
+    },
+    {
+      "codigoBarras": "7861021207990",
+      "nombre": "Infusión Dulcet Jengibre, Cardamomo y Rosas 25 u",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 2.45,
+      "iva": 15,
+      "marca": "Dulcet infusión",
+      "contenido": "25 unidades, peso neto 37,5g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/120/7990/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045000860",
+      "nombre": "Galletas GranoVita Coco Granix 140 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Granix, GranoVita",
+      "contenido": "140 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/500/0860/front_es.22.400.jpg"
+    },
+    {
+      "codigoBarras": "7861012503094",
+      "nombre": "Gelatoni Light Cereza Toni 200 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": "Toni",
+      "contenido": "200g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/250/3094/front_es.18.400.jpg"
+    },
+    {
+      "codigoBarras": "7861025804959",
+      "nombre": "Yogurt Chivería Vainilla 185 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.8,
+      "iva": 0,
+      "marca": "chivería",
+      "contenido": "185 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/580/4959/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "2500000004513",
+      "nombre": "Yogurt Natural Laiteri 950 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 3.2,
+      "iva": 0,
+      "marca": "Laiteri",
+      "contenido": "950 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/250/000/000/4513/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861012500956",
+      "nombre": "Leche Toni Semidescremada Frutilla 200 ml",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.65,
+      "iva": 15,
+      "marca": "Toni",
+      "contenido": "200 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/250/0956/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7750243046107",
+      "nombre": "Mayonesa Alacena 200 cc",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.45,
+      "iva": 15,
+      "marca": "AlaCena",
+      "contenido": "200 cm3",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/775/024/304/6107/front_es.11.400.jpg"
+    },
+    {
+      "codigoBarras": "7800120163134",
+      "nombre": "Granola Vivo con Trocitos de Berries 370 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 4.6,
+      "iva": 15,
+      "marca": "Vivo, Carozzi",
+      "contenido": "370 g / 13.1 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/012/016/3134/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7707280880287",
+      "nombre": "Café Juan Valdez Colina Balanceado 250 g",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 9.5,
+      "iva": 15,
+      "marca": "Juan Valdez, Colina",
+      "contenido": "250 g (8.8 oz)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/728/088/0287/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "7707280880218",
+      "nombre": "Café Juan Valdez Cumbre Fuerte 250 g",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 9.5,
+      "iva": 15,
+      "marca": "Juan Valdez",
+      "contenido": "250 g (8.8 oz)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/728/088/0218/front_es.13.400.jpg"
+    },
+    {
+      "codigoBarras": "0021000026869",
+      "nombre": "Mayonesa Kraft con Aceite de Oliva 354 ml",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 5.8,
+      "iva": 15,
+      "marca": "Kraft",
+      "contenido": "12 oz (354 ml)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/002/100/002/6869/front_en.15.400.jpg"
+    },
+    {
+      "codigoBarras": "0090388001416",
+      "nombre": "Atún Real Lomitos en Aceite de Soya 3 x 80 g",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 4.25,
+      "iva": 0,
+      "marca": "Real",
+      "contenido": "240 g (3 x 80 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/009/038/800/1416/front_es.15.400.jpg"
+    },
+    {
+      "codigoBarras": "7702025118311",
+      "nombre": "Galletas Noel Tipo Leche 321 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.3,
+      "iva": 15,
+      "marca": "Noel, Nutresa",
+      "contenido": "321 g (11.32 oz)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/202/511/8311/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7862102442453",
+      "nombre": "Medallón de Pollo Casa Noble",
+      "categoria": "Embutidos y Carnes",
+      "pvp": 4.2,
+      "iva": 15,
+      "marca": "Casa Noble",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/244/2453/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "0044695109174",
+      "nombre": "Arvejitas Precocidas Facundo",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.35,
+      "iva": 15,
+      "marca": "Facundo",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/004/469/510/9174/front_eo.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862109430927",
+      "nombre": "Gatorade Apple Ice 500 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1,
+      "iva": 15,
+      "marca": "Gatorade",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/943/0927/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861050501878",
+      "nombre": "Barra de Granola Quinde",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.6,
+      "iva": 15,
+      "marca": "Quinde",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/105/050/1878/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7702189057211",
+      "nombre": "Galleta Quaker con Avena y Granola",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.45,
+      "iva": 15,
+      "marca": "Quaker",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/218/905/7211/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861011803249",
+      "nombre": "Maní Cris Japonés",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.5,
+      "iva": 15,
+      "marca": "Mani Cris",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/180/3249/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862114070361",
+      "nombre": "Chifles Chiflar 50 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.5,
+      "iva": 15,
+      "marca": "chiflar",
+      "contenido": "50 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/407/0361/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7501058637710",
+      "nombre": "Leche de Fórmula NAN Optipro 2 1,1 kg",
+      "categoria": "Bebés e Infantes",
+      "pvp": 38.5,
+      "iva": 0,
+      "marca": "Optipro, NAN, Nestlé",
+      "contenido": "1.1 kg",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/750/105/863/7710/front_es.19.400.jpg"
+    },
+    {
+      "codigoBarras": "7707325840085",
+      "nombre": "Harina de Maíz Blanca Precocida Bellini 1 kg",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.95,
+      "iva": 0,
+      "marca": "Bellini",
+      "contenido": "1kg",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/732/584/0085/front_es.14.400.jpg"
+    },
+    {
+      "codigoBarras": "7861023500235",
+      "nombre": "Harina Integral Santa Lucía 500 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.1,
+      "iva": 0,
+      "marca": "santa Lucía",
+      "contenido": "500g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/350/0235/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7702007002058",
+      "nombre": "Chocolisto 440 g",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 4.8,
+      "iva": 15,
+      "marca": "Nutresa",
+      "contenido": "440g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/200/700/2058/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861025805123",
+      "nombre": "Yogurt Chivería Dietético sin Azúcar 180 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.85,
+      "iva": 0,
+      "marca": "Chiveria",
+      "contenido": "180 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/580/5123/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007213106",
+      "nombre": "Salvado de Trigo Schullo 200 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 1.1,
+      "iva": 0,
+      "marca": "Schullo",
+      "contenido": "200 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/721/3106/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7702032005031",
+      "nombre": "Colcafé Cappuccino Mocca 270 g",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 6.9,
+      "iva": 15,
+      "marca": "Colcafé, Nutresa",
+      "contenido": "270 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/203/200/5031/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225427579",
+      "nombre": "Rocklets Maní 150 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 2.6,
+      "iva": 15,
+      "marca": "Arcor, Rocklets",
+      "contenido": "150 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/542/7579/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "7702409000331",
+      "nombre": "Maní Salado Manitoba 50 g",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": "Manitoba",
+      "contenido": "50 g (1.8 oz)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/240/900/0331/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045000815",
+      "nombre": "Galletas Frutigran Tropical 175 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2,
+      "iva": 15,
+      "marca": "Granix, Frutigran",
+      "contenido": "175 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/500/0815/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045000570",
+      "nombre": "Galletas Granix Avellanas, Avena y Cacao 142 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Granix, Granola",
+      "contenido": "142 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/500/0570/front_es.13.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045000587",
+      "nombre": "Galletas Granix Almendras, Avena y Coco 145 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Granix, Granola",
+      "contenido": "145 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/500/0587/front_es.20.400.jpg"
+    },
+    {
+      "codigoBarras": "0086785212463",
+      "nombre": "Vino Roscato Rosé Dolce 750 ml",
+      "categoria": "Vinos y Licores",
+      "pvp": 14.99,
+      "iva": 15,
+      "marca": "Roscato",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/008/678/521/2463/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862100604433",
+      "nombre": "Sardinas Real en Salsa de Tomate",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 2.1,
+      "iva": 0,
+      "marca": "Real",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/060/4433/front_es.12.400.jpg"
+    },
+    {
+      "codigoBarras": "7861009944206",
+      "nombre": "Pan Integral Sanduchero Bimbo",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 2.65,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/994/4206/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "8410660014477",
+      "nombre": "Aceite de Oliva Virgen Extra 500 ml",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 8.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": "500 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/841/066/001/4477/front_fr.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7622300116521",
+      "nombre": "Galletas Ritz Paquete Individual 22,4 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.35,
+      "iva": 15,
+      "marca": "Ritz, Nabisco",
+      "contenido": "22.4 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/762/230/011/6521/front_es.20.400.jpg"
+    },
+    {
+      "codigoBarras": "7861025806588",
+      "nombre": "Yogurt Chivería Slim 950 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 3.1,
+      "iva": 0,
+      "marca": "Chiveria",
+      "contenido": "950g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/580/6588/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225510196",
+      "nombre": "Chocolate Privilegio Arcor 60 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 1.35,
+      "iva": 15,
+      "marca": "Privilegio, Arcor",
+      "contenido": "60 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/551/0196/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001239515",
+      "nombre": "Cereal Chocapic Nestlé 90 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 1.25,
+      "iva": 15,
+      "marca": "Chocapic",
+      "contenido": "90g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/123/9515/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7797906054819",
+      "nombre": "Papas Fritas McCain Corte Tradicional XL 1,4 kg",
+      "categoria": "Congelados y Helados",
+      "pvp": 7.2,
+      "iva": 15,
+      "marca": "McCain",
+      "contenido": "1.4 kg",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/790/605/4819/front_es.18.400.jpg"
+    },
+    {
+      "codigoBarras": "7861048605526",
+      "nombre": "Margarina La Favorita",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 1.55,
+      "iva": 0,
+      "marca": "La Favorita",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/860/5526/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "8412170011434",
+      "nombre": "Galletas María sin Gluten Noglut 180 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Santiveri, Noglut",
+      "contenido": "180 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/841/217/001/1434/front.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7862119506216",
+      "nombre": "Atún Don Sancho Lomitos en Aceite de Girasol 160 g",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.75,
+      "iva": 0,
+      "marca": "Don Sancho",
+      "contenido": "160 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/950/6216/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7804320116846",
+      "nombre": "Vino Concha y Toro Reservado 750 ml",
+      "categoria": "Vinos y Licores",
+      "pvp": 8.99,
+      "iva": 15,
+      "marca": "CONCHA Y TORO",
+      "contenido": "750 cc",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/432/011/6846/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861018290035",
+      "nombre": "Salsa de Tomate Los Andes",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.2,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/829/0035/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862123120873",
+      "nombre": "Endulzante de Sucralosa Ta'riko",
+      "categoria": "Azúcar y Endulzantes",
+      "pvp": 2.8,
+      "iva": 15,
+      "marca": "Ta'riko",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/312/0873/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "0070847034957",
+      "nombre": "Monster Energy Ultra 473 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 2.75,
+      "iva": 15,
+      "marca": "Monster Energy",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/007/084/703/4957/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007231285",
+      "nombre": "Galletas Lorena",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.3,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/723/1285/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861047723344",
+      "nombre": "Helado Pingüino Chips Ahoy 473 ml",
+      "categoria": "Congelados y Helados",
+      "pvp": 4.5,
+      "iva": 15,
+      "marca": "pingüino",
+      "contenido": "473ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/772/3344/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7862109274415",
+      "nombre": "Cereal Orgánico de Chocolate Pacari",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 5.9,
+      "iva": 15,
+      "marca": "Pacari",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/927/4415/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862115500638",
+      "nombre": "Almendras Peladas Corfruit 125 g",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 3.4,
+      "iva": 15,
+      "marca": "corfruit",
+      "contenido": "125 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/550/0638/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861009942882",
+      "nombre": "Submarino Marinela 54 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.65,
+      "iva": 15,
+      "marca": "marinela",
+      "contenido": "54g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/994/2882/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "0722008000089",
+      "nombre": "Atún Van Camp's Lomitos",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.85,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/072/200/800/0089/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024609388",
+      "nombre": "Inca Kola",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/460/9388/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7804916430189",
+      "nombre": "Raytan Dermoprotector 50 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 9.8,
+      "iva": 15,
+      "marca": "Raytan",
+      "contenido": "50ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/491/643/0189/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861035520405",
+      "nombre": "Avena Molida Quaker Sabor Fresa",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 1.8,
+      "iva": 0,
+      "marca": "Quaker",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/103/552/0405/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861029402199",
+      "nombre": "Bebida de Avena Vita",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": "Avena Vita",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/940/2199/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7622210665362",
+      "nombre": "Galletas Club Social Integral",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.35,
+      "iva": 15,
+      "marca": "Nabisco",
+      "contenido": "1",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/762/221/066/5362/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "0300054756640",
+      "nombre": "Centrum Silver Multivitamínico",
+      "categoria": "Nutrición y Suplementos",
+      "pvp": 24.5,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/030/005/475/6640/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024611060",
+      "nombre": "Fuze Tea",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.9,
+      "iva": 15,
+      "marca": "Fuzetea",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/461/1060/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862120272582",
+      "nombre": "Camarón Blanco Premium Superior",
+      "categoria": "Congelados y Helados",
+      "pvp": 9.9,
+      "iva": 0,
+      "marca": "Superior",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/027/2582/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007250491",
+      "nombre": "Avena Fina Orgánica Schullo 650 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 2.4,
+      "iva": 0,
+      "marca": "SCHULLO",
+      "contenido": "650g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/725/0491/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862114221701",
+      "nombre": "Colágeno Hidrolizado Live con Ácido Hialurónico 300 g",
+      "categoria": "Nutrición y Suplementos",
+      "pvp": 18.9,
+      "iva": 15,
+      "marca": "Collagen, Live",
+      "contenido": "300 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/422/1701/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7861013734176",
+      "nombre": "Jamón Americano",
+      "categoria": "Embutidos y Carnes",
+      "pvp": 2.8,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/373/4176/front_en.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7862123120149",
+      "nombre": "Stevia Balance 25 g",
+      "categoria": "Azúcar y Endulzantes",
+      "pvp": 2.2,
+      "iva": 15,
+      "marca": "Balance",
+      "contenido": "25 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/312/0149/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "7613032444761",
+      "nombre": "Cereal Infantil Nestlé con Leche",
+      "categoria": "Bebés e Infantes",
+      "pvp": 4.6,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/761/303/244/4761/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "2500000001246",
+      "nombre": "Ciruela Pasa Alideli 1 libra",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "alideli",
+      "contenido": "1 libra",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/250/000/000/1246/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007305276",
+      "nombre": "Salsa Teriyaki McCormick",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 2.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/730/5276/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861006784331",
+      "nombre": "Cangui Rol Queso Blanco",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.35,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/678/4331/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861025810219",
+      "nombre": "Yogurt Chivería Mango",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.8,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/581/0219/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861015113856",
+      "nombre": "Puré de Tomate Gustadina",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/511/3856/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007300868",
+      "nombre": "Jengibre Molido McCormick 25 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.7,
+      "iva": 15,
+      "marca": "McCormick",
+      "contenido": "25 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/730/0868/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7861035520054",
+      "nombre": "Hojuelas de Avena Quaker",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 2.1,
+      "iva": 0,
+      "marca": "Quaker",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/103/552/0054/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7750885008389",
+      "nombre": "Chocolate Golazo Ambrosoli 25 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 0.35,
+      "iva": 15,
+      "marca": "Ambrosoli",
+      "contenido": "25 g / 0.88 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/775/088/500/8389/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7792129003521",
+      "nombre": "Endulzante Sucaryl Sucralosa 50 sobres",
+      "categoria": "Azúcar y Endulzantes",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "Sucaryl",
+      "contenido": "40 g (50 x 0.8 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/212/900/3521/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861004830412",
+      "nombre": "Choco Krispis Kellogg's",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 3.8,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/483/0412/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024609456",
+      "nombre": "Agua Dasani 500 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.55,
+      "iva": 15,
+      "marca": "the coca cola company",
+      "contenido": "500ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/460/9456/front.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024620451",
+      "nombre": "Fioravanti Fresa 400 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.6,
+      "iva": 15,
+      "marca": "Coca Cola",
+      "contenido": "400 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/462/0451/front_de.3.400.jpg"
+    },
+    {
+      "codigoBarras": "8712400717984",
+      "nombre": "Nutrilon Comfort Omneo 400 g",
+      "categoria": "Bebés e Infantes",
+      "pvp": 26.9,
+      "iva": 0,
+      "marca": "Nutricia",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/871/240/071/7984/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861006744045",
+      "nombre": "Tostitos Inalecsa 45 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.5,
+      "iva": 15,
+      "marca": "Inalecsa",
+      "contenido": "45 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/674/4045/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861018512618",
+      "nombre": "Ruffles Original 20 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.35,
+      "iva": 15,
+      "marca": "Frito lay",
+      "contenido": "20 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/851/2618/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7702057700539",
+      "nombre": "Vita C MK 10 tabletas",
+      "categoria": "Nutrición y Suplementos",
+      "pvp": 2.75,
+      "iva": 15,
+      "marca": "MK",
+      "contenido": "10 tabletas",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/205/770/0539/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861006800079",
+      "nombre": "Café Soluble Oro 25 g",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": "café oro",
+      "contenido": "25g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/680/0079/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "3518646672309",
+      "nombre": "Marimer Higiene Nasal 100 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 9.5,
+      "iva": 15,
+      "marca": "marimer,  Gilbert",
+      "contenido": "100ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/351/864/667/2309/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042561408",
+      "nombre": "Tortillas de Harina Integral Akí 400 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 2.1,
+      "iva": 0,
+      "marca": "aki",
+      "contenido": "400g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/256/1408/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7896058257489",
+      "nombre": "Panettone Arcor Premium Chocolate 530 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 6.9,
+      "iva": 15,
+      "marca": "Arcor",
+      "contenido": "18.7 oz (530 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/605/825/7489/front_es.26.400.jpg"
+    },
+    {
+      "codigoBarras": "7891962027395",
+      "nombre": "Chocottone Bauducco 400 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 5.8,
+      "iva": 15,
+      "marca": "Bauducco",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/196/202/7395/front_pt.10.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045826224",
+      "nombre": "Galletas Granix Sésamo 185 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.2,
+      "iva": 15,
+      "marca": "Granix",
+      "contenido": "185 g / 6.5 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/582/6224/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7862129010024",
+      "nombre": "Maíz Cakes Dr. Müller 115 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.95,
+      "iva": 15,
+      "marca": "Dr Müller",
+      "contenido": "115",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/901/0024/front_es.11.400.jpg"
+    },
+    {
+      "codigoBarras": "7861048601511",
+      "nombre": "Margarina Girasol 500 g",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 1.65,
+      "iva": 0,
+      "marca": "girasol",
+      "contenido": "500 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/860/1511/front_es.14.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045001195",
+      "nombre": "Galletas Frutigran Salvado 250 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.4,
+      "iva": 15,
+      "marca": "Granix, Frutigran",
+      "contenido": "250 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/500/1195/front_es.40.400.jpg"
+    },
+    {
+      "codigoBarras": "7891008121674",
+      "nombre": "Chocolate Talento Cereales y Pasas Garoto 85 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Garoto, Talento",
+      "contenido": "85 g / 2.99 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/100/812/1674/front_pt.10.400.jpg"
+    },
+    {
+      "codigoBarras": "7802575004833",
+      "nombre": "Fettuccine 88 Carozzi 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.35,
+      "iva": 0,
+      "marca": "Carozzi",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/257/500/4833/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861002382111",
+      "nombre": "Sopa de Pollo con Fideos 60 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": null,
+      "contenido": "60 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/238/2111/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "8002630010550",
+      "nombre": "Panettone Melegatti Nocciolone 750 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 12.9,
+      "iva": 15,
+      "marca": "melegatti",
+      "contenido": "750 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/800/263/001/0550/front_it.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7802575015174",
+      "nombre": "Lasaña Precocida Carozzi 360 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 3.1,
+      "iva": 0,
+      "marca": "Carozzi",
+      "contenido": "360 g / 12.70 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/257/501/5174/front_es.11.400.jpg"
+    },
+    {
+      "codigoBarras": "7862129010307",
+      "nombre": "Rice Cakes Mango Dr. Müller",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.95,
+      "iva": 15,
+      "marca": "Dr Muller",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/901/0307/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024600859",
+      "nombre": "Coca-Cola Light",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1,
+      "iva": 15,
+      "marca": "Coca-Cola",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/460/0859/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862124830870",
+      "nombre": "República del Cacao Chocolate con Leche Caramelizado",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 4.9,
+      "iva": 15,
+      "marca": "Republica del cacao",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/483/0870/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7891118013586",
+      "nombre": "Chicle de Bola Poosh Tutti Frutti 200 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 2.3,
+      "iva": 15,
+      "marca": "Poosh!, Arcor",
+      "contenido": "200 g (7.5 oz)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/111/801/3586/front_pt.10.400.jpg"
+    },
+    {
+      "codigoBarras": "7861033000084",
+      "nombre": "Ricotta La Holandesa",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 3.4,
+      "iva": 0,
+      "marca": "La Holandesa",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/103/300/0084/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862109430712",
+      "nombre": "7 Up",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/943/0712/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862109270202",
+      "nombre": "Pepas de Cacao Pacari 90 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 5.6,
+      "iva": 15,
+      "marca": "Pacari",
+      "contenido": "90 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/927/0202/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7793640216445",
+      "nombre": "Berocca Bayer Multivitamínico",
+      "categoria": "Nutrición y Suplementos",
+      "pvp": 12.5,
+      "iva": 15,
+      "marca": "Bayer",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/364/021/6445/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861029404841",
+      "nombre": "Leche Deslactosada Vita 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.2,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/940/4841/front_en.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7862115361918",
+      "nombre": "Salchicha Hot Dog Cordon Green",
+      "categoria": "Embutidos y Carnes",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "Cordon green",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/536/1918/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861002560854",
+      "nombre": "Manteca Vegetal Los 3 Chanchitos 900 g",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 3.4,
+      "iva": 0,
+      "marca": "Los 3 Chanchitos",
+      "contenido": "900 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/256/0854/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861167301934",
+      "nombre": "Atún Líder Lomitos en Agua",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.6,
+      "iva": 0,
+      "marca": "Líder",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/116/730/1934/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861091157461",
+      "nombre": "Galletas Daisy Nestlé",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.3,
+      "iva": 15,
+      "marca": "Nestlé",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/109/115/7461/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861002300160",
+      "nombre": "Tallarines Sumesa 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.1,
+      "iva": 0,
+      "marca": "Tallarines, Sumesa",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/230/0160/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861011210672",
+      "nombre": "Repelente Bassa",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.5,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/121/0672/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042560678",
+      "nombre": "Masa para Empanadas Supermaxi",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 1.95,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/256/0678/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861048603942",
+      "nombre": "Detergente Ciclón Poder Limón 200 g",
+      "categoria": "Limpieza y Hogar",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": "LA FABRIL S.A",
+      "contenido": "200 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/860/3942/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "0781159856396",
+      "nombre": "Crackers Cusi Orégano y Yuca 120 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.4,
+      "iva": 15,
+      "marca": "CUSI",
+      "contenido": "120 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/078/115/985/6396/front_es.18.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225511537",
+      "nombre": "Bon o Bon Blanco 30 x 15 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 7.2,
+      "iva": 15,
+      "marca": "bon o bon, Arcor",
+      "contenido": "450 g (30 x 15 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/551/1537/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "7862128054944",
+      "nombre": "Crunchy Mix El Artesanal 130 g",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "El Artesanal",
+      "contenido": "130 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/805/4944/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "0033200190202",
+      "nombre": "Desodorante Arm & Hammer 71 g",
+      "categoria": "Cuidado Personal",
+      "pvp": 5.9,
+      "iva": 15,
+      "marca": "Arm & Hammer",
+      "contenido": "71 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/003/320/019/0202/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7862107782844",
+      "nombre": "Arándanos Deshidratados Deleite",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 3.6,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/778/2844/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7751738000017",
+      "nombre": "Ron Cartavio 750 ml",
+      "categoria": "Vinos y Licores",
+      "pvp": 10.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/775/173/800/0017/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862105452978",
+      "nombre": "Leche Trü Entera 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.15,
+      "iva": 0,
+      "marca": "TRÜ",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/545/2978/front_en.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225511513",
+      "nombre": "Bon o Bon Leche 30 x 15 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 7.2,
+      "iva": 15,
+      "marca": "Arcor, bon o bon",
+      "contenido": "450 g (30 x 15 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/551/1513/front_es.25.400.jpg"
+    },
+    {
+      "codigoBarras": "7862100601555",
+      "nombre": "Macarela Real en Salsa de Tomate",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.85,
+      "iva": 0,
+      "marca": "Real",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/060/1555/front_en.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7862109432068",
+      "nombre": "Gatorade Uva 500 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1,
+      "iva": 15,
+      "marca": "uva",
+      "contenido": "7",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/943/2068/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7790762050148",
+      "nombre": "Vino Tinto Casa de Campo 750 ml",
+      "categoria": "Vinos y Licores",
+      "pvp": 7.5,
+      "iva": 15,
+      "marca": "casa de campo",
+      "contenido": "750 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/076/205/0148/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861002011189",
+      "nombre": "Leche Andina Descremada Chocolatada 900 ml",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.55,
+      "iva": 15,
+      "marca": "andina",
+      "contenido": "900ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/201/1189/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861003023709",
+      "nombre": "Leche Semidescremada Mi Comisariato 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1,
+      "iva": 0,
+      "marca": "mi comisariato",
+      "contenido": "1 litro",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/302/3709/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861009941328",
+      "nombre": "Pan Braun Nueve Cereales Bimbo 500 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 3.4,
+      "iva": 0,
+      "marca": "Braun, Bimbo",
+      "contenido": "500 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/994/1328/front_es.18.400.jpg"
+    },
+    {
+      "codigoBarras": "7702025182183",
+      "nombre": "Leche Nesquik Chocolatada 200 ml",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": "Nestlé",
+      "contenido": "200ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/202/518/2183/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861033001388",
+      "nombre": "Queso Fresco Bajo en Grasa La Holandesa",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 3.6,
+      "iva": 0,
+      "marca": "La Holandesa",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/103/300/1388/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862104180186",
+      "nombre": "Rosquitas de Canela Kroipan 140 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 1.5,
+      "iva": 15,
+      "marca": "kroipan",
+      "contenido": "140gr",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/418/0186/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7802575007261",
+      "nombre": "Lasaña Tradicional Carozzi 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 2.9,
+      "iva": 0,
+      "marca": "Carozzi",
+      "contenido": "400 g / 14.11 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/257/500/7261/front_es.17.400.jpg"
+    },
+    {
+      "codigoBarras": "7861117223828",
+      "nombre": "Yogurt El Ranchito 2 kg",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 4.9,
+      "iva": 0,
+      "marca": "el ranchito",
+      "contenido": "2kg",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/111/722/3828/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7790260002090",
+      "nombre": "Licor Tres Plumas Café al Whisky 750 ml",
+      "categoria": "Vinos y Licores",
+      "pvp": 11.5,
+      "iva": 15,
+      "marca": "Tres Plumas, Dellepiane Spirits",
+      "contenido": "750 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/026/000/2090/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7622201717605",
+      "nombre": "Galletas Club Social Original",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.35,
+      "iva": 15,
+      "marca": "club social",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/762/220/171/7605/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7800120162229",
+      "nombre": "Cereal Check Sabor Yogurt Vivo 350 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Vivo, Carozzi",
+      "contenido": "350 g / 12.3 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/012/016/2229/front_es.13.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225640770",
+      "nombre": "Galletas Bon o Bon Cookies 95 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.2,
+      "iva": 15,
+      "marca": "bon o bon, Arcor",
+      "contenido": "95 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/564/0770/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042517061",
+      "nombre": "Margarina de Mesa Akí 1 kg",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 2.9,
+      "iva": 0,
+      "marca": "AKI",
+      "contenido": "1000g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/251/7061/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "2000000150375",
+      "nombre": "Atún Real Lomitos en Aceite de Girasol 80 g",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.15,
+      "iva": 0,
+      "marca": "Real, NIRSA",
+      "contenido": "80 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/200/000/015/0375/front_es.10.400.jpg"
+    },
+    {
+      "codigoBarras": "7622201776459",
+      "nombre": "Caramelos Halls Limón y Miel",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 0.6,
+      "iva": 15,
+      "marca": "Halls",
+      "contenido": "25.2 g (9 x 2.8 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/762/220/177/6459/front_es.39.400.jpg"
+    },
+    {
+      "codigoBarras": "5900852940903",
+      "nombre": "Bebelac Gold 3 900 g",
+      "categoria": "Bebés e Infantes",
+      "pvp": 24.5,
+      "iva": 0,
+      "marca": "Nutricia, Bebelac",
+      "contenido": "900 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/590/085/294/0903/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "8004350000354",
+      "nombre": "Vinagre Balsámico de Módena 500 ml",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 6.9,
+      "iva": 15,
+      "marca": "Pasta zana",
+      "contenido": "500 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/800/435/000/0354/front_en.17.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001234909",
+      "nombre": "Leche La Lechera Semidescremada 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.1,
+      "iva": 0,
+      "marca": "Nestle",
+      "contenido": "1 l",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/123/4909/front_es.17.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045825401",
+      "nombre": "Galletas Frutigran Avena, Sésamo y Amaranto 260 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.6,
+      "iva": 15,
+      "marca": "Granix, Frutigran",
+      "contenido": "260 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/582/5401/front_es.21.400.jpg"
+    },
+    {
+      "codigoBarras": "7794450008084",
+      "nombre": "Vino Alamos Malbec 750 ml",
+      "categoria": "Vinos y Licores",
+      "pvp": 13.9,
+      "iva": 15,
+      "marca": "Alamos",
+      "contenido": "750 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/445/000/8084/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042566670",
+      "nombre": "Mayonesa Baja en Calorías Supermaxi 340 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 2.4,
+      "iva": 15,
+      "marca": "supermaxi",
+      "contenido": "340 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/256/6670/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7792129002203",
+      "nombre": "Endulzante Sucaryl Sucralosa Líquida 180 ml",
+      "categoria": "Azúcar y Endulzantes",
+      "pvp": 5.4,
+      "iva": 15,
+      "marca": "Sucaryl",
+      "contenido": "180 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/212/900/2203/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225426336",
+      "nombre": "Chubi Arcor 150 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 2.3,
+      "iva": 15,
+      "marca": "Arcor, Chubi",
+      "contenido": "150 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/542/6336/front_es.39.400.jpg"
+    },
+    {
+      "codigoBarras": "7501058640505",
+      "nombre": "Colado de Manzana Gerber 113 g",
+      "categoria": "Bebés e Infantes",
+      "pvp": 1.35,
+      "iva": 0,
+      "marca": "Gerber",
+      "contenido": "113 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/750/105/864/0505/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861012511785",
+      "nombre": "Yogurt Toni Light Descremado 950 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 3.15,
+      "iva": 0,
+      "marca": "Toni",
+      "contenido": "950 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/251/1785/front_es.17.400.jpg"
+    },
+    {
+      "codigoBarras": "7862122741062",
+      "nombre": "Bebida de Almendras Liv 1 L",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "liv",
+      "contenido": "1000ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/274/1062/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045825753",
+      "nombre": "Granola Crocante Granix Almendras y Pasas 350 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 5.2,
+      "iva": 15,
+      "marca": "Granix",
+      "contenido": "350 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/582/5753/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7891962032283",
+      "nombre": "Wafer Bauducco Fresa 140 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": "Bauducco",
+      "contenido": "140 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/196/203/2283/front_es.11.400.jpg"
+    },
+    {
+      "codigoBarras": "7702354934255",
+      "nombre": "Popetas Caramelo 44 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.6,
+      "iva": 15,
+      "marca": "Quala S.A",
+      "contenido": "44,4 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/235/493/4255/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "8412170026469",
+      "nombre": "Galletas CookiSanas Chocolate 150 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 3.4,
+      "iva": 15,
+      "marca": "Santiveri, CookiSanas",
+      "contenido": "150 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/841/217/002/6469/front_es.12.400.jpg"
+    },
+    {
+      "codigoBarras": "7802215505140",
+      "nombre": "Galletas Costa Choco Chips 125 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.35,
+      "iva": 15,
+      "marca": "Costa",
+      "contenido": "125 g / 4.4 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/221/550/5140/front_es.23.400.jpg"
+    },
+    {
+      "codigoBarras": "7802215303241",
+      "nombre": "Galletas Gran Cereal Cacao Costa 135 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.4,
+      "iva": 15,
+      "marca": "Costa, Gran Cereal",
+      "contenido": "135 g / 4.8 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/221/530/3241/front_es.18.400.jpg"
+    },
+    {
+      "codigoBarras": "7861004940036",
+      "nombre": "Galletas Salticas Superior 63 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.45,
+      "iva": 15,
+      "marca": "Superior",
+      "contenido": "63g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/494/0036/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "77975737",
+      "nombre": "Turrón & Maní Arcor 25 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 0.3,
+      "iva": 15,
+      "marca": "Arcor",
+      "contenido": "25 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/77975737/front_es.15.400.jpg"
+    },
+    {
+      "codigoBarras": "7702409012297",
+      "nombre": "Maní Crocante Chile Limón Manitoba 40 g",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 0.7,
+      "iva": 15,
+      "marca": "Manitoba",
+      "contenido": "40 g (1.4 oz)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/240/901/2297/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045000853",
+      "nombre": "Galletas GranoVita Vainilla 140 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Granix, GranoVita",
+      "contenido": "140 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/500/0853/front_es.10.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042572596",
+      "nombre": "Aceite Comestible de Soya 1 L",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 3.1,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/257/2596/front_es.13.400.jpg"
+    },
+    {
+      "codigoBarras": "7802950066906",
+      "nombre": "Leche Condensada Nestlé 397 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 2.6,
+      "iva": 15,
+      "marca": "nestle",
+      "contenido": "397g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/295/006/6906/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7802215514333",
+      "nombre": "Galletas Obsesión Costa 85 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.8,
+      "iva": 15,
+      "marca": "Costa",
+      "contenido": "85 g / 3 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/221/551/4333/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7861002531700",
+      "nombre": "Mantequilla Regia",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 2.2,
+      "iva": 0,
+      "marca": "Regia, Danec",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/253/1700/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "0121410727988",
+      "nombre": "Aceite de Oliva Arbolito 250 ml",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 5.4,
+      "iva": 15,
+      "marca": "Arbolito",
+      "contenido": "250ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/012/141/072/7988/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861015103796",
+      "nombre": "Mayonesa Gustadina sin Colorantes",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.95,
+      "iva": 15,
+      "marca": "Gustadina",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/510/3796/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042568247",
+      "nombre": "Chocolate Akí con Leche y Arroz Crocante 100 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 1.6,
+      "iva": 15,
+      "marca": null,
+      "contenido": "100 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/256/8247/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024600125",
+      "nombre": "Sprite 500 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": null,
+      "contenido": "500 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/460/0125/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861004100508",
+      "nombre": "Cocoa en Polvo 500 g",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 4.5,
+      "iva": 15,
+      "marca": null,
+      "contenido": "500 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/410/0508/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042545651",
+      "nombre": "Crema de Cacao y Avellanas Supermaxi 200 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": null,
+      "contenido": "200 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/254/5651/front_es.14.400.jpg"
+    },
+    {
+      "codigoBarras": "0076150601336",
+      "nombre": "Canguil Act II Mantequilla 91 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.95,
+      "iva": 15,
+      "marca": "Act II",
+      "contenido": "91 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/007/615/060/1336/front.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862117453796",
+      "nombre": "Pistachos Salados Del Sur",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 4.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/745/3796/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "8410109109832",
+      "nombre": "Chocolate Valor 85% Cacao 0% Azúcar 100 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Valor",
+      "contenido": "100 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/841/010/910/9832/front_es.57.400.jpg"
+    },
+    {
+      "codigoBarras": "7891962060460",
+      "nombre": "Tostadas Integrales Bauducco 142 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 2.4,
+      "iva": 15,
+      "marca": "Bauducco",
+      "contenido": "142 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/196/206/0460/front_es.24.400.jpg"
+    },
+    {
+      "codigoBarras": "7802575004437",
+      "nombre": "Spaghetti 5 Carozzi 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.25,
+      "iva": 0,
+      "marca": "Carozzi",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/257/500/4437/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7891008121575",
+      "nombre": "Chocolate Talento Semiamargo Almendras Garoto 85 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Garoto, Talento",
+      "contenido": "85 g / 2.99 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/100/812/1575/front_pt.12.400.jpg"
+    },
+    {
+      "codigoBarras": "7861011804086",
+      "nombre": "Granola sin Azúcar Cris 240 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 3.8,
+      "iva": 15,
+      "marca": "cris",
+      "contenido": "240 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/180/4086/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001238594",
+      "nombre": "Mayonesa Maggi 328 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 2.2,
+      "iva": 15,
+      "marca": "Maggi, Nestlé",
+      "contenido": "328 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/123/8594/front_es.14.400.jpg"
+    },
+    {
+      "codigoBarras": "7861018515756",
+      "nombre": "Ruffles Natural 44 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.6,
+      "iva": 15,
+      "marca": "frito lay",
+      "contenido": "44 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/851/5756/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "8410109050882",
+      "nombre": "Chocolate Valor Negro 70% 0% Azúcar 100 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Valor",
+      "contenido": "100 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/841/010/905/0882/front_es.41.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007305030",
+      "nombre": "Vinagreta Balsámica McCormick",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "Mccormick",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/730/5030/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862105453951",
+      "nombre": "Leche Trü Más Proteína Deslactosada 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.65,
+      "iva": 0,
+      "marca": "Tru",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/545/3951/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861012514243",
+      "nombre": "Yogurt Griego Toni",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.8,
+      "iva": 0,
+      "marca": "Toni",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/251/4243/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861019411507",
+      "nombre": "Chocalmendras Candysney 50 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 1.3,
+      "iva": 15,
+      "marca": "candysney",
+      "contenido": "50 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/941/1507/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862120000024",
+      "nombre": "Granodiet Natulife 400 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 3.5,
+      "iva": 15,
+      "marca": "natulife",
+      "contenido": "400g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/000/0024/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "0759494000354",
+      "nombre": "Agua Mineral con Gas Tesalia 500 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.65,
+      "iva": 15,
+      "marca": null,
+      "contenido": "500 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/075/949/400/0354/front_es.12.400.jpg"
+    },
+    {
+      "codigoBarras": "7861063503319",
+      "nombre": "Pasta Integral Moderna",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.4,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/106/350/3319/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861048690133",
+      "nombre": "Aceite La Favorita 1 L",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 3.1,
+      "iva": 0,
+      "marca": "favorita",
+      "contenido": "1l",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/869/0133/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7702103019165",
+      "nombre": "All-Bran Original Kellogg's",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 4.9,
+      "iva": 15,
+      "marca": "Kellogg's",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/210/301/9165/front_fr.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7861033001760",
+      "nombre": "Queso Mozzarella Light La Holandesa",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 4.6,
+      "iva": 0,
+      "marca": "La holandesa",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/103/300/1760/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001243383",
+      "nombre": "Leche Deslactosada Nestlé 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.25,
+      "iva": 0,
+      "marca": "Nestlé",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/124/3383/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861063505795",
+      "nombre": "Pan Integral Moderna 600 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 2.7,
+      "iva": 0,
+      "marca": "Moderna",
+      "contenido": "600 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/106/350/5795/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861055900454",
+      "nombre": "Leche Semidescremada Nutri 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.95,
+      "iva": 0,
+      "marca": "Nutri",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/105/590/0454/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861008100276",
+      "nombre": "Maíz para Canguil Don Chicho 500 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.4,
+      "iva": 0,
+      "marca": "Don Chicho",
+      "contenido": "500 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/810/0276/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862109275825",
+      "nombre": "Crema de Avellana sin Azúcar Pacari",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 7.5,
+      "iva": 15,
+      "marca": "Pacari",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/927/5825/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7702103000262",
+      "nombre": "Cereal Froot Loops Kellogg's 230 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 4.2,
+      "iva": 15,
+      "marca": "Kellogg's, Froot Loops",
+      "contenido": "230 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/210/300/0262/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7891008121728",
+      "nombre": "Chocolate Talento Avellanas Garoto 85 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Garoto, Talento",
+      "contenido": "85 g / 2.99 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/100/812/1728/front_pt.22.400.jpg"
+    },
+    {
+      "codigoBarras": "7610700002056",
+      "nombre": "Caramelos Ricola Hierbas Suizas sin Azúcar",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 2.5,
+      "iva": 15,
+      "marca": "Ricola",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/761/070/000/2056/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861006781644",
+      "nombre": "Tortillas de Harina Mama Fanny",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 1.95,
+      "iva": 0,
+      "marca": "Mamá fanny",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/678/1644/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001237924",
+      "nombre": "Ricacao Nestlé",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 3.4,
+      "iva": 15,
+      "marca": "Nestle",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/123/7924/front_fr.17.400.jpg"
+    },
+    {
+      "codigoBarras": "8719200452879",
+      "nombre": "Margarina Bonella 500 g",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 2.4,
+      "iva": 0,
+      "marca": "Bonella,  Rama",
+      "contenido": "500 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/871/920/045/2879/front_es.15.400.jpg"
+    },
+    {
+      "codigoBarras": "7861063507386",
+      "nombre": "Pan Integral de Nueces y Moras Moderna 500 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 3.4,
+      "iva": 0,
+      "marca": "moderna",
+      "contenido": "500 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/106/350/7386/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861018512557",
+      "nombre": "Doritos Queso 52 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.65,
+      "iva": 15,
+      "marca": "Frito Lay",
+      "contenido": "52 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/851/2557/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861074600236",
+      "nombre": "Quinua Ecuatoriana",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 2.9,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/107/460/0236/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7622210091741",
+      "nombre": "Pudín Royal Vainilla 110 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 1.45,
+      "iva": 15,
+      "marca": "Royal",
+      "contenido": "110 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/762/221/009/1741/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7891000350157",
+      "nombre": "Nescafé Tradición 120 g",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 6.4,
+      "iva": 15,
+      "marca": "Nescafé, Nestlé",
+      "contenido": "120 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/100/035/0157/front_es.27.400.jpg"
+    },
+    {
+      "codigoBarras": "7862110543067",
+      "nombre": "Néctar de Naranja Pulp",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.45,
+      "iva": 15,
+      "marca": "Pulp",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/054/3067/front_fr.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861002502335",
+      "nombre": "Aceite Vivi Canola 1 L",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 3.6,
+      "iva": 0,
+      "marca": "Danec",
+      "contenido": "1 litro",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/250/2335/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861055401760",
+      "nombre": "Queso Fresco Carchi",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 3.2,
+      "iva": 0,
+      "marca": "Carchi",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/105/540/1760/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007222207",
+      "nombre": "Crema de Maní 250 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 3.1,
+      "iva": 15,
+      "marca": null,
+      "contenido": "250 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/722/2207/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "7862104161192",
+      "nombre": "Pan Integral Trigueño 550 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 2.4,
+      "iva": 0,
+      "marca": "Trigueño",
+      "contenido": "550g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/416/1192/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861009944336",
+      "nombre": "Pan Blanco Bimbo",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 2.35,
+      "iva": 0,
+      "marca": "Bimbo",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/994/4336/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862106704458",
+      "nombre": "Vive 100 Energizante",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.6,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/670/4458/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861036741045",
+      "nombre": "Shampoo Misty Men 3 en 1 500 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.9,
+      "iva": 15,
+      "marca": "Misty",
+      "contenido": "500ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/103/674/1045/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7868000677812",
+      "nombre": "Granola del Austro GranOrt 450 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 4.8,
+      "iva": 15,
+      "marca": "GranOrt",
+      "contenido": "450g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/800/067/7812/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007800740",
+      "nombre": "Esencia de Vainilla McCormick",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.6,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/780/0740/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001238549",
+      "nombre": "Salsa de Tomate Maggi",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.7,
+      "iva": 15,
+      "marca": "Maggi",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/123/8549/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001235524",
+      "nombre": "La Lechera Tres Leches",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 2.4,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/123/5524/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042556671",
+      "nombre": "Chifles Supermaxi",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.85,
+      "iva": 15,
+      "marca": "Supermaxi",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/255/6671/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7804000002056",
+      "nombre": "Barra de Cereal En Línea Almendra y Coco 6 u",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.4,
+      "iva": 15,
+      "marca": "En Línea",
+      "contenido": "120 g (6 barras)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/400/000/2056/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001261868",
+      "nombre": "La Sazón Maggi 200 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "maggi",
+      "contenido": "200g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/126/1868/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7862100602125",
+      "nombre": "Ensalada de Atún Tipo Rusa Real",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/060/2125/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7868000753417",
+      "nombre": "Té de Guayusa Amazónica",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 2.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/800/075/3417/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001244885",
+      "nombre": "Crema de Choclo Maggi",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/124/4885/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861015103819",
+      "nombre": "Salsa de Tomate Gustadina",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.3,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/510/3819/front_en.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7862123510360",
+      "nombre": "Aceite de Coco 220 ml",
+      "categoria": "Aceites, Margarinas y Grasas",
+      "pvp": 4.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": "220 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/351/0360/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042531074",
+      "nombre": "Harina de Trigo Todo Uso 1 kg",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.45,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/253/1074/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862106704472",
+      "nombre": "Vive 100 Cero Azúcar",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/670/4472/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861049300260",
+      "nombre": "Azúcar Morena de Caña 1 kg",
+      "categoria": "Azúcar y Endulzantes",
+      "pvp": 1.2,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/930/0260/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001241556",
+      "nombre": "Néctar de Manzana Nestlé",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.9,
+      "iva": 15,
+      "marca": "Nestlé",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/124/1556/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "77078841",
+      "nombre": "Tic Tac Menta",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 0.85,
+      "iva": 15,
+      "marca": "Tic Tac",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/77078841/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "2500000005374",
+      "nombre": "Corte de Res Santo Corte Prokarnita 500 g",
+      "categoria": "Embutidos y Carnes",
+      "pvp": 5.9,
+      "iva": 0,
+      "marca": "Prokarnita S.A.",
+      "contenido": "470 gramos - 530 gramos",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/250/000/000/5374/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024621465",
+      "nombre": "Powerade 500 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/462/1465/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7312040017034",
+      "nombre": "Vodka Absolut 1 L",
+      "categoria": "Vinos y Licores",
+      "pvp": 29.9,
+      "iva": 15,
+      "marca": "Absolut",
+      "contenido": "1 l",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/731/204/001/7034/front_en.42.400.jpg"
+    },
+    {
+      "codigoBarras": "7702032104369",
+      "nombre": "Colcafé Intenso Granulado 50 g",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 2.9,
+      "iva": 15,
+      "marca": "Colcafé, Nutresa",
+      "contenido": "50 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/203/210/4369/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "7802575353047",
+      "nombre": "Salsa Pomarola Italiana Carozzi 200 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 0.95,
+      "iva": 15,
+      "marca": "Carozzi, Pomarola",
+      "contenido": "200 g / 7.05 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/257/535/3047/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7861029402267",
+      "nombre": "Leche Entera Vita 900 ml",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.95,
+      "iva": 0,
+      "marca": "Pasteurizadora Quito. S.A",
+      "contenido": "900 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/940/2267/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861012510566",
+      "nombre": "Leche Toni Semidescremada Chocolatada",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": "Toni",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/251/0566/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7861012508440",
+      "nombre": "Yogurt Natural Toni 1,7 kg",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 5.2,
+      "iva": 0,
+      "marca": "Toni",
+      "contenido": "1.70 kg",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/250/8440/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7891962032290",
+      "nombre": "Wafer Bauducco Chocolate 140 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": "Bauducco",
+      "contenido": "140 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/196/203/2290/front.16.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045824893",
+      "nombre": "Galletas Frutigran Chips de Chocolate 255 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.8,
+      "iva": 15,
+      "marca": "Granix, Frutigran",
+      "contenido": "255 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/582/4893/front_es.23.400.jpg"
+    },
+    {
+      "codigoBarras": "0090388002932",
+      "nombre": "Atún Real Lomitos en Agua Light 180 g",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 2.4,
+      "iva": 0,
+      "marca": "Real",
+      "contenido": "180 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/009/038/800/2932/front_es.19.400.jpg"
+    },
+    {
+      "codigoBarras": "0090388003755",
+      "nombre": "Atún Real Grated en Agua 185 g",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.6,
+      "iva": 0,
+      "marca": "Real",
+      "contenido": "185 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/009/038/800/3755/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861055900706",
+      "nombre": "Leche Deslactosada Nutri 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.15,
+      "iva": 0,
+      "marca": "nutri",
+      "contenido": "1 L",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/105/590/0706/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7802215515019",
+      "nombre": "Galletas Gretel Chocolate Costa 85 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.8,
+      "iva": 15,
+      "marca": "Costa, Gretel",
+      "contenido": "85 g / 3 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/221/551/5019/front_es.13.400.jpg"
+    },
+    {
+      "codigoBarras": "7802215302053",
+      "nombre": "Galletas Gran Cereal Clásica Costa 135 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.4,
+      "iva": 15,
+      "marca": "Costa, Gran Cereal",
+      "contenido": "135 g / 4.8 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/221/530/2053/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7757174002240",
+      "nombre": "Chocolate Golpe Arcor 27 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 0.45,
+      "iva": 15,
+      "marca": "Arcor, Golpe",
+      "contenido": "27 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/775/717/400/2240/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225688048",
+      "nombre": "Galletas Choc Kiss Arcor 135 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.3,
+      "iva": 15,
+      "marca": "Arcor",
+      "contenido": "135 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/568/8048/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045827054",
+      "nombre": "Galletas Frutigran Avena y Frutos Rojos 175 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Granix, Frutigran",
+      "contenido": "175 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/582/7054/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7861091158062",
+      "nombre": "Galletas Amor Wafer Nestlé 175 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.3,
+      "iva": 15,
+      "marca": "Nestle",
+      "contenido": "175",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/109/115/8062/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7861015102287",
+      "nombre": "Mermelada de Piña Gustadina",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/510/2287/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861000272735",
+      "nombre": "Semillas de Chía Kunachia 280 g",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Kunachia",
+      "contenido": "280 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/027/2735/front_es.15.400.jpg"
+    },
+    {
+      "codigoBarras": "7861077501592",
+      "nombre": "Helado Alfajor Topsy",
+      "categoria": "Congelados y Helados",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": "Topsy",
+      "contenido": "85 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/107/750/1592/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861006781347",
+      "nombre": "Tortillas para Wrap Mama Fanny",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 2.2,
+      "iva": 0,
+      "marca": "Mama Fanny",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/678/1347/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862101011230",
+      "nombre": "Panko Ichiban",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": "Ichiban",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/101/1230/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862109439029",
+      "nombre": "Pepsi Sabor Intenso",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.9,
+      "iva": 15,
+      "marca": "Pepsi",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/943/9029/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7790580200107",
+      "nombre": "Gomitas Tiburoncitos Mogul 12 x 30 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Mogul, Arcor",
+      "contenido": "360 g (12 u x 30 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/058/020/0107/front_es.12.400.jpg"
+    },
+    {
+      "codigoBarras": "7750243286145",
+      "nombre": "Spaghetti Don Vittorio 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.1,
+      "iva": 0,
+      "marca": "Don Vittorio, Alicorp",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/775/024/328/6145/front_es.33.400.jpg"
+    },
+    {
+      "codigoBarras": "7861000261456",
+      "nombre": "Horchata Forestea 475 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.85,
+      "iva": 15,
+      "marca": "Forestea",
+      "contenido": "475 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/026/1456/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7868001011219",
+      "nombre": "Avena Polaca Gustalac 370 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.2,
+      "iva": 15,
+      "marca": "Lácteos Polaca Gustalac",
+      "contenido": "370g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/800/101/1219/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7502252483578",
+      "nombre": "Bebida Nature's Heart Almendra y Coco 200 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1.4,
+      "iva": 15,
+      "marca": "Nature's Heart",
+      "contenido": "200 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/750/225/248/3578/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7790580660000",
+      "nombre": "Polenta Instantánea Prestopronta 500 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 2.6,
+      "iva": 0,
+      "marca": "Prestopronta, Arcor",
+      "contenido": "500 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/058/066/0000/front_es.34.400.jpg"
+    },
+    {
+      "codigoBarras": "8410109050509",
+      "nombre": "Chocolate Valor Negro 70% Cacao 100 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 3.7,
+      "iva": 15,
+      "marca": "Valor",
+      "contenido": "100 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/841/010/905/0509/front_es.19.400.jpg"
+    },
+    {
+      "codigoBarras": "7790580509507",
+      "nombre": "Mermelada de Durazno Arcor 454 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "Arcor",
+      "contenido": "454 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/058/050/9507/front_es.19.400.jpg"
+    },
+    {
+      "codigoBarras": "7591057001025",
+      "nombre": "Corn Flakes Kellogg's 200 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 2.9,
+      "iva": 15,
+      "marca": "Kellogg's, Corn Flakes",
+      "contenido": "200 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/759/105/700/1025/front_es.17.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024626262",
+      "nombre": "Coca-Cola Zero",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1,
+      "iva": 15,
+      "marca": "Coca-Cola",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/462/6262/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001267761",
+      "nombre": "Mostaza Maggi 200 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.3,
+      "iva": 15,
+      "marca": "maggi, Nestlé",
+      "contenido": "200g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/126/7761/front_es.19.400.jpg"
+    },
+    {
+      "codigoBarras": "7896007800001",
+      "nombre": "Salsa de Soya Sakura Shoyu 500 ml",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 3.4,
+      "iva": 15,
+      "marca": "Sakura",
+      "contenido": "500 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/600/780/0001/front_pt.12.400.jpg"
+    },
+    {
+      "codigoBarras": "7501059275539",
+      "nombre": "Nescafé Cappuccino 6 sobres",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 3.7,
+      "iva": 15,
+      "marca": "Nescafé, Nestlé",
+      "contenido": "120 g (6 sobres/sticks x 20 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/750/105/927/5539/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7862117501725",
+      "nombre": "Bebida Hidratante Revo",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": "Revo drink",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/750/1725/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7702025182206",
+      "nombre": "Galletas Festival Noel",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.4,
+      "iva": 15,
+      "marca": "Festival",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/202/518/2206/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "2500000001390",
+      "nombre": "Lunch Mix Alideli 150 g",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 2.9,
+      "iva": 15,
+      "marca": "alideli",
+      "contenido": "150g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/250/000/000/1390/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861138610768",
+      "nombre": "Queso Tierno Reyqueso 200 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 2.6,
+      "iva": 0,
+      "marca": "Reyqueso supreme",
+      "contenido": "200 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/113/861/0768/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861004911203",
+      "nombre": "Galletas Integrales Siluet con Manzana 28 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.3,
+      "iva": 15,
+      "marca": "Siluet",
+      "contenido": "28 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/491/1203/front_en.30.400.jpg"
+    },
+    {
+      "codigoBarras": "7702011023032",
+      "nombre": "Gomas Grissly Colombina",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 0.6,
+      "iva": 15,
+      "marca": "Colombina",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/201/102/3032/front_en.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7790580283155",
+      "nombre": "Turrón de Maní con Frutas Arcor 120 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 1.8,
+      "iva": 15,
+      "marca": "Arcor",
+      "contenido": "120 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/058/028/3155/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7862113114615",
+      "nombre": "Kombucha Frutos Rojos",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/311/4615/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7800120162212",
+      "nombre": "Cereal Check 3 Cereales Vivo 360 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Vivo, Carozzi",
+      "contenido": "360 g / 12.7 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/012/016/2212/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045001188",
+      "nombre": "Galletas Frutigran Avena y Pasas 250 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.4,
+      "iva": 15,
+      "marca": "Granix, Frutigran",
+      "contenido": "250 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/500/1188/front_es.55.400.jpg"
+    },
+    {
+      "codigoBarras": "7862100604648",
+      "nombre": "Atún Real Claro Lomitos en Aceite de Oliva",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 2.95,
+      "iva": 0,
+      "marca": "Real",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/060/4648/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7790580169312",
+      "nombre": "Gomitas Cerebritos Mogul 30 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 0.6,
+      "iva": 15,
+      "marca": "Mogul, Arcor",
+      "contenido": "30 g (1.6 oz)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/058/016/9312/front_es.32.400.jpg"
+    },
+    {
+      "codigoBarras": "7861055900447",
+      "nombre": "Leche Entera Nutri 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 0.95,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/105/590/0447/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861017500234",
+      "nombre": "Té Verde Hornimans",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 1.95,
+      "iva": 15,
+      "marca": "Hornimans tea",
+      "contenido": "40g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/750/0234/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "8710428014900",
+      "nombre": "Ensure Advance Abbott",
+      "categoria": "Nutrición y Suplementos",
+      "pvp": 26.9,
+      "iva": 15,
+      "marca": "Abbott",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/871/042/801/4900/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042559788",
+      "nombre": "Papas Onduladas Crema y Cebolla Supermaxi",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/255/9788/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862104340498",
+      "nombre": "Aplanchados 150 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 1.5,
+      "iva": 15,
+      "marca": null,
+      "contenido": "150 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/434/0498/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862110543289",
+      "nombre": "Néctar de Durazno Pulp",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.45,
+      "iva": 15,
+      "marca": "Pulp",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/211/054/3289/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042559535",
+      "nombre": "Champiñones Rebanados Supermaxi",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 2.1,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/255/9535/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861018202076",
+      "nombre": "Ketchup Los Andes",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.5,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/820/2076/front_fr.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861008520920",
+      "nombre": "Chocolate Jaaz Confiteca 15 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 0.25,
+      "iva": 15,
+      "marca": "Confiteca",
+      "contenido": "15g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/852/0920/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861042560982",
+      "nombre": "Curry La Original 50 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.3,
+      "iva": 15,
+      "marca": "la original",
+      "contenido": "50g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/104/256/0982/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7501057006432",
+      "nombre": "Crema Corporal Lubriderm 400 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 11.9,
+      "iva": 15,
+      "marca": "lubriderm",
+      "contenido": "400ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/750/105/700/6432/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "0759494004376",
+      "nombre": "Energizante 220V Tesalia 365 ml",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.75,
+      "iva": 15,
+      "marca": "THE TESALIA SPRINGS COMPANY",
+      "contenido": "365 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/075/949/400/4376/front_de.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862109562000",
+      "nombre": "Stevia en Gotas Green Life 60 ml",
+      "categoria": "Azúcar y Endulzantes",
+      "pvp": 4.5,
+      "iva": 15,
+      "marca": "Green life",
+      "contenido": "60 ml",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/210/956/2000/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861002013053",
+      "nombre": "Bebida de Almendras Gloria Vainilla 1 L",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "gloria",
+      "contenido": "1lt",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/201/3053/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001234893",
+      "nombre": "Leche La Lechera Entera 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.1,
+      "iva": 0,
+      "marca": "Nestle",
+      "contenido": "1L",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/123/4893/front_es.15.400.jpg"
+    },
+    {
+      "codigoBarras": "7861018517514",
+      "nombre": "Snack De Todito 195 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.6,
+      "iva": 15,
+      "marca": null,
+      "contenido": "195 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/851/7514/front_xx.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7613030979715",
+      "nombre": "Cereal Trix",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/761/303/097/9715/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861063505788",
+      "nombre": "Pan Sanduchero Integral Moderna",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 2.6,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/106/350/5788/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7702010420917",
+      "nombre": "Jabón Protex",
+      "categoria": "Cuidado Personal",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": "Protex",
+      "contenido": "1",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/201/042/0917/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7868000629408",
+      "nombre": "Tortillas Integrales Maya's 600 g",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 3.4,
+      "iva": 0,
+      "marca": "Maya's",
+      "contenido": "600 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/800/062/9408/front_en.4.400.jpg"
+    },
+    {
+      "codigoBarras": "0722008001345",
+      "nombre": "Atún Van Camp's en Aceite de Girasol",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 1.95,
+      "iva": 0,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/072/200/800/1345/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7861024607643",
+      "nombre": "Coca-Cola Original 1 L",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": "Coca-Cola",
+      "contenido": "1 l",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/460/7643/front_en.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001290301",
+      "nombre": "Crema de Pollo Maggi",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.1,
+      "iva": 15,
+      "marca": "Maggi",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/129/0301/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "0759494999702",
+      "nombre": "Agua Mineral Tesalia sin Gas",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 0.7,
+      "iva": 15,
+      "marca": "Tesalia",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/075/949/499/9702/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007905148",
+      "nombre": "Fideo Instantáneo Rapidito Oriental 100 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 0.55,
+      "iva": 15,
+      "marca": "oriental",
+      "contenido": "100g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/790/5148/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861004911166",
+      "nombre": "Galletas Integrales Siluet Avena y Miel 28 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.3,
+      "iva": 15,
+      "marca": "Superior",
+      "contenido": "28gr",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/491/1166/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861012513901",
+      "nombre": "Yogurt Toni Bebible 950 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 3.1,
+      "iva": 0,
+      "marca": "Toni",
+      "contenido": "950 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/101/251/3901/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225511186",
+      "nombre": "Bon o Bon Chocolate 30 x 15 g",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 7.2,
+      "iva": 15,
+      "marca": "bon o bon, Arcor",
+      "contenido": "450 g (30 x 15 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/551/1186/front_es.16.400.jpg"
+    },
+    {
+      "codigoBarras": "0090388001546",
+      "nombre": "Atún Real Lomitos en Agua 3 x 80 g",
+      "categoria": "Enlatados y Conservas",
+      "pvp": 4.25,
+      "iva": 0,
+      "marca": "Real",
+      "contenido": "240 g (3 x 80 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/009/038/800/1546/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "0076150202199",
+      "nombre": "Canguil Act II Mantequilla Light 85 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.95,
+      "iva": 15,
+      "marca": "Act II",
+      "contenido": "85 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/007/615/020/2199/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7802215505058",
+      "nombre": "Galletas Costa Maxi Chips 200 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.2,
+      "iva": 15,
+      "marca": "Costa",
+      "contenido": "200 g / 7.1 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/221/550/5058/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7750243286152",
+      "nombre": "Linguini Don Vittorio 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.1,
+      "iva": 0,
+      "marca": "Don Vittorio",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/775/024/328/6152/front_es.24.400.jpg"
+    },
+    {
+      "codigoBarras": "7790580509408",
+      "nombre": "Mermelada de Damasco Arcor 454 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "Arcor",
+      "contenido": "454 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/058/050/9408/front_es.19.400.jpg"
+    },
+    {
+      "codigoBarras": "7802225688758",
+      "nombre": "Galletas Rocklets Vainilla 165 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.4,
+      "iva": 15,
+      "marca": "Rocklets, Arcor",
+      "contenido": "165 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/222/568/8758/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045825746",
+      "nombre": "Granola Crocante Granix Frutos Rojos 350 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 5.2,
+      "iva": 15,
+      "marca": "Granix",
+      "contenido": "350 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/582/5746/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7802215512285",
+      "nombre": "Galletas FRAC Vainilla Costa 130 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 1.2,
+      "iva": 15,
+      "marca": "Costa, FRAC",
+      "contenido": "130 g / 4.6 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/221/551/2285/front.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045824886",
+      "nombre": "Galletas Fiesta Surtidas Granix 350 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 3.6,
+      "iva": 15,
+      "marca": "Granix, Fiesta",
+      "contenido": "350 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/582/4886/front_es.25.400.jpg"
+    },
+    {
+      "codigoBarras": "7702409011498",
+      "nombre": "Pistachos Horneados con Sal Manitoba 35 g",
+      "categoria": "Frutos Secos y Semillas",
+      "pvp": 1.2,
+      "iva": 15,
+      "marca": "Manitoba",
+      "contenido": "35 g (1.2 oz)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/240/901/1498/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7861005200641",
+      "nombre": "Café Liofilizado Minerva",
+      "categoria": "Café, Té y Cocoa",
+      "pvp": 5.9,
+      "iva": 15,
+      "marca": "Minerva",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/520/0641/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7862126490676",
+      "nombre": "Yogurt Griego Kaaru 900 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 5.9,
+      "iva": 0,
+      "marca": "Kaaru",
+      "contenido": "900 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/212/649/0676/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861106411090",
+      "nombre": "Leche Entera Parmalat 1 L",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 1.05,
+      "iva": 0,
+      "marca": "Parmalat",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/110/641/1090/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861063508000",
+      "nombre": "Pan Gourmet Integral con Cereales Moderna",
+      "categoria": "Panadería y Tortillas",
+      "pvp": 3.2,
+      "iva": 0,
+      "marca": "Moderna",
+      "contenido": null,
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/106/350/8000/front_en.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7622201407308",
+      "nombre": "Galletas Oreo 4 unidades",
+      "categoria": "Galletas y Snacks",
+      "pvp": 0.35,
+      "iva": 15,
+      "marca": "nabisco",
+      "contenido": "4 galletas",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/762/220/140/7308/front_es.12.400.jpg"
+    },
+    {
+      "codigoBarras": "7709990080438",
+      "nombre": "Coditos de Lentejas Rojas Terra Verde 250 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "Terra Verde",
+      "contenido": "250 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/999/008/0438/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7891079012444",
+      "nombre": "Ramen Nissin Sabor Verduras 85 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 0.95,
+      "iva": 15,
+      "marca": "Nissin",
+      "contenido": "85 g (80 g + 5 g)",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/789/107/901/2444/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7702174083454",
+      "nombre": "Chupetes Yogueta Fresa 24 u",
+      "categoria": "Confitería y Chocolates",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Yogueta",
+      "contenido": "360 g (12.69 oz) 24 u",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/770/217/408/3454/front_es.11.400.jpg"
+    },
+    {
+      "codigoBarras": "7861007210013",
+      "nombre": "Granola Schullo Miel de Abejas y Pasas 400 g",
+      "categoria": "Cereales, Avenas y Granolas",
+      "pvp": 3.7,
+      "iva": 15,
+      "marca": "Schullo",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/100/721/0013/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7802575015600",
+      "nombre": "Spaghetti Integral Carozzi 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.8,
+      "iva": 0,
+      "marca": "Carozzi",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/257/501/5600/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7790045825395",
+      "nombre": "Galletas Frutigran Avena, Chía y Lino 240 g",
+      "categoria": "Galletas y Snacks",
+      "pvp": 2.6,
+      "iva": 15,
+      "marca": "Granix, Frutigran",
+      "contenido": "240 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/779/004/582/5395/front_es.38.400.jpg"
+    },
+    {
+      "codigoBarras": "7861025804676",
+      "nombre": "Yogurt Chivería Vainilla 950 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 3.3,
+      "iva": 0,
+      "marca": "Chiveria",
+      "contenido": "950 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/786/102/580/4676/front_fr.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7750670000758",
+      "nombre": "Bebida de Durazno Pulp 1 L",
+      "categoria": "Bebidas y Jugos",
+      "pvp": 1.4,
+      "iva": 15,
+      "marca": "Pul'p",
+      "contenido": "1 L",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/775/067/000/0758/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7802575006035",
+      "nombre": "Corbatas Carozzi 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.35,
+      "iva": 0,
+      "marca": "Carozzi",
+      "contenido": "400 g",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/257/500/6035/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7802575004635",
+      "nombre": "Tallarines 87 Carozzi 400 g",
+      "categoria": "Pastas, Harinas y Sopas",
+      "pvp": 1.25,
+      "iva": 0,
+      "marca": "Carozzi",
+      "contenido": "400 g / 14.11 oz",
+      "imagenOrigen": "https://images.openfoodfacts.org/images/products/780/257/500/4635/front_es.10.400.jpg"
+    },
+    {
+      "codigoBarras": "7500435231268",
+      "nombre": "Shampoo Head & Shoulders Anti Comezón 650 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 10.9,
+      "iva": 15,
+      "marca": "head",
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/043/523/1268/front_en.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7500435108027",
+      "nombre": "Shampoo Head & Shoulders Protección Caída 700 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 11.5,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/043/510/8027/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7500435020077",
+      "nombre": "Shampoo Head & Shoulders Alivio Refrescante 180 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 3.95,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/043/502/0077/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7500435108034",
+      "nombre": "Shampoo Head & Shoulders 2 en 1 700 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 11.5,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/043/510/8034/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "75058852",
+      "nombre": "Desodorante Rexona Antibacterial",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.1,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/000/007/505/8852/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7500435019873",
+      "nombre": "Shampoo Head & Shoulders Manzana Fresh 180 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 3.95,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/043/501/9873/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "3014260279165",
+      "nombre": "Pasta Dental Oral-B Niños 100 g",
+      "categoria": "Cuidado Personal",
+      "pvp": 2.8,
+      "iva": 15,
+      "marca": "Oral B",
+      "contenido": "100 gr",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/301/426/027/9165/front_es.10.400.jpg"
+    },
+    {
+      "codigoBarras": "4005900994790",
+      "nombre": "Protector Solar Facial Nivea",
+      "categoria": "Cuidado Personal",
+      "pvp": 14.9,
+      "iva": 15,
+      "marca": "Nivea",
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/590/099/4790/front_en.6.400.jpg"
+    },
+    {
+      "codigoBarras": "0190679000187",
+      "nombre": "Acondicionador Herbal Essences Argan Oil 400 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 6.9,
+      "iva": 15,
+      "marca": "Herbal Essences",
+      "contenido": "400 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/019/067/900/0187/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7500435202671",
+      "nombre": "Shampoo Head & Shoulders Limpieza y Renovación 180 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 3.95,
+      "iva": 15,
+      "marca": "Head & Shoulder",
+      "contenido": "180 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/043/520/2671/front_en.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7702031293569",
+      "nombre": "Shampoo Johnson's Baby",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.2,
+      "iva": 15,
+      "marca": "Johnson's",
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/770/203/129/3569/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "7509546054650",
+      "nombre": "Pasta Dental Colgate Luminous White 75 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.9,
+      "iva": 15,
+      "marca": "Colgate, Luminous White",
+      "contenido": "75 ml (103 g)",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/954/605/4650/front_es.10.400.jpg"
+    },
+    {
+      "codigoBarras": "4005808980239",
+      "nombre": "Desodorante Nivea Men Black & White Invisible 150 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 5.4,
+      "iva": 15,
+      "marca": "Black & White, Nivea, Nivea Men",
+      "contenido": "150 ml / 89 g",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/580/898/0239/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "4005900374653",
+      "nombre": "Desodorante Nivea Men Black & White Invisible Fresh 150 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 5.4,
+      "iva": 15,
+      "marca": "Black & White, Nivea, Nivea Men",
+      "contenido": "150 ml (89 g)",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/590/037/4653/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "75080150",
+      "nombre": "Desodorante Dove Invisible Dry 50 g",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.2,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/000/007/508/0150/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "75031077",
+      "nombre": "Desodorante Dove Men 50 g",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.2,
+      "iva": 15,
+      "marca": null,
+      "contenido": null,
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/000/007/503/1077/front_en.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7791293043814",
+      "nombre": "Desodorante Axe Apollo 150 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 5.2,
+      "iva": 15,
+      "marca": "Unilever, Axe",
+      "contenido": "150 ml (97 g)",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/779/129/304/3814/front_es.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7891024134610",
+      "nombre": "Pasta Dental Colgate Máxima Protección Anticaries 180 g",
+      "categoria": "Cuidado Personal",
+      "pvp": 3.4,
+      "iva": 15,
+      "marca": "Colgate",
+      "contenido": "180 g",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/789/102/413/4610/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7862113781060",
+      "nombre": "Vaselina 50 g",
+      "categoria": "Cuidado Personal",
+      "pvp": 1.8,
+      "iva": 15,
+      "marca": "Vaselina",
+      "contenido": "50 Gr.",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/786/211/378/1060/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "4005800137655",
+      "nombre": "Crema Nivea Creme 30 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 1.95,
+      "iva": 15,
+      "marca": "Nivea",
+      "contenido": "30 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/580/013/7655/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "4005800137556",
+      "nombre": "Crema Nivea Creme 150 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 5.9,
+      "iva": 15,
+      "marca": "Nivea",
+      "contenido": "150 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/580/013/7556/front_en.12.400.jpg"
+    },
+    {
+      "codigoBarras": "4005900515933",
+      "nombre": "Desodorante Nivea Fresh Ocean 48H",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.8,
+      "iva": 15,
+      "marca": "Nivea",
+      "contenido": "1",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/590/051/5933/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "7500435139571",
+      "nombre": "Shampoo Herbal Essences Bourbon Manuka Honey 400 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 6.9,
+      "iva": 15,
+      "marca": "Bio Renew, Herbal Essences",
+      "contenido": "400 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/043/513/9571/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "4005808319695",
+      "nombre": "Crema Corporal Nivea Milk Nutritiva 400 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 8.9,
+      "iva": 15,
+      "marca": "Nivea",
+      "contenido": "400 ml / 394 g",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/580/831/9695/front_es.14.400.jpg"
+    },
+    {
+      "codigoBarras": "4005808315680",
+      "nombre": "Crema Corporal Nivea Milk Nutritiva 125 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": "Nivea",
+      "contenido": "125 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/580/831/5680/front_es.5.400.jpg"
+    },
+    {
+      "codigoBarras": "7791293040127",
+      "nombre": "Desodorante Dove Coco y Jazmín 150 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 5.2,
+      "iva": 15,
+      "marca": "Dove, Nutritive Secrets",
+      "contenido": "87 g - 150 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/779/129/304/0127/front_es.14.400.jpg"
+    },
+    {
+      "codigoBarras": "7506306211285",
+      "nombre": "Shampoo Dove Ritual Restaurador 400 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 6.5,
+      "iva": 15,
+      "marca": "Dove",
+      "contenido": "400 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/630/621/1285/front_es.7.400.jpg"
+    },
+    {
+      "codigoBarras": "7501056330347",
+      "nombre": "Crema Pond's Bio-Hidratante 200 g",
+      "categoria": "Cuidado Personal",
+      "pvp": 9.9,
+      "iva": 15,
+      "marca": "Pond's",
+      "contenido": "200 g",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/105/633/0347/front_es.10.400.jpg"
+    },
+    {
+      "codigoBarras": "4005800137662",
+      "nombre": "Crema Nivea Creme 400 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 11.9,
+      "iva": 15,
+      "marca": "Nivea",
+      "contenido": "400 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/580/013/7662/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "4005808183043",
+      "nombre": "Tónico Facial Nivea Matificante 200 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 7.9,
+      "iva": 15,
+      "marca": "Nivea",
+      "contenido": "200 ml (201 g)",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/580/818/3043/front_es.10.400.jpg"
+    },
+    {
+      "codigoBarras": "4005900353054",
+      "nombre": "Desodorante Nivea Men Protect & Care 150 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 5.4,
+      "iva": 15,
+      "marca": "Nivea, Nivea Men",
+      "contenido": "150 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/400/590/035/3054/front_en.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7506306223202",
+      "nombre": "Jabón Líquido Dove Cuida & Protege Antibacterial 400 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 6.8,
+      "iva": 15,
+      "marca": "Dove",
+      "contenido": "400 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/750/630/622/3202/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "7702057087586",
+      "nombre": "Crema No. 4 110 g",
+      "categoria": "Cuidado Personal",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "crema n. 4",
+      "contenido": "110 g",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/770/205/708/7586/front_es.4.400.jpg"
+    },
+    {
+      "codigoBarras": "15063397",
+      "nombre": "Desodorante Old Spice Pure Sport 150 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 5.9,
+      "iva": 15,
+      "marca": "Old Spice",
+      "contenido": "96g/150ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/000/001/506/3397/front_es.6.400.jpg"
+    },
+    {
+      "codigoBarras": "0075486091170",
+      "nombre": "Protector Solar Hawaiian Tropic Island Sport 360 ml",
+      "categoria": "Cuidado Personal",
+      "pvp": 19.9,
+      "iva": 15,
+      "marca": "Hawaiian tropic",
+      "contenido": "360 ml",
+      "imagenOrigen": "https://images.openbeautyfacts.org/images/products/007/548/609/1170/front_de.8.400.jpg"
+    },
+    {
+      "codigoBarras": "7861001247923",
+      "nombre": "La Sazón Maggi 150 g",
+      "categoria": "Salsas, Untables y Condimentos",
+      "pvp": 1.7,
+      "iva": 15,
+      "marca": "Maggi",
+      "contenido": "150g",
+      "imagenOrigen": "https://images.openproductsfacts.org/images/products/786/100/124/7923/front_es.15.400.jpg"
+    },
+    {
+      "codigoBarras": "7750243070430",
+      "nombre": "Detergente Intra Patito Floral 640 g",
+      "categoria": "Limpieza y Hogar",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "Patito",
+      "contenido": "640 g (22.5 oz)",
+      "imagenOrigen": "https://images.openproductsfacts.org/images/products/775/024/307/0430/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7861012503513",
+      "nombre": "Queso Crema Toni 600 g",
+      "categoria": "Lácteos y Derivados",
+      "pvp": 5.2,
+      "iva": 0,
+      "marca": "Toni",
+      "contenido": "600g",
+      "imagenOrigen": "https://images.openproductsfacts.org/images/products/786/101/250/3513/front_es.3.400.jpg"
+    },
+    {
+      "codigoBarras": "7751851008754",
+      "nombre": "Detergente Intra Patito Bebé 640 g",
+      "categoria": "Limpieza y Hogar",
+      "pvp": 3.2,
+      "iva": 15,
+      "marca": "Patito",
+      "contenido": "640 g (22.5 oz)",
+      "imagenOrigen": "https://images.openproductsfacts.org/images/products/775/185/100/8754/front_es.13.400.jpg"
+    },
+    {
+      "codigoBarras": "0119221004961",
+      "nombre": "Pañales Babysec Ultrasec XG 48 u",
+      "categoria": "Bebés e Infantes",
+      "pvp": 17.9,
+      "iva": 15,
+      "marca": "Babysec",
+      "contenido": "48 u",
+      "imagenOrigen": "https://images.openproductsfacts.org/images/products/011/922/100/4961/front_es.9.400.jpg"
+    },
+    {
+      "codigoBarras": "7702018874781",
+      "nombre": "Máquina de Afeitar Gillette Prestobarba 3 2 u",
+      "categoria": "Cuidado Personal",
+      "pvp": 4.2,
+      "iva": 15,
+      "marca": "Gillette, Prestobarba",
+      "contenido": "2 u",
+      "imagenOrigen": "https://images.openproductsfacts.org/images/products/770/201/887/4781/front_es.15.400.jpg"
+    },
+    {
+      "codigoBarras": "7862116270035",
+      "nombre": "Alcohol Antiséptico 1 L",
+      "categoria": "Limpieza y Hogar",
+      "pvp": 3.9,
+      "iva": 15,
+      "marca": null,
+      "contenido": "1000 ml",
+      "imagenOrigen": "https://images.openproductsfacts.org/images/products/786/211/627/0035/front_es.16.400.jpg"
+    }
+  ]
+}

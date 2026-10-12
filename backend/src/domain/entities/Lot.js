@@ -1,11 +1,14 @@
 const { ValidationException, OverbookingException } = require('../exceptions/DomainExceptions');
+const { classifyExpiryDays } = require('../policies/BusinessRules');
 
 class Lot {
   constructor({
     id,
     productoId,
     numeroLote,
+    fechaElaboracion,
     fechaCaducidad,
+    costoUnitario,
     cantidadIngresada,
     cantidadDisponible,
     cantidadReservada,
@@ -28,6 +31,31 @@ class Lot {
       throw new ValidationException('La fecha de caducidad es obligatoria.');
     }
 
+    const expirationDate = new Date(fechaCaducidad);
+    if (Number.isNaN(expirationDate.getTime())) {
+      throw new ValidationException('La fecha de caducidad no es válida.');
+    }
+
+    let productionDate = null;
+    if (fechaElaboracion !== undefined && fechaElaboracion !== null && fechaElaboracion !== '') {
+      productionDate = new Date(fechaElaboracion);
+      if (Number.isNaN(productionDate.getTime())) {
+        throw new ValidationException('La fecha de elaboración no es válida.');
+      }
+      if (productionDate >= expirationDate) {
+        throw new ValidationException('La fecha de elaboración debe ser anterior a la fecha de caducidad.');
+      }
+    }
+
+    let unitCost = null;
+    if (costoUnitario !== undefined && costoUnitario !== null && costoUnitario !== '') {
+      unitCost = Number(costoUnitario);
+      if (!Number.isFinite(unitCost) || unitCost <= 0) {
+        throw new ValidationException('El costo unitario debe ser un número mayor a cero.');
+      }
+      unitCost = Math.round(unitCost * 10000) / 10000;
+    }
+
     const ingresada = parseInt(cantidadIngresada, 10);
     if (isNaN(ingresada) || ingresada < 0) {
       throw new ValidationException('La cantidad ingresada debe ser un número entero mayor o igual a cero.');
@@ -36,7 +64,9 @@ class Lot {
     this.id = id;
     this.productoId = productoId;
     this.numeroLote = numeroLote.trim();
-    this.fechaCaducidad = new Date(fechaCaducidad);
+    this.fechaElaboracion = productionDate;
+    this.fechaCaducidad = expirationDate;
+    this.costoUnitario = unitCost;
     this.cantidadIngresada = ingresada;
     this.cantidadDisponible = cantidadDisponible !== undefined ? parseInt(cantidadDisponible, 10) : ingresada;
     this.cantidadReservada = cantidadReservada !== undefined ? parseInt(cantidadReservada, 10) : 0;
@@ -58,11 +88,7 @@ class Lot {
   }
 
   obtenerNivelAlerta() {
-    const dias = this.calcularDiasParaVencer();
-    if (dias <= 0) return 'VENCIDO';
-    if (dias < 7) return 'ROJO';
-    if (dias < 15) return 'AMARILLO';
-    return 'NORMAL';
+    return classifyExpiryDays(this.calcularDiasParaVencer());
   }
 
   reservar(cantidad) {
@@ -102,6 +128,9 @@ class Lot {
   registrarMerma(cantidad, razon) {
     const qty = parseInt(cantidad, 10);
     if (qty <= 0) throw new ValidationException('La cantidad de merma debe ser mayor a cero.');
+    if (!razon || typeof razon !== 'string' || razon.trim().length < 3 || razon.trim().length > 500) {
+      throw new ValidationException('La razón de la merma debe tener entre 3 y 500 caracteres.');
+    }
     if (this.cantidadDisponible < qty) {
       throw new ValidationException(`No se puede dar de baja ${qty} unidades. Disponible libre: ${this.cantidadDisponible}`);
     }

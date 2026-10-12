@@ -23,6 +23,7 @@ dist/
 build/
 .next/
 .cache/
+.expo/
 *.tsbuildinfo
 
 # OS & IDE files
@@ -34,3 +35,6 @@ Thumbs.db
 # Scratch & temporary files
 *.tmp
 *.temp
+
+# Imágenes descargadas por el seed (npm run db:seed)
+backend/public/media/productos/

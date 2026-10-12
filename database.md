@@ -154,7 +154,9 @@ Contiene la información de catálogo de los artículos.
 | `id` | `UUID` | **NO** | Clave Primaria (`DEFAULT gen_random_uuid()`) |
 | `producto_id` | `UUID` | **NO** | FK a `productos(id)` ON DELETE CASCADE |
 | `numero_lote` | `VARCHAR(50)` | **NO** | Código del lote asignado por proveedor o interno |
+| `fecha_elaboracion` | `DATE` | Nuevos: **NO** | Fecha real de fabricación; en históricos puede ser nula |
 | `fecha_caducidad` | `DATE` | **NO** | Fecha límite de caducidad del lote |
+| `costo_unitario` | `NUMERIC(12,4)` | Nuevos: **NO** | Costo real de adquisición por unidad; en históricos puede ser nulo |
 | `cantidad_ingresada`| `INTEGER` | **NO** | Unidades recibidas inicialmente (`CHECK >= 0`) |
 | `cantidad_disponible`| `INTEGER` | **NO** | Stock libre para reserva/venta (`CHECK >= 0`) |
 | `cantidad_reservada`| `INTEGER` | **NO** | Stock bloqueado en carrito activo (`CHECK >= 0`) |
@@ -207,12 +209,21 @@ Registro de alertas notificadas vía Server-Sent Events (SSE) a bodegueros y per
 | `id` | `UUID` | **NO** | Clave Primaria (`DEFAULT gen_random_uuid()`) |
 | `lote_id` | `UUID` | **NO** | FK a `lotes(id)` ON DELETE CASCADE |
 | `dias_para_vencer`| `INTEGER` | **NO** | Días calculados a la fecha de expiración |
-| `nivel` | `nivel_alerta` | **NO** | `AMARILLO` (< 15 días) o `ROJO` (< 7 días) |
+| `nivel` | `nivel_alerta` | **NO** | `ROJO` entre 1–6 días o `AMARILLO` entre 7–14 días; los lotes con ≤ 0 días se tratan como `VENCIDO` y no se persisten en este enum. |
 | `atendida` | `BOOLEAN` | **NO** | Estado de resolución (`DEFAULT FALSE`) |
 | `created_at` | `TIMESTAMPTZ` | **NO** | Timestamp de generación |
 
 ### 3.8. Tabla `promociones_ia`
 Sugerencias promocionales de ofertas dinámicas generadas mediante la API de Gemini para lotes de baja rotación.
+
+### 3.9. Tablas de auditoría de inventario
+
+`inventario_movimientos` es el libro inmutable de ingresos, traslados, reservas,
+liberaciones, ventas, mermas y vencimientos. Conserva cantidad, ubicación, responsable
+y los saldos disponible/reservado antes y después de cada operación.
+
+`mermas` almacena el detalle de la baja, su razón, responsable, costo unitario y costo
+total. Cada merma referencia exactamente un movimiento creado en la misma transacción.
 
 | Columna | Tipo de Dato | Nulo | Descripción / Constraints |
 | :--- | :--- | :---: | :--- |
