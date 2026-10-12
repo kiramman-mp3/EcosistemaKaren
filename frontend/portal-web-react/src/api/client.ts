@@ -46,6 +46,7 @@ export interface BackendProduct {
   descripcion?: string;
   precioVenta: number;
   minStockAlerta: number;
+  imagenUrl?: string | null;
   aliasId?: string;
   created_at?: string;
   updated_at?: string;

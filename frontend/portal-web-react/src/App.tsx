@@ -129,7 +129,7 @@ export const App: React.FC = () => {
             category: catName,
             price: bp.precioVenta,
             stock: computedStock,
-            image: CATEGORY_IMAGES[catName] || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
+            image: bp.imagenUrl || CATEGORY_IMAGES[catName] || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
             badge: catName,
             unit: 'Unidad',
             barcode: bp.codigoBarras
@@ -158,7 +158,7 @@ export const App: React.FC = () => {
             stockTotal: matchingLot.cantidadIngresada,
             stockAvailable: matchingLot.cantidadDisponible,
             expiryText: `⏰ Caduca: ${new Date(matchingLot.fechaCaducidad).toLocaleDateString()}`,
-            image: CATEGORY_IMAGES[backendCats.find(c => c.id === lotProd.categoriaId)?.nombre || ''] || 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
+            image: lotProd.imagenUrl || CATEGORY_IMAGES[backendCats.find(c => c.id === lotProd.categoriaId)?.nombre || ''] || 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
             loteId: p.loteId,
             productId: lotProd.id,
             razonIa: p.razonIa
