@@ -7,13 +7,14 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { BackendLot } from '../types';
 import { api } from '../api/client';
+import { daysUntil, formatDate } from '../utils/dates';
 import { classifyExpiryDays } from '../config/businessRules';
 import { Ionicons } from '@expo/vector-icons';
+import { notify } from '../utils/dialogs';
 
 interface InventarioLotesScreenProps {
   lots: BackendLot[];
@@ -49,21 +50,15 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
       await api.updateLotLocation(lot.id, nextLoc);
       onRefresh();
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Error al cambiar ubicación');
+      notify('Error', err.response?.data?.message || err.message || 'Error al cambiar ubicación');
     } finally {
       setMovingLotId(null);
     }
   };
 
   const getDaysLeft = (fecha: string) => {
-    try {
-      const target = new Date(fecha);
-      const now = new Date();
-      const diffMs = target.getTime() - now.getTime();
-      return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    } catch {
-      return 0;
-    }
+    const days = daysUntil(fecha);
+    return Number.isFinite(days) ? days : 0;
   };
 
   return (
@@ -180,7 +175,7 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
                   {/* Date and Days Badge */}
                   <View style={styles.dateRow}>
                     <Text style={styles.dateLabel}>
-                      Caducidad: {new Date(lot.fechaCaducidad).toLocaleDateString()}
+                      Caducidad: {formatDate(lot.fechaCaducidad)}
                     </Text>
                     <View
                       style={[
@@ -212,7 +207,7 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
                   </View>
                   <Text style={styles.dateLabel}>
                     Elaboración: {lot.fechaElaboracion
-                      ? new Date(lot.fechaElaboracion).toLocaleDateString()
+                      ? formatDate(lot.fechaElaboracion)
                       : 'Dato histórico no disponible'} · Costo unitario: {lot.costoUnitario != null
                       ? `$${Number(lot.costoUnitario).toFixed(4)}`
                       : 'No registrado'}

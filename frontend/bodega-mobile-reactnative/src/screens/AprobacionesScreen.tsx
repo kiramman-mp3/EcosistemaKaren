@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { api } from '../api/client';
 import { BackendPromotion } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { confirmAction, notify } from '../utils/dialogs';
 
 type Filter = 'TODAS' | 'PENDIENTES' | 'ACTIVAS' | 'FINALIZADAS' | 'RECHAZADAS';
 const FILTERS: Filter[] = ['TODAS', 'PENDIENTES', 'ACTIVAS', 'FINALIZADAS', 'RECHAZADAS'];
@@ -24,7 +25,7 @@ export const AprobacionesScreen: React.FC = () => {
         : filter === 'FINALIZADAS' ? { estado: 'APROBADA', activa: false }
           : filter === 'RECHAZADAS' ? { estado: 'RECHAZADA' } : {};
     try { setItems(await api.getManagedPromotions(params)); }
-    catch (error: any) { Alert.alert('Error', error.response?.data?.message || 'No se pudieron cargar las promociones.'); }
+    catch (error: any) { notify('Error', error.response?.data?.message || 'No se pudieron cargar las promociones.'); }
     finally { setLoading(false); }
   }, [filter]);
   useEffect(() => { void load(); }, [load]);
@@ -35,25 +36,21 @@ export const AprobacionesScreen: React.FC = () => {
   };
   const run = async (action: () => Promise<unknown>, success: string) => {
     setSaving(true);
-    try { await action(); setSelected(null); await load(); Alert.alert('Promociones', success); }
-    catch (error: any) { Alert.alert('Operación rechazada', error.response?.data?.message || error.message); }
+    try { await action(); setSelected(null); await load(); notify('Promociones', success); }
+    catch (error: any) { notify('Operación rechazada', error.response?.data?.message || error.message); }
     finally { setSaving(false); }
   };
   const save = () => {
     if (!selected) return;
     const value = Number(discount.replace(',', '.'));
-    if (!Number.isFinite(value) || value < 5 || value > 50) return Alert.alert('Dato inválido', 'El descuento debe estar entre 5% y 50%.');
-    if (phrase.trim().length < 3 || phrase.trim().length > 180) return Alert.alert('Dato inválido', 'La frase debe tener entre 3 y 180 caracteres.');
+    if (!Number.isFinite(value) || value < 5 || value > 50) return notify('Dato inválido', 'El descuento debe estar entre 5% y 50%.');
+    if (phrase.trim().length < 3 || phrase.trim().length > 180) return notify('Dato inválido', 'La frase debe tener entre 3 y 180 caracteres.');
     void run(() => api.updatePromotion(selected.id, { descuentoPorcentaje: value, frasePromocional: phrase.trim() }), 'El borrador fue actualizado.');
   };
-  const remove = () => selected && Alert.alert('Eliminar borrador', 'Esta acción elimina el borrador sin publicar.', [
-    { text: 'Cancelar', style: 'cancel' },
-    { text: 'Eliminar', style: 'destructive', onPress: () => void run(() => api.deletePromotionDraft(selected.id), 'El borrador fue eliminado.') }
-  ]);
-  const finish = () => selected && Alert.alert('Finalizar promoción', 'La oferta dejará de mostrarse a los clientes y conservará su historial.', [
-    { text: 'Cancelar', style: 'cancel' },
-    { text: 'Finalizar', style: 'destructive', onPress: () => void run(() => api.deactivatePromotion(selected.id), 'La promoción fue finalizada.') }
-  ]);
+  const remove = () => selected && void confirmAction('Eliminar borrador', 'Esta acción elimina el borrador sin publicar.', { confirmLabel: 'Eliminar', destructive: true })
+    .then(confirmed => { if (confirmed) void run(() => api.deletePromotionDraft(selected.id), 'El borrador fue eliminado.'); });
+  const finish = () => selected && void confirmAction('Finalizar promoción', 'La oferta dejará de mostrarse a los clientes y conservará su historial.', { confirmLabel: 'Finalizar', destructive: true })
+    .then(confirmed => { if (confirmed) void run(() => api.deactivatePromotion(selected.id), 'La promoción fue finalizada.'); });
 
   return <View style={styles.container}>
     <ScrollView style={styles.list} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} colors={['#DC2626']} />}>

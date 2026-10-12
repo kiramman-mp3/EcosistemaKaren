@@ -28,6 +28,7 @@ import {
 } from './src/types';
 import { api } from './src/api/client';
 import { classifyExpiryDays } from './src/config/businessRules';
+import { daysUntil } from './src/utils/dates';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol: string } | null>(null);
@@ -84,15 +85,12 @@ export default function App() {
 
   // Compute alerts from lots
   const computeAlertsFromLots = (currentLots: BackendLot[], prods: BackendProduct[]): ExpiryAlertItem[] => {
-    const now = new Date();
     const result: ExpiryAlertItem[] = [];
 
     for (const lot of currentLots) {
       if (lot.estado !== 'ACTIVO' || lot.cantidadDisponible <= 0) continue;
       try {
-        const exp = new Date(lot.fechaCaducidad);
-        const diffMs = exp.getTime() - now.getTime();
-        const dias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        const dias = daysUntil(lot.fechaCaducidad);
 
         const nivel = classifyExpiryDays(dias);
         if (nivel !== 'NORMAL') {
@@ -152,9 +150,11 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser) return;
+    // El canal SSE solo avisa de lotes nuevos; el estado "online" de la tienda lo
+    // decide el heartbeat, no la conexión SSE.
     return api.subscribeAlerts(
       () => { void loadData(); },
-      connected => { if (connected) setIsOnline(true); }
+      () => {}
     );
   }, [currentUser, loadData]);
 
@@ -207,6 +207,11 @@ export default function App() {
         onLogout={() => {
           void api.logout();
           setCurrentUser(null);
+          setProducts([]);
+          setLots([]);
+          setAlerts([]);
+          setSelectedPromo(null);
+          setMermaTarget(null);
         }}
       />
 

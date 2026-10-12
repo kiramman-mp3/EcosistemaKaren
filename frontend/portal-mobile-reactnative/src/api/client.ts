@@ -102,6 +102,7 @@ export interface CreateReservationRequest {
   items: {
     productoId: string;
     cantidad: number;
+    promocionId?: string;
   }[];
 }
 
@@ -111,6 +112,10 @@ export interface ReservationDetail {
   loteId: string;
   cantidad: number;
   precioUnitario: number;
+  productoId?: string;
+  productoNombre?: string;
+  numeroLote?: string;
+  imagenUrl?: string | null;
 }
 
 export interface BackendReservation {
@@ -120,6 +125,7 @@ export interface BackendReservation {
   estado: 'PENDIENTE' | 'CONFIRMADA' | 'EXPIRADA' | 'CANCELADA';
   fechaExpiracion: string;
   detalles: ReservationDetail[];
+  clienteNombre?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -153,9 +159,18 @@ export const api = {
   },
 
   // 3. Products
+  // Sin limit el backend devuelve solo 30 productos: se recorren todas las páginas de 100.
   async getProducts(): Promise<BackendProduct[]> {
-    const res = await apiClient.get<{ success: boolean; data: BackendProduct[] }>('/products');
-    return res.data.data || [];
+    const pageSize = 100;
+    const all: BackendProduct[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const res = await apiClient.get<{ success: boolean; data: BackendProduct[]; total?: number }>('/products', {
+        params: { limit: pageSize, offset },
+      });
+      const items = res.data.data || [];
+      all.push(...items);
+      if (items.length < pageSize || all.length >= Number(res.data.total ?? all.length)) return all;
+    }
   },
 
   // 4. Lots

@@ -1,4 +1,6 @@
 require('dotenv').config();
+// Antes de cualquier fecha: el día de negocio (caducidades, FEFO) es el de Ecuador.
+require('./src/domain/policies/BusinessDates').applyBusinessTimezone();
 const createServer = require('./src/infrastructure/http/server');
 
 const PORT = process.env.PORT || 4000;

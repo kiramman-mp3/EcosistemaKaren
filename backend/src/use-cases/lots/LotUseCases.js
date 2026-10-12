@@ -2,6 +2,7 @@ const { NotFoundException, ValidationException, ForbiddenException } = require('
 const Lot = require('../../domain/entities/Lot');
 const Alert = require('../../domain/entities/Alert');
 const { classifyExpiryDays, isExpiryAlertLevel } = require('../../domain/policies/BusinessRules');
+const { toDateOnly } = require('../../domain/policies/BusinessDates');
 
 class GetLots {
   constructor(lotRepository) {
@@ -25,7 +26,8 @@ class GetPublicLotAvailability {
       .map(lot => ({
         id: lot.id,
         productoId: lot.productoId,
-        fechaCaducidad: lot.fechaCaducidad,
+        fechaCaducidad: toDateOnly(lot.fechaCaducidad),
+        cantidadIngresada: lot.cantidadIngresada,
         cantidadDisponible: lot.cantidadDisponible,
         estado: lot.estado
       }));
@@ -212,7 +214,7 @@ class ObtenerAlertasCaducidad {
           ubicacion: lot.ubicacion,
           cantidadDisponible: lot.cantidadDisponible,
           cantidadReservada: lot.cantidadReservada,
-          fechaCaducidad: lot.fechaCaducidad
+          fechaCaducidad: toDateOnly(lot.fechaCaducidad)
         });
       }
     }

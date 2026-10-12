@@ -1,15 +1,16 @@
 const crypto = require('crypto');
 const { ValidationException } = require('../exceptions/DomainExceptions');
 const { classifyExpiryDays } = require('./BusinessRules');
+const { toDateOnly, daysUntil } = require('./BusinessDates');
 
 const PROMOTABLE_LEVELS = new Set(['ROJO', 'AMARILLO']);
 
 function normalizeDate(value) {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  const date = toDateOnly(value);
+  if (!date) {
     throw new ValidationException('La fecha de caducidad del lote no es válida.');
   }
-  return date.toISOString().slice(0, 10);
+  return date;
 }
 
 function buildPromotionCacheKey({
@@ -62,11 +63,7 @@ function assertPromotableLot(lot, referenceDate = new Date()) {
 }
 
 function calculateDaysUntilExpiry(expiry, referenceDate = new Date()) {
-  const ref = new Date(referenceDate);
-  const date = expiry instanceof Date ? new Date(expiry) : new Date(expiry);
-  const startToday = Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate());
-  const expiryDay = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  return Math.ceil((expiryDay - startToday) / 86400000);
+  return daysUntil(expiry, referenceDate);
 }
 
 module.exports = {

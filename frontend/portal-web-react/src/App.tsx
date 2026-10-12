@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { CategoriesGrid } from './components/CategoriesGrid';
@@ -13,6 +13,7 @@ import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass
 import { CheckCircle, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { api, BackendReservation } from './api/client';
 import { reservationToPass, selectActiveReservation } from './reservations/recovery';
+import { formatDate } from './utils/dates';
 
 // Product image fallbacks by category
 const CATEGORY_IMAGES: Record<string, string> = {
@@ -61,9 +62,12 @@ export const App: React.FC = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Un solo temporizador: un toast nuevo no debe cerrarse por el temporizador del anterior.
+  const toastTimer = useRef<number | null>(null);
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToastMessage(null), 3500);
   };
 
   const syncReservations = useCallback(async (user: { id: string; nombre: string }) => {
@@ -155,9 +159,9 @@ export const App: React.FC = () => {
             urgencyBadge: `¡${matchingLot.cantidadDisponible} disponibles!`,
             price: discountedPrice,
             originalPrice: origPrice,
-            stockTotal: matchingLot.cantidadIngresada,
+            stockTotal: Math.max(matchingLot.cantidadIngresada || 0, matchingLot.cantidadDisponible),
             stockAvailable: matchingLot.cantidadDisponible,
-            expiryText: `⏰ Caduca: ${new Date(matchingLot.fechaCaducidad).toLocaleDateString()}`,
+            expiryText: `⏰ Caduca: ${formatDate(matchingLot.fechaCaducidad)}`,
             image: lotProd.imagenUrl || CATEGORY_IMAGES[backendCats.find(c => c.id === lotProd.categoriaId)?.nombre || ''] || 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
             loteId: p.loteId,
             productId: lotProd.id,
@@ -309,9 +313,12 @@ export const App: React.FC = () => {
 
       const result = await api.createReservation(reservationPayload);
       const remainingSeconds = secondsUntilExpiration(result.fechaExpiracion);
+      // La respuesta de creación no trae nombres ni lotes legibles: se consulta la
+      // reserva completa (FEFO puede repartir un producto en varios lotes).
+      const saved = await api.getReservationByCode(result.codigoRetiro).catch(() => null);
 
       // Generate Pass UI Model
-      const newPass: ReservationPass = {
+      const newPass: ReservationPass = saved ? reservationToPass(saved, currentUser.nombre) : {
         code: result.codigoRetiro,
         status: 'ACTIVA',
         initialSeconds: remainingSeconds,
@@ -322,7 +329,7 @@ export const App: React.FC = () => {
           productName: i.product.name,
           quantity: i.quantity,
           price: i.product.price,
-          lotCode: result.detalles?.[0]?.loteId ? `LOT-${result.detalles[0].loteId.substring(0, 8)}` : 'LOT-FEFO'
+          lotCode: 'FEFO'
         })),
         total
       };

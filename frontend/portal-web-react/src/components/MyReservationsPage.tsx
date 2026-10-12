@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CalendarClock, Clock, QrCode, RefreshCw, ShoppingBag } from 'lucide-react';
-import type { BackendReservation } from '../api/client';
+import type { BackendReservation } from '../api/client';
+import { formatDateTime } from '../utils/dates';
 
 interface Props {
   authenticated: boolean;
@@ -130,7 +131,7 @@ export const MyReservationsPage: React.FC<Props> = ({
                           <div className="font-mono text-lg font-black text-navy break-all">{reservation.codigoRetiro}</div>
                           <div className="mt-1 text-xs text-slate-500 flex items-start gap-1.5">
                             <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                            <span>{new Date(reservation.fechaExpiracion).toLocaleString()}</span>
+                            <span>{formatDateTime(reservation.fechaExpiracion)}</span>
                           </div>
                         </div>
                         <span className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold ${statusClass[effectiveStatus]}`}>{statusLabel[effectiveStatus]}</span>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform,
+  ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform,
   RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { api } from '../api/client';
@@ -8,6 +8,7 @@ import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { BackendCategory, BackendProduct } from '../types';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { Ionicons } from '@expo/vector-icons';
+import { notify } from '../utils/dialogs';
 
 const PAGE_SIZE = 30;
 const EMPTY_FORM = { categoriaId: '', nombre: '', descripcion: '', precioVenta: '', impuestoPorcentaje: '0', minStockAlerta: '10' };
@@ -46,13 +47,13 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       setProducts(current => append ? [...current, ...result.items] : result.items);
       setTotal(result.total);
     } catch (error: any) {
-      if (id === requestId.current) Alert.alert('Catálogo no disponible', error.response?.data?.message || 'No se pudieron cargar los productos.');
+      if (id === requestId.current) notify('Catálogo no disponible', error.response?.data?.message || 'No se pudieron cargar los productos.');
     } finally {
       if (id === requestId.current) { setLoading(false); setLoadingMore(false); setRefreshing(false); }
     }
   }, [categoryId, products.length, query]);
 
-  useEffect(() => { void api.getCategories().then(setCategories).catch(() => Alert.alert('Error', 'No se pudieron cargar las categorías.')); }, []);
+  useEffect(() => { void api.getCategories().then(setCategories).catch(() => notify('Error', 'No se pudieron cargar las categorías.')); }, []);
   useEffect(() => {
     const timer = setTimeout(() => { setProducts([]); void load(false); }, 350);
     return () => clearTimeout(timer);
@@ -70,19 +71,19 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
   const resolveBarcode = async (raw: string) => {
     const normalized = normalizeBarcode(raw);
     if (validateScannedBarcode(normalized) !== 'valid') {
-      Alert.alert('Código inválido', 'El código leído no es un EAN/GTIN válido.');
+      notify('Código inválido', 'El código leído no es un EAN/GTIN válido.');
       return;
     }
     try {
       const existing = await api.getProductByBarcode(normalized);
       if (existing) {
         setQuery(normalized);
-        Alert.alert('Producto existente', `${existing.nombre} ya está registrado en el catálogo.`);
+        notify('Producto existente', `${existing.nombre} ya está registrado en el catálogo.`);
         return;
       }
     } catch (error: any) {
       if (error.response?.status !== 404) {
-        Alert.alert('Sin conexión', 'No se pudo comprobar el código en el catálogo.');
+        notify('Sin conexión', 'No se pudo comprobar el código en el catálogo.');
         return;
       }
     }
@@ -105,7 +106,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       setFormOpen(false);
       setQuery(created.codigoBarras);
       await onCatalogChanged();
-      Alert.alert('Producto registrado', `${created.nombre} ya puede utilizarse al ingresar lotes.`);
+      notify('Producto registrado', `${created.nombre} ya puede utilizarse al ingresar lotes.`);
     } catch (error: any) {
       setFormError(error.response?.data?.message || 'No se pudo registrar el producto.');
     } finally { setSaving(false); }
@@ -129,7 +130,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       setCategoryForm({ nombre: '', descripcion: '' });
       setCategoryId(created.id);
       setForm(current => ({ ...current, categoriaId: created.id }));
-      Alert.alert('Categoría creada', `${created.nombre} ya está disponible en el catálogo.`);
+      notify('Categoría creada', `${created.nombre} ya está disponible en el catálogo.`);
     } catch (error: any) {
       setCategoryError(error.response?.data?.message || 'No se pudo crear la categoría.');
     } finally {

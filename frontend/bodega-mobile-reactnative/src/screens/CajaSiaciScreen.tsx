@@ -7,11 +7,11 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { BackendReservation } from '../types';
 import { api } from '../api/client';
+import { formatDateTime } from '../utils/dates';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -209,8 +209,7 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Fecha de Expiración:</Text>
               <Text style={styles.infoVal}>
-                {new Date(reservation.fechaExpiracion).toLocaleTimeString()} (
-                {new Date(reservation.fechaExpiracion).toLocaleDateString()})
+                {formatDateTime(reservation.fechaExpiracion)}
               </Text>
             </View>
           </View>

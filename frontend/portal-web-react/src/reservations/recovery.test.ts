@@ -28,4 +28,12 @@ describe('recuperación de reservas', () => {
     expect(pass.total).toBe(3);
     expect(pass.items[0].lotCode).toBe('lot-123456789');
   });
+
+  it('usa el nombre del producto y el número de lote cuando el backend los envía', () => {
+    const pass = reservationToPass(reservation({
+      detalles: [{ loteId: 'lot-1', cantidad: 1, precioUnitario: 2, productoNombre: 'Leche Vita 1 L', numeroLote: 'LT-77' }],
+    }), 'Ana', NOW);
+    expect(pass.items[0].productName).toBe('Leche Vita 1 L');
+    expect(pass.items[0].lotCode).toBe('LT-77');
+  });
 });

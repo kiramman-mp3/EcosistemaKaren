@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { api } from '../api/client';
+import { formatDateTime } from '../utils/dates';
 import { InventoryMovement, InventoryWaste } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 
 const money = (value?: number | null) => value == null ? 'No registrado' : `$${Number(value).toFixed(2)}`;
-const dateTime = (value: string) => new Date(value).toLocaleString();
+const dateTime = (value: string) => formatDateTime(value);
 
 export const ReportesScreen: React.FC = () => {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
