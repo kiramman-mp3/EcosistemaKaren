@@ -1,20 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { BackendLot } from '../types';
 import { api } from '../api/client';
 import { daysUntil, formatDate } from '../utils/dates';
 import { classifyExpiryDays } from '../config/businessRules';
-import { Ionicons } from '@expo/vector-icons';
 import { notify } from '../utils/dialogs';
+import { Button, Chip, EmptyState, ScreenTitle } from '../components/ui';
+import { LotLabel } from '../components/LotLabel';
+import { colors, fonts, radius } from '../theme/tokens';
 
 interface InventarioLotesScreenProps {
   lots: BackendLot[];
@@ -22,462 +16,132 @@ interface InventarioLotesScreenProps {
   refreshing: boolean;
 }
 
-export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
-  lots,
-  onRefresh,
-  refreshing,
-}) => {
+type LocationFilter = 'TODOS' | 'BODEGA' | 'PERCHA';
+
+const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({ lots, onRefresh, refreshing }) => {
   const [search, setSearch] = useState('');
-  const [locationFilter, setLocationFilter] = useState<'ALL' | 'BODEGA' | 'PERCHA'>('ALL');
+  const [location, setLocation] = useState<LocationFilter>('TODOS');
   const [movingLotId, setMovingLotId] = useState<string | null>(null);
 
-  const filteredLots = useMemo(() => {
-    return lots.filter((lot) => {
-      const matchLoc = locationFilter === 'ALL' || lot.ubicacion === locationFilter;
-      const q = search.toLowerCase();
-      const matchSearch =
-        (lot.productoNombre || '').toLowerCase().includes(q) ||
-        (lot.numeroLote || '').toLowerCase().includes(q) ||
-        (lot.codigoBarras || '').includes(q);
-      return matchLoc && matchSearch;
-    });
-  }, [lots, locationFilter, search]);
+  const counts = useMemo(() => ({
+    TODOS: lots.length,
+    BODEGA: lots.filter(lot => lot.ubicacion === 'BODEGA').length,
+    PERCHA: lots.filter(lot => lot.ubicacion === 'PERCHA').length,
+  }), [lots]);
 
-  const handleToggleLocation = async (lot: BackendLot) => {
-    const nextLoc = lot.ubicacion === 'BODEGA' ? 'PERCHA' : 'BODEGA';
+  const visible = useMemo(() => {
+    const q = fold(search.trim());
+    return lots.filter(lot =>
+      (location === 'TODOS' || lot.ubicacion === location)
+      && (!q || fold(lot.productoNombre || '').includes(q) || fold(lot.numeroLote || '').includes(q)
+        || (lot.codigoBarras || '').includes(q)));
+  }, [lots, location, search]);
+
+  const toggleLocation = async (lot: BackendLot) => {
+    const next = lot.ubicacion === 'BODEGA' ? 'PERCHA' : 'BODEGA';
     setMovingLotId(lot.id);
     try {
-      await api.updateLotLocation(lot.id, nextLoc);
+      await api.updateLotLocation(lot.id, next);
       onRefresh();
     } catch (err: any) {
-      notify('Error', err.response?.data?.message || err.message || 'Error al cambiar ubicación');
+      notify('No se pudo mover el lote', err.response?.data?.message || err.message || 'Inténtalo de nuevo.');
     } finally {
       setMovingLotId(null);
     }
   };
 
-  const getDaysLeft = (fecha: string) => {
-    const days = daysUntil(fecha);
-    return Number.isFinite(days) ? days : 0;
-  };
-
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.badgeTop}>
-          <Text style={styles.badgeTopText}>TRAZABILIDAD FEFO TOTAL</Text>
+    <FlatList
+      style={styles.list}
+      contentContainerStyle={styles.content}
+      data={visible}
+      keyExtractor={lot => lot.id}
+      initialNumToRender={8}
+      windowSize={7}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} colors={[colors.ink]} />}
+      ListHeaderComponent={
+        <View>
+          <ScreenTitle title="Lotes" subtitle="Lotes vigentes con stock, en orden de vencimiento." />
+          <View style={styles.search}>
+            <Ionicons name="search-outline" size={20} color={colors.inkMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Producto, lote o código de barras"
+              placeholderTextColor={colors.inkFaint}
+              value={search}
+              onChangeText={setSearch}
+              accessibilityLabel="Buscar lotes"
+              autoCorrect={false}
+            />
+            {search ? (
+              <TouchableOpacity onPress={() => setSearch('')} accessibilityLabel="Borrar búsqueda" style={styles.clear}>
+                <Ionicons name="close" size={20} color={colors.inkMuted} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          <View style={styles.filters}>
+            <Chip label="Todos" count={counts.TODOS} active={location === 'TODOS'} onPress={() => setLocation('TODOS')} />
+            <Chip label="Bodega" count={counts.BODEGA} active={location === 'BODEGA'} onPress={() => setLocation('BODEGA')} />
+            <Chip label="Percha" count={counts.PERCHA} active={location === 'PERCHA'} onPress={() => setLocation('PERCHA')} />
+          </View>
         </View>
-        <Text style={styles.title}>Inventario de Lotes en Tienda</Text>
-        <Text style={styles.subtitle}>
-          Control de stock disponible vs reservado por ubicación física.
-        </Text>
-
-        {/* Search Input */}
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={20} color="#64748B" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar por producto, lote o EAN..."
-            placeholderTextColor="#94A3B8"
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search ? (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close" size={20} color="#64748B" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {/* Location Filter Pills */}
-        <View style={styles.filterRow}>
-          <TouchableOpacity
-            style={[styles.pill, locationFilter === 'ALL' && styles.pillActive]}
-            onPress={() => setLocationFilter('ALL')}
+      }
+      ListEmptyComponent={
+        <EmptyState
+          icon="layers-outline"
+          title={lots.length ? 'Ningún lote coincide' : 'No hay lotes vigentes'}
+          text={lots.length ? 'Prueba con otra palabra o quita el filtro de ubicación.' : 'Los lotes aparecen aquí al recibir mercadería.'}
+        />
+      }
+      renderItem={({ item: lot }) => {
+        const days = daysUntil(lot.fechaCaducidad);
+        const safeDays = Number.isFinite(days) ? days : 0;
+        return (
+          <LotLabel
+            productName={lot.productoNombre || 'Producto'}
+            lotNumber={lot.numeroLote}
+            expiresOn={lot.fechaCaducidad}
+            days={safeDays}
+            level={classifyExpiryDays(safeDays)}
+            location={lot.ubicacion}
+            available={lot.cantidadDisponible}
+            reserved={lot.cantidadReservada || 0}
+            received={lot.cantidadIngresada}
           >
-            <Text style={[styles.pillText, locationFilter === 'ALL' && styles.pillTextActive]}>
-              Todos ({lots.length})
+            <Text style={styles.detail}>
+              {lot.fechaElaboracion ? `Elaborado ${formatDate(lot.fechaElaboracion)}` : 'Sin fecha de elaboración'}
+              {'   '}
+              {lot.costoUnitario != null ? `Costo $${Number(lot.costoUnitario).toFixed(4)}` : 'Costo no registrado'}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.pill, locationFilter === 'BODEGA' && styles.pillActive]}
-            onPress={() => setLocationFilter('BODEGA')}
-          >
-            <Ionicons name="cube-outline" size={16} color={locationFilter === 'BODEGA' ? '#FFF' : '#64748B'} /><Text style={[styles.pillText, locationFilter === 'BODEGA' && styles.pillTextActive]}>Bodega ({lots.filter((l) => l.ubicacion === 'BODEGA').length})</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.pill, locationFilter === 'PERCHA' && styles.pillActive]}
-            onPress={() => setLocationFilter('PERCHA')}
-          >
-            <Ionicons name="storefront-outline" size={16} color={locationFilter === 'PERCHA' ? '#FFF' : '#64748B'} /><Text style={[styles.pillText, locationFilter === 'PERCHA' && styles.pillTextActive]}>Percha ({lots.filter((l) => l.ubicacion === 'PERCHA').length})</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Lots List */}
-      <ScrollView
-        style={styles.listScroll}
-        showsVerticalScrollIndicator={false}
-        alwaysBounceVertical
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1E293B" colors={['#1E293B']} />}
-      >
-        {filteredLots.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Ionicons name="cube-outline" size={42} color="#94A3B8" />
-            <Text style={styles.emptyTitle}>No se encontraron lotes</Text>
-            <Text style={styles.emptySub}>Prueba ajustando los filtros de búsqueda.</Text>
-          </View>
-        ) : (
-          <View style={styles.list}>
-            {filteredLots.map((lot) => {
-              const days = getDaysLeft(lot.fechaCaducidad);
-              const expiryLevel = classifyExpiryDays(days);
-              const isCritical = expiryLevel === 'VENCIDO' || expiryLevel === 'ROJO';
-              const isWarning = expiryLevel === 'AMARILLO';
-              const isMoving = movingLotId === lot.id;
-
-              return (
-                <View key={lot.id} style={styles.lotCard}>
-                  {/* Top Bar */}
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.lotNumber}>Lote: {lot.numeroLote}</Text>
-                    <View
-                      style={[
-                        styles.locPill,
-                        {
-                          backgroundColor:
-                            lot.ubicacion === 'BODEGA' ? '#EEF2FF' : '#DCFCE7',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.locPillText,
-                          {
-                            color:
-                              lot.ubicacion === 'BODEGA' ? '#4F46E5' : '#15803D',
-                          },
-                        ]}
-                      >
-                        {lot.ubicacion}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Product Title */}
-                  <Text style={styles.productTitle}>
-                    {lot.productoNombre || 'Producto en catálogo'}
-                  </Text>
-
-                  {/* Date and Days Badge */}
-                  <View style={styles.dateRow}>
-                    <Text style={styles.dateLabel}>
-                      Caducidad: {formatDate(lot.fechaCaducidad)}
-                    </Text>
-                    <View
-                      style={[
-                        styles.daysPill,
-                        {
-                          backgroundColor: isCritical
-                            ? '#FEE2E2'
-                            : isWarning
-                            ? '#FEF3C7'
-                            : '#DCFCE7',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.daysText,
-                          {
-                            color: isCritical
-                              ? '#DC2626'
-                              : isWarning
-                              ? '#D97706'
-                              : '#15803D',
-                          },
-                        ]}
-                      >
-                        {days} días
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.dateLabel}>
-                    Elaboración: {lot.fechaElaboracion
-                      ? formatDate(lot.fechaElaboracion)
-                      : 'Dato histórico no disponible'} · Costo unitario: {lot.costoUnitario != null
-                      ? `$${Number(lot.costoUnitario).toFixed(4)}`
-                      : 'No registrado'}
-                  </Text>
-
-                  {/* Stock Metrics */}
-                  <View style={styles.metricsBox}>
-                    <View style={styles.metricItem}>
-                      <Text style={styles.metricLabel}>Disponible:</Text>
-                      <Text style={styles.metricValGreen}>{lot.cantidadDisponible} un.</Text>
-                    </View>
-                    <View style={styles.metricItem}>
-                      <Text style={styles.metricLabel}>Apartado Web:</Text>
-                      <Text style={styles.metricValOrange}>{lot.cantidadReservada || 0} un.</Text>
-                    </View>
-                    <View style={styles.metricItem}>
-                      <Text style={styles.metricLabel}>Inicial:</Text>
-                      <Text style={styles.metricValGray}>{lot.cantidadIngresada} un.</Text>
-                    </View>
-                  </View>
-
-                  {/* Action to switch location */}
-                  <TouchableOpacity
-                    style={styles.switchBtn}
-                    onPress={() => handleToggleLocation(lot)}
-                    disabled={isMoving}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Mover lote a ${lot.ubicacion === 'BODEGA' ? 'Percha' : 'Bodega'}`}
-                  >
-                    {isMoving ? (
-                      <ActivityIndicator size="small" color="#1E293B" />
-                    ) : (
-                      <Text style={styles.switchBtnText}>
-                        Mover a {lot.ubicacion === 'BODEGA' ? 'Percha' : 'Bodega'}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
-    </View>
+            <Button
+              label={lot.ubicacion === 'BODEGA' ? 'Pasar a percha' : 'Regresar a bodega'}
+              icon={lot.ubicacion === 'BODEGA' ? 'arrow-forward-outline' : 'arrow-back-outline'}
+              variant={lot.ubicacion === 'BODEGA' ? 'primary' : 'outline'}
+              compact
+              loading={movingLotId === lot.id}
+              onPress={() => void toggleLocation(lot)}
+              style={styles.action}
+            />
+          </LotLabel>
+        );
+      }}
+    />
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  list: { flex: 1, backgroundColor: colors.aisle },
+  content: { padding: 16, paddingBottom: 32 },
+  search: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 50, paddingLeft: 12,
+    backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  badgeTop: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 4,
-  },
-  badgeTopText: {
-    color: '#4F46E5',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#1E293B',
-  },
-  subtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-    marginBottom: 10,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 12,
-    height: 42,
-    marginBottom: 10,
-  },
-  searchIcon: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: '#1E293B',
-  },
-  clearText: {
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: 'bold',
-    padding: 4,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingBottom: 4,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  pillActive: {
-    backgroundColor: '#1E293B',
-    borderColor: '#1E293B',
-  },
-  pillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  pillTextActive: {
-    color: '#FFFFFF',
-  },
-  listScroll: {
-    flex: 1,
-    padding: 16,
-  },
-  emptyBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 30,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginTop: 20,
-  },
-  emptyIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1E293B',
-  },
-  emptySub: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 4,
-  },
-  list: {
-    gap: 12,
-    paddingBottom: 40,
-  },
-  lotCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  lotNumber: {
-    fontFamily: 'monospace',
-    fontWeight: '800',
-    fontSize: 12,
-    color: '#475569',
-  },
-  locPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  locPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  productTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: 8,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  dateLabel: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  daysPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  daysText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  metricsBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-  },
-  metricItem: {
-    alignItems: 'center',
-  },
-  metricLabel: {
-    fontSize: 10,
-    color: '#64748B',
-    marginBottom: 2,
-  },
-  metricValGreen: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#15803D',
-  },
-  metricValOrange: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#D97706',
-  },
-  metricValGray: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  switchBtn: {
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  switchBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
+  searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.ink, paddingVertical: 10 },
+  clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  filters: { flexDirection: 'row', gap: 8, marginTop: 12, marginBottom: 14 },
+  detail: { width: '100%', fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted },
+  action: { flexGrow: 1 },
 });
