@@ -439,6 +439,8 @@ function simulate({ products, lots, users }) {
       const q = Math.min(lot.disp, randInt(1, 6));
       const before = { disp: lot.disp, res: lot.res };
       lot.disp -= q;
+      // Igual que registerWasteWithAudit: una merma que deja el lote en cero lo marca MERMA.
+      if (lot.disp + lot.res === 0) lot.writtenOff = true;
       const actor = pick(warehouse).id;
       const movement = move(lot, 'MERMA', q, before, { disp: lot.disp, res: lot.res }, { motivo: pick(MERMA_REASONS), actor, at: t });
       wastes.push({ id: uuid(), lote_id: lot.id, movimiento_id: movement.id, cantidad: q,
@@ -454,6 +456,7 @@ function simulate({ products, lots, users }) {
       const q = lot.disp;
       const before = { disp: lot.disp, res: lot.res };
       lot.disp = 0;
+      if (lot.res === 0) lot.writtenOff = true;
       const actor = pick(warehouse).id;
       const movement = move(lot, 'MERMA', q, before, { disp: 0, res: lot.res }, { motivo: EXPIRED_WASTE_REASON, actor, at: t });
       wastes.push({ id: uuid(), lote_id: lot.id, movimiento_id: movement.id, cantidad: q, razon: EXPIRED_WASTE_REASON,
@@ -474,7 +477,8 @@ function simulate({ products, lots, users }) {
 
 function finalizeLots(lots) {
   for (const lot of lots) {
-    if (lot.caducidad <= TODAY) lot.estado = lot.disp + lot.res > 0 ? 'VENCIDO' : 'AGOTADO';
+    if (lot.writtenOff) lot.estado = 'MERMA';
+    else if (lot.caducidad <= TODAY) lot.estado = lot.disp + lot.res > 0 ? 'VENCIDO' : 'AGOTADO';
     else lot.estado = lot.disp + lot.res > 0 ? 'ACTIVO' : 'AGOTADO';
   }
   // Lotes no perecibles con stock que entran en ventana de caducidad cercana,
