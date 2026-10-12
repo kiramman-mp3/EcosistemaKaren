@@ -50,3 +50,12 @@ test('las alertas incluyen identificador, código de barras y stock reservado de
   assert.equal(alert.cantidadReservada, 4);
   assert.ok('codigoBarras' in alert);
 });
+
+test('la disponibilidad pública informa unidades ingresadas y fechas AAAA-MM-DD', async () => {
+  const { GetPublicLotAvailability } = require('../src/use-cases/lots/LotUseCases');
+  const memory = new InMemoryRepositories();
+  const [item] = await new GetPublicLotAvailability(memory.lotRepository).execute();
+  assert.ok(Number.isInteger(item.cantidadIngresada));
+  assert.match(item.fechaCaducidad, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal('costoUnitario' in item, false);
+});

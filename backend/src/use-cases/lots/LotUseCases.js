@@ -27,6 +27,7 @@ class GetPublicLotAvailability {
         id: lot.id,
         productoId: lot.productoId,
         fechaCaducidad: toDateOnly(lot.fechaCaducidad),
+        cantidadIngresada: lot.cantidadIngresada,
         cantidadDisponible: lot.cantidadDisponible,
         estado: lot.estado
       }));
