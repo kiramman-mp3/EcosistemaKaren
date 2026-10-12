@@ -14,6 +14,13 @@ const getBaseUrl = (): string => {
 
 export const BASE_URL = getBaseUrl();
 
+/** Las imágenes llegan como rutas del backend (/api/v1/media/...); la app necesita la URL completa. */
+export function mediaUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return BASE_URL.replace(/\/api\/v1$/, '') + path;
+}
+
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -69,6 +76,7 @@ export interface BackendProduct {
   descripcion?: string;
   precioVenta: number;
   minStockAlerta: number;
+  imagenUrl?: string | null;
   aliasId?: string;
   created_at?: string;
   updated_at?: string;
