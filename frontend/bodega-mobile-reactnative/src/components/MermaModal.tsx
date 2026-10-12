@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { confirmAction } from '../utils/dialogs';
 import {
   View,
   Text,
@@ -8,7 +9,6 @@ import {
   Modal,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 
 interface MermaModalProps {
@@ -72,14 +72,11 @@ export const MermaModal: React.FC<MermaModalProps> = ({
     }
 
     if (qty === maxUnits) {
-      Alert.alert(
+      void confirmAction(
         'Dar de baja todo el lote',
         `Se registrarán como merma las ${maxUnits} unidades disponibles. Esta operación quedará auditada.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Dar de baja todo', style: 'destructive', onPress: () => void submitMerma(qty) },
-        ]
-      );
+        { confirmLabel: 'Dar de baja todo', destructive: true },
+      ).then(confirmed => { if (confirmed) void submitMerma(qty); });
       return;
     }
 

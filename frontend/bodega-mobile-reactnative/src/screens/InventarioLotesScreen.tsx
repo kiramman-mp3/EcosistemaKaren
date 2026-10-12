@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { BackendLot } from '../types';
@@ -15,6 +14,7 @@ import { api } from '../api/client';
 import { daysUntil, formatDate } from '../utils/dates';
 import { classifyExpiryDays } from '../config/businessRules';
 import { Ionicons } from '@expo/vector-icons';
+import { notify } from '../utils/dialogs';
 
 interface InventarioLotesScreenProps {
   lots: BackendLot[];
@@ -50,7 +50,7 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({
       await api.updateLotLocation(lot.id, nextLoc);
       onRefresh();
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Error al cambiar ubicación');
+      notify('Error', err.response?.data?.message || err.message || 'Error al cambiar ubicación');
     } finally {
       setMovingLotId(null);
     }

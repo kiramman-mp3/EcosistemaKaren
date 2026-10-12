@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, Pressable, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { confirmAction } from '../utils/dialogs';
 import { Ionicons } from '@expo/vector-icons';
 
 interface HeaderBodegaProps {
@@ -27,14 +28,9 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
 
   const confirmLogout = () => {
     setProfileOpen(false);
-    Alert.alert(
-      'Cerrar sesión',
-      '¿Deseas salir de la aplicación de bodega?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: onLogout },
-      ]
-    );
+    void confirmAction('Cerrar sesión', '¿Deseas salir de la aplicación de bodega?', {
+      confirmLabel: 'Salir', destructive: true,
+    }).then(confirmed => { if (confirmed) onLogout(); });
   };
 
   return (

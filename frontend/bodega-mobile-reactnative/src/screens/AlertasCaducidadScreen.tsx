@@ -6,13 +6,13 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { ExpiryAlertItem, BackendPromotion } from '../types';
 import { api } from '../api/client';
 import { formatDate } from '../utils/dates';
 import { Ionicons } from '@expo/vector-icons';
+import { notify } from '../utils/dialogs';
 
 interface AlertasCaducidadScreenProps {
   alerts: ExpiryAlertItem[];
@@ -44,10 +44,10 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
     setActionLoadingId(item.loteId);
     try {
       await api.updateLotLocation(item.loteId, 'PERCHA');
-      Alert.alert('Éxito', `Lote ${item.numeroLote} trasladado a PERCHA para rotación.`);
+      notify('Éxito', `Lote ${item.numeroLote} trasladado a PERCHA para rotación.`);
       onRefresh();
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Error al mover a percha');
+      notify('Error', err.response?.data?.message || err.message || 'Error al mover a percha');
     } finally {
       setActionLoadingId(null);
     }
@@ -74,7 +74,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
         || err.response?.data?.message
         || err.message
         || 'Error al generar promoción con IA';
-      Alert.alert('Error', message);
+      notify('Error', message);
     } finally {
       setActionLoadingId(null);
     }
