@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, CheckCircle2, MapPin, Copy, Check, Download } from 'lucide-react';
-import { ReservationPass } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, Copy, Download, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
+import { ReservationPass } from '../types';
 
 interface ReservationModalProps {
   pass: ReservationPass;
@@ -10,162 +10,165 @@ interface ReservationModalProps {
   onClose: () => void;
 }
 
-export const ReservationModal: React.FC<ReservationModalProps> = ({
-  pass,
-  isOpen,
-  onClose,
-}) => {
-  const [secondsLeft, setSecondsLeft] = useState(pass.remainingSeconds || 585);
+const formatCountdown = (totalSec: number) => {
+  const mins = Math.floor(totalSec / 60).toString().padStart(2, '0');
+  const secs = (totalSec % 60).toString().padStart(2, '0');
+  return `${mins}:${secs}`;
+};
+
+export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen, onClose }) => {
+  const [secondsLeft, setSecondsLeft] = useState(pass.remainingSeconds || 0);
   const [copied, setCopied] = useState(false);
   const [savingImage, setSavingImage] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const passRef = useRef<HTMLDivElement>(null);
+  const ticketRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     setSecondsLeft(pass.remainingSeconds || 0);
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
+    const interval = setInterval(() => setSecondsLeft(prev => (prev > 0 ? prev - 1 : 0)), 1000);
     return () => clearInterval(interval);
   }, [isOpen, pass.code, pass.remainingSeconds]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  const formatCountdown = (totalSec: number) => {
-    const mins = Math.floor(totalSec / 60).toString().padStart(2, '0');
-    const secs = (totalSec % 60).toString().padStart(2, '0');
-    return `${mins}m:${secs}s`;
-  };
+  const expired = secondsLeft <= 0;
+  const urgent = !expired && secondsLeft <= 120;
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(pass.code);
+    void navigator.clipboard?.writeText(pass.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSaveImage = async () => {
-    if (!passRef.current || savingImage) return;
+    if (!ticketRef.current || savingImage) return;
     setSavingImage(true);
     setSaveError('');
     try {
-      const dataUrl = await toPng(passRef.current, {
+      const dataUrl = await toPng(ticketRef.current, {
         backgroundColor: '#FFFFFF',
         cacheBust: true,
         pixelRatio: 2,
         filter: (node) => !(node instanceof HTMLElement && node.dataset.exportIgnore === 'true'),
       });
       const link = document.createElement('a');
-      link.download = `comprobante-retiro-${pass.code.replace(/[^a-zA-Z0-9-]/g, '')}.png`;
+      link.download = `pase-retiro-${pass.code.replace(/[^a-zA-Z0-9-]/g, '')}.png`;
       link.href = dataUrl;
       link.click();
     } catch {
-      setSaveError('No se pudo generar la imagen. Inténtalo nuevamente.');
+      setSaveError('No se pudo guardar la imagen. Inténtalo de nuevo o toma una captura de pantalla.');
     } finally {
       setSavingImage(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-2 sm:p-4 bg-navy-deep/70 backdrop-blur-sm animate-fade-in">
-      <div
-        ref={passRef}
-        className="relative w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl border border-slate-100 transform scale-100 transition-transform"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close Button */}
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/70 p-3 sm:p-6 flex items-start sm:items-center justify-center">
+      <div role="dialog" aria-modal="true" aria-labelledby="pase-titulo" className="relative w-full max-w-sm animate-slide-up">
         <button
           onClick={onClose}
-          data-export-ignore="true"
-          className="absolute top-2.5 right-2.5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-          aria-label="Cerrar modal"
+          className="absolute -top-1 right-0 sm:-right-12 sm:top-0 z-10 w-10 h-10 rounded-full bg-white text-ink flex items-center justify-center"
+          aria-label="Cerrar pase"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Success Header */}
-        <div className="text-center space-y-1.5">
-          <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl mx-auto flex items-center justify-center shadow-inner">
-            <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Reserva Confirmada
-          </span>
-          <h3 className="text-xl sm:text-2xl font-display font-black text-navy">
-            Pase de Retiro Digital
-          </h3>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto">
-            El stock ha sido bloqueado en caja física SIACI. Presenta este PIN antes de que expire.
-          </p>
-        </div>
+        <div ref={ticketRef} className="bg-white text-ink">
+          <div className="ticket-edge bg-transparent" aria-hidden="true" />
+          <div className="px-6 pt-4 pb-6">
+            <div className="text-center">
+              <p className="font-tag font-bold text-2xl leading-none">Supermercado Karen</p>
+              <p className="mt-1 text-xs text-ink-muted">{pass.storeLocation}</p>
+            </div>
 
-        {/* PIN Container with Copy */}
-        <div className="mt-3 bg-slate-50 border border-slate-200/80 rounded-2xl px-3 py-2.5 text-center">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
-            CÓDIGO PIN EXCLUSIVO
-          </span>
-          <div className="flex items-center justify-center gap-3">
-            <span className="font-mono text-2xl sm:text-3xl font-black text-navy tracking-widest">
-              {pass.code}
-            </span>
-            <button
-              onClick={handleCopyCode}
-              data-export-ignore="true"
-              className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-navy hover:bg-slate-50 active:scale-95 transition-all shadow-sm"
-              title="Copiar código PIN"
+            <div className="rule-dashed my-4" aria-hidden="true" />
+
+            <h2 id="pase-titulo" className="text-center text-sm text-ink-soft">Pase de retiro de</h2>
+            <p className="text-center font-semibold">{pass.customerName}</p>
+
+            <div className="mt-4 flex flex-col items-center">
+              <div className="p-2 border border-aisle-rule rounded-tag">
+                <QRCodeSVG value={pass.code} size={148} level="M" fgColor="#13284B" />
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="font-tag font-bold text-4xl tracking-wider tabular">{pass.code}</span>
+                <button
+                  onClick={handleCopyCode}
+                  data-export-ignore="true"
+                  className="p-2 rounded-tag text-ink-muted hover:text-ink hover:bg-aisle"
+                  aria-label="Copiar código"
+                >
+                  {copied ? <Check className="w-4 h-4 text-fresh" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div
+              className={`mt-4 rounded-tag px-4 py-3 text-center ${expired ? 'bg-aisle' : urgent ? 'bg-karen text-white' : 'bg-sticker'}`}
+              role="timer"
+              aria-live="off"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            </button>
+              {expired ? (
+                <p className="font-semibold">Este código venció. Las unidades volvieron a la percha.</p>
+              ) : (
+                <>
+                  <p className="font-tag font-bold text-5xl leading-none tabular">{formatCountdown(secondsLeft)}</p>
+                  <p className={`mt-1 text-sm ${urgent ? 'text-white' : 'text-ink-soft'}`}>para retirar y pagar en caja</p>
+                </>
+              )}
+            </div>
+
+            {pass.items.length > 0 && (
+              <>
+                <div className="rule-dashed my-4" aria-hidden="true" />
+                <ul className="space-y-2 text-sm">
+                  {pass.items.map((item, index) => (
+                    <li key={`${item.productName}-${index}`} className="flex justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="tabular">{item.quantity} × </span>{item.productName}
+                      </span>
+                      <span className="shrink-0 tabular">${(item.quantity * item.price).toFixed(2)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="rule-dashed my-3" aria-hidden="true" />
+                <div className="flex justify-between items-baseline">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-tag font-bold text-2xl tabular">${pass.total.toFixed(2)}</span>
+                </div>
+              </>
+            )}
+
+            <p className="mt-4 text-xs text-ink-muted text-center leading-relaxed">
+              Muestra este código en caja. Pagas ahí mismo.
+            </p>
           </div>
+          <div className="ticket-edge-bottom" aria-hidden="true" />
         </div>
 
-        {/* QR estándar: contiene únicamente el PIN de retiro */}
-        <div className="my-3 flex flex-col items-center justify-center bg-slate-900 rounded-2xl p-3 shadow-inner">
-          <div className="p-2.5 bg-white rounded-xl"><QRCodeSVG value={pass.code} size={120} level="M" /></div>
-          <span className="text-[10px] text-slate-400 font-mono mt-2 tracking-widest">
-            ESCANEAR EN CAJA O PERCHA
-          </span>
-        </div>
-
-        {/* Pulsating Countdown */}
-        <div className="flex items-center justify-center gap-2 bg-red-50 border border-red-200/80 rounded-xl py-2 px-4 mb-2.5">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-karenRed opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-karenRed"></span>
-          </span>
-          <span className="text-xs font-bold text-slate-700">Tiempo restante:</span>
-          <span className="font-mono font-black text-base text-karenRed">
-            {formatCountdown(secondsLeft)}
-          </span>
-        </div>
-
-        {/* Store Location Info */}
-        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded-xl mb-2.5">
-          <MapPin className="w-4 h-4 text-navy flex-shrink-0" />
-          <span className="truncate">{pass.storeLocation}</span>
-        </div>
-
-        <div data-export-ignore="true" className="mb-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             onClick={() => void handleSaveImage()}
             disabled={savingImage}
-            className="w-full py-2.5 rounded-xl font-bold text-sm text-navy bg-white border border-slate-300 hover:bg-slate-50 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait"
+            aria-label="Guardar comprobante como imagen"
+            className="h-12 rounded-tag bg-white text-ink font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
           >
             <Download className="w-4 h-4" />
-            {savingImage ? 'Generando imagen…' : 'Guardar comprobante como imagen'}
+            {savingImage ? 'Guardando…' : 'Guardar imagen'}
           </button>
-          {saveError && <p role="alert" className="mt-2 text-center text-xs font-semibold text-red-600">{saveError}</p>}
+          <button onClick={onClose} className="h-12 rounded-tag bg-sticker text-ink font-semibold">
+            Listo
+          </button>
         </div>
-
-        {/* Action Button */}
-        <button
-          onClick={onClose}
-          data-export-ignore="true"
-          className="w-full py-2.5 rounded-xl font-bold text-sm text-white bg-navy hover:bg-navy-dark active:scale-98 transition-all shadow-soft"
-        >
-          Entendido, ir a pagar en tienda
-        </button>
-
+        {saveError && <p role="alert" className="mt-2 text-center text-sm text-white">{saveError}</p>}
       </div>
     </div>
   );
