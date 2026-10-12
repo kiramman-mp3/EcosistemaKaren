@@ -35,3 +35,18 @@ test('marca lotes vencidos una sola vez, los excluye del inventario activo y con
   const alerts = await new ObtenerAlertasCaducidad(repository).execute();
   assert.equal(alerts.some(alert => alert.loteId === lot.id && alert.nivel === 'VENCIDO'), true);
 });
+
+test('las alertas incluyen identificador, código de barras y stock reservado del lote', async () => {
+  const memory = new InMemoryRepositories();
+  const lot = memory.lots[0];
+  lot.estado = 'ACTIVO';
+  lot.fechaCaducidad = new Date(Date.now() + 3 * 86400000);
+  lot.cantidadReservada = 4;
+
+  const alerts = await new ObtenerAlertasCaducidad(memory.lotRepository).execute();
+  const alert = alerts.find(item => item.loteId === lot.id);
+  assert.ok(alert);
+  assert.equal(alert.id, `alerta-${lot.id}`);
+  assert.equal(alert.cantidadReservada, 4);
+  assert.ok('codigoBarras' in alert);
+});

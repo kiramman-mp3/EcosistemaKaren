@@ -18,3 +18,11 @@ test('crea categorías del catálogo y rechaza nombres duplicados sin distinguir
     /Ya existe una categoría/
   );
 });
+
+test('la búsqueda de productos ignora tildes y mayúsculas', async () => {
+  const memory = new InMemoryRepositories();
+  const product = memory.products[0];
+  product.nombre = 'Café Pasado Ecuatoriano';
+  const { items } = await memory.productRepository.findAll({ q: 'CAFE pasado', limit: 10 });
+  assert.ok(items.some(item => item.id === product.id));
+});
