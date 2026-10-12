@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
-
+import { Button, Field, Notice } from './ui';
+import { colors, fonts, radius } from '../theme/tokens';
 
 interface LoginModalMobileProps {
   visible: boolean;
@@ -12,11 +14,7 @@ interface LoginModalMobileProps {
 }
 
 export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
-  visible,
-  onClose,
-  currentUser = null,
-  onLoginSuccess,
-  onLogout,
+  visible, onClose, currentUser = null, onLoginSuccess, onLogout,
 }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -24,328 +22,122 @@ export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError('Por favor completa todos los campos.');
-      return;
-    }
-    if (isRegisterMode && !nombre.trim()) {
-      setError('Por favor ingresa tu nombre.');
-      return;
-    }
+    if (!email.trim() || !password) return setError('Escribe tu correo y tu contraseña.');
+    if (isRegisterMode && !nombre.trim()) return setError('Escribe tu nombre.');
+    if (isRegisterMode && password.length < 8) return setError('La contraseña necesita al menos 8 caracteres.');
 
     setLoading(true);
     setError(null);
     try {
-      let res;
-      if (isRegisterMode) {
-        res = await api.register({
-          nombre: nombre.trim(),
-          email: email.trim().toLowerCase(),
-          password: password.trim(),
-        });
-      } else {
-        res = await api.login({
-          email: email.trim().toLowerCase(),
-          password: password.trim(),
-        });
-      }
-
-      setDone(true);
-      if (onLoginSuccess && res.user) {
-        onLoginSuccess(res.user);
-      }
-      setTimeout(() => {
-        setDone(false);
-        onClose();
-      }, 1000);
+      // La contraseña se envía tal cual: recortarla cambiaría la que la persona eligió.
+      const res = isRegisterMode
+        ? await api.register({ nombre: nombre.trim(), email: email.trim().toLowerCase(), password })
+        : await api.login({ email: email.trim().toLowerCase(), password });
+      if (onLoginSuccess && res.user) onLoginSuccess(res.user);
+      setPassword('');
+      onClose();
     } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          'Error al conectar con el servidor. Verifica tus credenciales.'
-      );
+      setError(err.response?.data?.message || err.message || 'No pudimos conectar con la tienda. Inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogoutAction = async () => {
+  const handleLogout = async () => {
     await api.logout();
-    if (onLogout) onLogout();
+    onLogout?.();
     onClose();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeText}>✕</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.title}>Portal Clientes Karen</Text>
-          <Text style={styles.subtitle}>
-            {currentUser
-              ? `Sesión activa como ${currentUser.nombre}`
-              : 'Accede para gestionar tus pedidos y reservas.'}
-          </Text>
-
-          {currentUser ? (
-            <View style={styles.form}>
-              <View style={styles.userBox}>
-                <Text style={styles.userBoxName}>{currentUser.nombre}</Text>
-                <Text style={styles.userBoxEmail}>{currentUser.email}</Text>
-                <Text style={styles.userBoxRol}>Rol: {currentUser.rol || 'CLIENTE'}</Text>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.card}>
+            <View style={styles.head}>
+              <View style={styles.flex}>
+                <Text style={styles.title}>
+                  {currentUser ? 'Tu cuenta' : isRegisterMode ? 'Crea tu cuenta' : 'Ingresa a tu cuenta'}
+                </Text>
+                <Text style={styles.subtitle}>
+                  {currentUser ? currentUser.email : 'Para reservar y ver tus códigos de retiro.'}
+                </Text>
               </View>
-              <TouchableOpacity style={styles.logoutBtn} onPress={handleLogoutAction}>
-                <Text style={styles.logoutBtnText}>Cerrar Sesión</Text>
+              <TouchableOpacity onPress={onClose} style={styles.close} accessibilityLabel="Cerrar">
+                <Ionicons name="close" size={26} color={colors.white} />
               </TouchableOpacity>
             </View>
-          ) : done ? (
-            <View style={styles.doneBox}>
-              <Text style={styles.doneText}>✓ ¡Sesión Iniciada con Éxito!</Text>
-            </View>
-          ) : (
-            <View style={styles.form}>
-              {/* Tab Selector */}
-              <View style={styles.tabToggleRow}>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, !isRegisterMode && styles.toggleBtnActive]}
-                  onPress={() => {
-                    setIsRegisterMode(false);
-                    setError(null);
-                  }}
-                >
-                  <Text style={[styles.toggleBtnText, !isRegisterMode && styles.toggleBtnTextActive]}>
-                    Iniciar Sesión
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, isRegisterMode && styles.toggleBtnActive]}
-                  onPress={() => {
-                    setIsRegisterMode(true);
-                    setError(null);
-                  }}
-                >
-                  <Text style={[styles.toggleBtnText, isRegisterMode && styles.toggleBtnTextActive]}>
-                    Registrarme
-                  </Text>
-                </TouchableOpacity>
-              </View>
 
-              {error && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>⚠️ {error}</Text>
-                </View>
+            <View style={styles.body}>
+              {currentUser ? (
+                <>
+                  <Text style={styles.hello}>Hola, {currentUser.nombre}.</Text>
+                  <Button label="Cerrar sesión" variant="outline" icon="log-out-outline" onPress={() => void handleLogout()} />
+                </>
+              ) : (
+                <>
+                  {error && <Notice tone="error" text={error} />}
+                  {isRegisterMode && (
+                    <Field label="Nombre y apellido" value={nombre} onChangeText={setNombre} autoComplete="name" returnKeyType="next" />
+                  )}
+                  <Field
+                    label="Correo"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                  />
+                  <Field
+                    ref={passwordRef}
+                    label="Contraseña"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoComplete={isRegisterMode ? 'new-password' : 'password'}
+                    hint={isRegisterMode ? 'Mínimo 8 caracteres.' : undefined}
+                    returnKeyType="done"
+                    onSubmitEditing={() => void handleSubmit()}
+                  />
+                  <Button label={isRegisterMode ? 'Crear cuenta' : 'Ingresar'} variant="danger" loading={loading} onPress={() => void handleSubmit()} />
+                  <TouchableOpacity
+                    style={styles.switch}
+                    onPress={() => { setIsRegisterMode(!isRegisterMode); setError(null); }}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.switchText}>
+                      {isRegisterMode ? '¿Ya tienes cuenta? ' : '¿Primera vez aquí? '}
+                      <Text style={styles.switchLink}>{isRegisterMode ? 'Ingresa' : 'Crea una cuenta'}</Text>
+                    </Text>
+                  </TouchableOpacity>
+                </>
               )}
-
-              {isRegisterMode && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Tu nombre completo"
-                  placeholderTextColor="#94A3B8"
-                  value={nombre}
-                  onChangeText={setNombre}
-                />
-              )}
-
-              <TextInput
-                style={styles.input}
-                placeholder="correo@karen.com"
-                placeholderTextColor="#94A3B8"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Contraseña"
-                placeholderTextColor="#94A3B8"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-
-              <TouchableOpacity
-                style={styles.submitBtn}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.submitBtnText}>
-                    {isRegisterMode ? 'Crear Cuenta' : 'Ingresar'}
-                  </Text>
-                )}
-              </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
-
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  card: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    position: 'relative',
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    padding: 6,
-  },
-  closeText: {
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: 'bold',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#1D3557',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  form: {
-    gap: 10,
-  },
-  input: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: '#1E293B',
-  },
-  submitBtn: {
-    backgroundColor: '#1D3557',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  submitBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  doneBox: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  doneText: {
-    color: '#16A34A',
-    fontWeight: '800',
-    fontSize: 14,
-  },
-  tabToggleRow: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 3,
-    marginBottom: 6,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 7,
-    alignItems: 'center',
-    borderRadius: 9,
-  },
-  toggleBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  toggleBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  toggleBtnTextActive: {
-    color: '#1D3557',
-    fontWeight: '800',
-  },
-  errorBox: {
-    backgroundColor: '#FEE2E2',
-    padding: 8,
-    borderRadius: 10,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  userBox: {
-    backgroundColor: '#F8FAFC',
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    gap: 3,
-    marginBottom: 6,
-  },
-  userBoxName: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#1D3557',
-  },
-  userBoxEmail: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  userBoxRol: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#16A34A',
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginTop: 4,
-  },
-  logoutBtn: {
-    backgroundColor: '#FEE2E2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    paddingVertical: 11,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  logoutBtnText: {
-    color: '#DC2626',
-    fontWeight: '800',
-    fontSize: 13,
-  },
+  flex: { flex: 1 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.6)' },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.white, borderRadius: radius.tag, overflow: 'hidden', width: '100%', maxWidth: 420, alignSelf: 'center' },
+  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: colors.ink, padding: 18 },
+  title: { fontFamily: fonts.tag, fontSize: 26, color: colors.white },
+  subtitle: { fontFamily: fonts.body, fontSize: 14, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: -8, marginRight: -8 },
+  body: { padding: 18 },
+  hello: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, marginBottom: 14 },
+  switch: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  switchText: { fontFamily: fonts.body, fontSize: 14, color: colors.inkSoft },
+  switchLink: { fontFamily: fonts.semibold, color: colors.ink, textDecorationLine: 'underline' },
 });
-

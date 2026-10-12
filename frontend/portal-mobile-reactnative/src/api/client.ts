@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 import { clearSession, loadSession, saveSession, StoredUser } from '../auth/secureSession';
 
 const getBaseUrl = (): string => {
-  const configuredUrl = (globalThis as any)?.process?.env?.EXPO_PUBLIC_API_URL;
+  // Expo solo inlinea la variable si se lee literalmente como process.env.EXPO_PUBLIC_API_URL.
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
   if (configuredUrl) return configuredUrl.replace(/\/$/, '');
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:4000/api/v1';
@@ -12,6 +13,13 @@ const getBaseUrl = (): string => {
 };
 
 export const BASE_URL = getBaseUrl();
+
+/** Las imágenes llegan como rutas del backend (/api/v1/media/...); la app necesita la URL completa. */
+export function mediaUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return BASE_URL.replace(/\/api\/v1$/, '') + path;
+}
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -68,6 +76,7 @@ export interface BackendProduct {
   descripcion?: string;
   precioVenta: number;
   minStockAlerta: number;
+  imagenUrl?: string | null;
   aliasId?: string;
   created_at?: string;
   updated_at?: string;
