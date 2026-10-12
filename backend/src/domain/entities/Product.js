@@ -1,7 +1,7 @@
 const { ValidationException } = require('../exceptions/DomainExceptions');
 
 class Product {
-  constructor({ id, categoriaId, codigoBarras, nombre, descripcion, precioVenta, impuestoPorcentaje = 0, minStockAlerta, created_at, updated_at }) {
+  constructor({ id, categoriaId, codigoBarras, nombre, descripcion, precioVenta, impuestoPorcentaje = 0, minStockAlerta, imagenUrl = null, created_at, updated_at }) {
     if (!codigoBarras || typeof codigoBarras !== 'string' || codigoBarras.trim().length < 4) {
       throw new ValidationException('El código de barras es obligatorio y debe ser válido.');
     }
@@ -33,6 +33,7 @@ class Product {
     this.precioVenta = price;
     this.impuestoPorcentaje = tax;
     this.minStockAlerta = minStock;
+    this.imagenUrl = imagenUrl || null;
     this.created_at = created_at || new Date();
     this.updated_at = updated_at || new Date();
   }
