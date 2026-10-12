@@ -202,13 +202,16 @@ class ObtenerAlertasCaducidad {
       const nivel = classifyExpiryDays(dias);
       if (nivel !== 'NORMAL') {
         alerts.push({
+          id: `alerta-${lot.id}`,
           loteId: lot.id,
           numeroLote: lot.numeroLote,
           productoNombre: lot.productoNombre || 'Producto',
+          codigoBarras: lot.codigoBarras,
           diasParaVencer: dias,
           nivel,
           ubicacion: lot.ubicacion,
           cantidadDisponible: lot.cantidadDisponible,
+          cantidadReservada: lot.cantidadReservada,
           fechaCaducidad: lot.fechaCaducidad
         });
       }
