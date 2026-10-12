@@ -28,7 +28,7 @@ export function reservationToPass(
     initialSeconds: remainingSeconds,
     remainingSeconds,
     customerName,
-    storeLocation: 'Sucursal Matriz - Caja SIACI',
+    storeLocation: 'Sucursal Matriz',
     items: reservation.detalles.map(detail => ({
       productName: detail.productoNombre || `Producto reservado · lote ${detail.loteId.slice(0, 8)}`,
       quantity: Number(detail.cantidad),
