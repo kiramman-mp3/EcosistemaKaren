@@ -647,10 +647,10 @@ class PostgresReservationRepository {
       }
 
       const details = await this._findDetails(client, reservationId);
-        await this._releaseLockedDetails(client, details, {
-          tipo: 'LIBERACION', actorId: actor.id, reservaId,
-          motivo: 'Liberación por cancelación o expiración durante cancelación'
-        });
+      await this._releaseLockedDetails(client, details, {
+        tipo: 'LIBERACION', actorId: actor.id, reservaId: reservationId,
+        motivo: 'Liberación por cancelación o expiración durante cancelación'
+      });
       expired = new Date(reservationRow.fechaExpiracion) <= new Date();
       const nextState = expired ? 'EXPIRADA' : 'CANCELADA';
       const updatedResult = await client.query(`
