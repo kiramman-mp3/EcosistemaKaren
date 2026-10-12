@@ -14,7 +14,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "test:endpoints": "node scripts/test-endpoints.js",
-    "test:performance": "node scripts/performance-smoke.js"
+    "test:performance": "node scripts/performance-smoke.js",
+    "db:seed": "node scripts/seed.js"
   },
   "dependencies": {
     "@google/genai": "^2.28.0",

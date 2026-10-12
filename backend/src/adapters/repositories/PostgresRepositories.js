@@ -62,7 +62,8 @@ class PostgresProductRepository {
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
-             p.min_stock_alerta as "minStockAlerta", p.created_at, p.updated_at
+             p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
+             p.created_at, p.updated_at
       FROM productos p
       WHERE ($1::text IS NULL OR p.nombre ILIKE $1 OR p.codigo_barras ILIKE $1)
         AND ($2::uuid IS NULL OR p.categoria_id = $2)
@@ -87,7 +88,8 @@ class PostgresProductRepository {
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
-             p.min_stock_alerta as "minStockAlerta", p.created_at, p.updated_at
+             p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
+             p.created_at, p.updated_at
       FROM productos p
       WHERE p.id = $1
     `, [id]);
@@ -99,7 +101,8 @@ class PostgresProductRepository {
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
-             p.min_stock_alerta as "minStockAlerta", p.created_at, p.updated_at
+             p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
+             p.created_at, p.updated_at
       FROM productos p
       WHERE p.codigo_barras = $1
     `, [barcode]);
@@ -113,7 +116,8 @@ class PostgresProductRepository {
        RETURNING id, categoria_id as "categoriaId", codigo_barras as "codigoBarras",
                  nombre, descripcion, precio_venta as "precioVenta",
                  impuesto_porcentaje as "impuestoPorcentaje",
-                 min_stock_alerta as "minStockAlerta", created_at, updated_at`,
+                 min_stock_alerta as "minStockAlerta", imagen_url as "imagenUrl",
+                 created_at, updated_at`,
       [product.categoriaId, product.codigoBarras, product.nombre, product.descripcion, product.precioVenta,
         product.impuestoPorcentaje, product.minStockAlerta]
     );

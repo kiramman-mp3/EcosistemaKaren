@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -79,6 +80,11 @@ async function createServer() {
       error.statusCode = 403;
       return callback(error);
     }
+  }));
+  // Imágenes de productos; antes del rate limit porque un catálogo carga decenas por vista.
+  app.use('/api/v1/media', express.static(path.resolve(__dirname, '../../../public/media'), {
+    maxAge: '7d',
+    fallthrough: false
   }));
   app.use('/api/v1', httpSecurity.general);
   app.use('/api/v1/auth', httpSecurity.auth);
