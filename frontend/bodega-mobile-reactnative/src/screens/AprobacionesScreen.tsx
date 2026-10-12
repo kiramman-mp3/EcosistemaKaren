@@ -1,11 +1,32 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView,
+  StyleSheet, Text, TouchableOpacity, View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { BackendPromotion } from '../types';
-import { Ionicons } from '@expo/vector-icons';
+import { confirmAction, notify } from '../utils/dialogs';
+import { Button, Chip, EmptyState, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
+import { colors, fonts, radius } from '../theme/tokens';
 
-type Filter = 'TODAS' | 'PENDIENTES' | 'ACTIVAS' | 'FINALIZADAS' | 'RECHAZADAS';
-const FILTERS: Filter[] = ['TODAS', 'PENDIENTES', 'ACTIVAS', 'FINALIZADAS', 'RECHAZADAS'];
+type Filter = 'PENDIENTES' | 'ACTIVAS' | 'FINALIZADAS' | 'RECHAZADAS' | 'TODAS';
+
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: 'PENDIENTES', label: 'Por revisar' },
+  { id: 'ACTIVAS', label: 'Publicadas' },
+  { id: 'FINALIZADAS', label: 'Finalizadas' },
+  { id: 'RECHAZADAS', label: 'Rechazadas' },
+  { id: 'TODAS', label: 'Todas' },
+];
+
+function statusOf(item: BackendPromotion) {
+  if (item.estado === 'RECHAZADA') return { label: 'Rechazada', bg: colors.karenTint, fg: colors.karenDeep };
+  if (item.estado === 'APROBADA') return item.activa
+    ? { label: 'Publicada', bg: colors.freshTint, fg: colors.fresh }
+    : { label: 'Finalizada', bg: colors.aisle, fg: colors.inkSoft };
+  return { label: 'Por revisar', bg: colors.sticker, fg: colors.ink };
+}
 
 export const AprobacionesScreen: React.FC = () => {
   const [items, setItems] = useState<BackendPromotion[]>([]);
@@ -14,7 +35,8 @@ export const AprobacionesScreen: React.FC = () => {
   const [selected, setSelected] = useState<BackendPromotion | null>(null);
   const [discount, setDiscount] = useState('');
   const [phrase, setPhrase] = useState('');
-  const [rejectReason, setRejectReason] = useState('No cumple los criterios comerciales');
+  const [rejectReason, setRejectReason] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -24,73 +46,205 @@ export const AprobacionesScreen: React.FC = () => {
         : filter === 'FINALIZADAS' ? { estado: 'APROBADA', activa: false }
           : filter === 'RECHAZADAS' ? { estado: 'RECHAZADA' } : {};
     try { setItems(await api.getManagedPromotions(params)); }
-    catch (error: any) { Alert.alert('Error', error.response?.data?.message || 'No se pudieron cargar las promociones.'); }
+    catch (error: any) { notify('No se pudieron cargar las ofertas', error.response?.data?.message || 'Revisa la conexión con la tienda.'); }
     finally { setLoading(false); }
   }, [filter]);
   useEffect(() => { void load(); }, [load]);
 
   const open = (item: BackendPromotion) => {
-    setSelected(item); setDiscount(String(item.descuentoPorcentaje)); setPhrase(item.frasePromocional);
-    setRejectReason('No cumple los criterios comerciales');
+    setSelected(item);
+    setDiscount(String(item.descuentoPorcentaje));
+    setPhrase(item.frasePromocional);
+    setRejectReason('');
+    setFormError(null);
   };
+
   const run = async (action: () => Promise<unknown>, success: string) => {
     setSaving(true);
-    try { await action(); setSelected(null); await load(); Alert.alert('Promociones', success); }
-    catch (error: any) { Alert.alert('Operación rechazada', error.response?.data?.message || error.message); }
-    finally { setSaving(false); }
+    setFormError(null);
+    try {
+      await action();
+      setSelected(null);
+      await load();
+      notify('Listo', success);
+    } catch (error: any) {
+      setFormError(error.response?.data?.message || error.message || 'No se pudo completar la acción.');
+    } finally { setSaving(false); }
   };
+
+  // Valida el borrador; devuelve los valores o null si hay un error visible.
+  const validDraft = () => {
+    const value = Number(discount.replace(',', '.'));
+    if (!Number.isFinite(value) || value < 5 || value > 50) { setFormError('El descuento debe estar entre 5% y 50%.'); return null; }
+    if (phrase.trim().length < 3 || phrase.trim().length > 180) { setFormError('La frase debe tener entre 3 y 180 caracteres.'); return null; }
+    return { descuentoPorcentaje: value, frasePromocional: phrase.trim() };
+  };
+
+  const isEdited = selected
+    ? Number(discount.replace(',', '.')) !== Number(selected.descuentoPorcentaje) || phrase.trim() !== selected.frasePromocional
+    : false;
+
   const save = () => {
     if (!selected) return;
-    const value = Number(discount.replace(',', '.'));
-    if (!Number.isFinite(value) || value < 5 || value > 50) return Alert.alert('Dato inválido', 'El descuento debe estar entre 5% y 50%.');
-    if (phrase.trim().length < 3 || phrase.trim().length > 180) return Alert.alert('Dato inválido', 'La frase debe tener entre 3 y 180 caracteres.');
-    void run(() => api.updatePromotion(selected.id, { descuentoPorcentaje: value, frasePromocional: phrase.trim() }), 'El borrador fue actualizado.');
+    const draft = validDraft();
+    if (draft) void run(() => api.updatePromotion(selected.id, draft), 'Cambios guardados.');
   };
-  const remove = () => selected && Alert.alert('Eliminar borrador', 'Esta acción elimina el borrador sin publicar.', [
-    { text: 'Cancelar', style: 'cancel' },
-    { text: 'Eliminar', style: 'destructive', onPress: () => void run(() => api.deletePromotionDraft(selected.id), 'El borrador fue eliminado.') }
-  ]);
-  const finish = () => selected && Alert.alert('Finalizar promoción', 'La oferta dejará de mostrarse a los clientes y conservará su historial.', [
-    { text: 'Cancelar', style: 'cancel' },
-    { text: 'Finalizar', style: 'destructive', onPress: () => void run(() => api.deactivatePromotion(selected.id), 'La promoción fue finalizada.') }
-  ]);
+
+  // Si el administrador editó el borrador, primero se guarda: antes se publicaba la versión anterior.
+  const approve = () => {
+    if (!selected) return;
+    const draft = validDraft();
+    if (!draft) return;
+    void run(async () => {
+      if (isEdited) await api.updatePromotion(selected.id, draft);
+      await api.approvePromotion(selected.id);
+    }, 'La oferta ya aparece en el portal de clientes.');
+  };
+
+  const reject = () => {
+    if (!selected) return;
+    if (rejectReason.trim().length < 3) { setFormError('Escribe el motivo del rechazo (mínimo 3 caracteres).'); return; }
+    void run(() => api.rejectPromotion(selected.id, rejectReason.trim()), 'Oferta rechazada.');
+  };
+
+  const remove = () => selected && void confirmAction('Eliminar borrador', 'El borrador se elimina sin publicarse.', { confirmLabel: 'Eliminar', destructive: true })
+    .then(confirmed => { if (confirmed) void run(() => api.deletePromotionDraft(selected.id), 'Borrador eliminado.'); });
+
+  const finish = () => selected && void confirmAction('Finalizar oferta', 'La oferta deja de mostrarse a los clientes. Su historial se conserva.', { confirmLabel: 'Finalizar', destructive: true })
+    .then(confirmed => { if (confirmed) void run(() => api.deactivatePromotion(selected.id), 'Oferta finalizada.'); });
 
   return <View style={styles.container}>
-    <ScrollView style={styles.list} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} colors={['#DC2626']} />}>
-      <Text style={styles.eyebrow}>CONTROL COMERCIAL</Text><Text style={styles.title}>Promociones</Text><Text style={styles.subtitle}>Revisa, edita y controla las ofertas antes y después de publicarlas.</Text>
-      <ScrollView style={styles.filtersScroll} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-        {FILTERS.map(value => <TouchableOpacity key={value} style={[styles.filter, filter === value && styles.filterActive]} onPress={() => setFilter(value)}><Text style={[styles.filterText, filter === value && styles.filterTextActive]}>{value}</Text></TouchableOpacity>)}
-      </ScrollView>
-      {loading ? <ActivityIndicator style={styles.loader} /> : items.map(item => <TouchableOpacity key={item.id} style={styles.card} onPress={() => open(item)}>
-        <View style={styles.cardTop}><Text style={styles.product}>{item.productoNombre || 'Producto'}</Text><Text style={styles.discount}>-{item.descuentoPorcentaje}%</Text></View>
-        <Text style={styles.phrase}>{item.frasePromocional}</Text>
-        <Text style={styles.lot}>Lote: {item.numeroLote || item.loteId.slice(0, 8)} · Stock: {item.cantidadDisponible ?? '—'} un.</Text>
-        <View style={[styles.status, item.estado === 'RECHAZADA' ? styles.rejected : item.estado === 'APROBADA' && item.activa ? styles.active : item.estado === 'APROBADA' ? styles.finished : styles.pending]}><Text style={styles.statusText}>{item.estado === 'APROBADA' ? item.activa ? 'ACTIVA' : 'FINALIZADA' : item.estado === 'RECHAZADA' ? 'RECHAZADA' : 'PENDIENTE'}</Text></View>
-      </TouchableOpacity>)}
-      {!loading && !items.length && <Text style={styles.empty}>No hay promociones en este estado.</Text>}
-    </ScrollView>
+    <FlatList
+      data={items}
+      keyExtractor={item => item.id}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.karen} colors={[colors.karen]} />}
+      ListHeaderComponent={<>
+        <ScreenTitle title="Ofertas" subtitle="Revisa los descuentos sugeridos antes de que los vean los clientes." />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+          {FILTERS.map(option => <Chip key={option.id} label={option.label} active={filter === option.id} onPress={() => setFilter(option.id)} />)}
+        </ScrollView>
+      </>}
+      ListEmptyComponent={loading
+        ? <ActivityIndicator color={colors.ink} style={styles.loader} />
+        : <EmptyState icon="megaphone-outline" title="Nada en este grupo" text="Las ofertas sugeridas desde 'Por vencer' aparecen aquí para revisarlas." />}
+      renderItem={({ item }) => {
+        const status = statusOf(item);
+        return (
+          <TouchableOpacity style={styles.card} onPress={() => open(item)} accessibilityRole="button" accessibilityLabel={`${item.productoNombre || 'Oferta'}, ${status.label}`}>
+            <View style={styles.discount}>
+              <Text style={styles.discountText}>-{item.descuentoPorcentaje}%</Text>
+            </View>
+            <View style={styles.cardBody}>
+              <Text style={styles.product} numberOfLines={2}>{item.productoNombre || 'Producto'}</Text>
+              <Text style={styles.phrase} numberOfLines={2}>{item.frasePromocional}</Text>
+              <View style={styles.cardMeta}>
+                {item.fechaCaducidad ? <ExpiryStamp date={item.fechaCaducidad} /> : null}
+                <View style={[styles.status, { backgroundColor: status.bg }]}>
+                  <Text style={[styles.statusText, { color: status.fg }]}>{status.label}</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        );
+      }}
+    />
 
     <Modal visible={Boolean(selected)} transparent animationType="slide" onRequestClose={() => setSelected(null)}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}><View style={styles.modal}><ScrollView keyboardShouldPersistTaps="handled">
-        <View style={styles.modalHeader}><View style={styles.modalHeading}><Text style={styles.modalTitle}>{selected?.productoNombre || 'Promoción'}</Text><Text style={styles.modalSub}>Lote {selected?.numeroLote || selected?.loteId}</Text></View><TouchableOpacity onPress={() => setSelected(null)}><Ionicons name="close" size={28} color="#64748B" /></TouchableOpacity></View>
-        {selected?.estado === 'PENDIENTE_APROBACION' ? <>
-          <Text style={styles.label}>DESCUENTO (5%–50%)</Text><TextInput style={styles.input} keyboardType="decimal-pad" value={discount} onChangeText={setDiscount} />
-          <Text style={styles.label}>FRASE COMERCIAL</Text><TextInput style={[styles.input, styles.textarea]} multiline maxLength={180} value={phrase} onChangeText={setPhrase} />
-          <Text style={styles.label}>JUSTIFICACIÓN DE IA (NO EDITABLE)</Text><Text style={styles.aiReason}>{selected.razonIa}</Text>
-          <TouchableOpacity style={styles.save} disabled={saving} onPress={save}><Text style={styles.buttonText}>Guardar cambios</Text></TouchableOpacity>
-          <View style={styles.actionRow}><TouchableOpacity style={styles.approve} disabled={saving} onPress={() => void run(() => api.approvePromotion(selected.id), 'La promoción fue publicada.')}><Text style={styles.buttonText}>Aprobar</Text></TouchableOpacity><TouchableOpacity style={[styles.delete, styles.rowDelete]} disabled={saving} onPress={remove}><Text style={styles.buttonText}>Eliminar borrador</Text></TouchableOpacity></View>
-          <Text style={styles.label}>MOTIVO DE RECHAZO</Text><TextInput style={styles.input} value={rejectReason} onChangeText={setRejectReason} /><TouchableOpacity style={styles.rejectButton} disabled={saving} onPress={() => void run(() => api.rejectPromotion(selected.id, rejectReason), 'La promoción fue rechazada.')}><Text style={styles.rejectText}>Rechazar promoción</Text></TouchableOpacity>
-        </> : <>
-          <View style={styles.readOnly}><Text style={styles.readOnlyDiscount}>-{selected?.descuentoPorcentaje}%</Text><Text style={styles.readOnlyPhrase}>{selected?.frasePromocional}</Text></View>
-          {!!selected?.razonIa && <><Text style={styles.label}>JUSTIFICACIÓN DE IA</Text><Text style={styles.aiReason}>{selected.razonIa}</Text></>}
-          {!!selected?.motivoRechazo && <><Text style={styles.label}>MOTIVO DE RECHAZO</Text><Text style={styles.aiReason}>{selected.motivoRechazo}</Text></>}
-          {selected?.estado === 'APROBADA' && selected.activa && <TouchableOpacity style={styles.delete} disabled={saving} onPress={finish}><Text style={styles.buttonText}>Finalizar promoción</Text></TouchableOpacity>}
-        </>}
-      </ScrollView></View></KeyboardAvoidingView>
+      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.sheet}>
+          <ScrollView keyboardShouldPersistTaps="handled">
+            <View style={styles.sheetHead}>
+              <View style={styles.flex}>
+                <Text style={styles.sheetTitle}>{selected?.productoNombre || 'Oferta'}</Text>
+                <Text style={styles.sheetSub}>
+                  Lote {selected?.numeroLote || selected?.loteId.slice(0, 8)}
+                  {selected?.cantidadDisponible != null ? `, ${selected.cantidadDisponible} unidades libres` : ''}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelected(null)} style={styles.close} accessibilityLabel="Cerrar">
+                <Ionicons name="close" size={26} color={colors.inkMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {formError && <Notice tone="error" text={formError} />}
+
+            {selected?.estado === 'PENDIENTE_APROBACION' ? <>
+              <Field label="Descuento (%)" hint="Entre 5 y 50." keyboardType="decimal-pad" value={discount} onChangeText={setDiscount} />
+              <Field label="Frase que verá el cliente" multiline maxLength={180} value={phrase} onChangeText={setPhrase} style={styles.textarea} />
+              {!!selected.razonIa && (
+                <View style={styles.reason}>
+                  <Text style={styles.reasonLabel}>Por qué se sugiere</Text>
+                  <Text style={styles.reasonText}>{selected.razonIa}</Text>
+                </View>
+              )}
+              <Button label={isEdited ? 'Guardar y publicar' : 'Publicar oferta'} icon="checkmark-outline" variant="danger" loading={saving} onPress={approve} />
+              <View style={styles.cols}>
+                <Button label="Solo guardar" variant="outline" compact disabled={saving || !isEdited} onPress={save} style={styles.flex} />
+                <Button label="Eliminar" variant="ghost" compact disabled={saving} onPress={remove} style={styles.flex} />
+              </View>
+              <View style={styles.divider} />
+              <Field label="Motivo para rechazarla" placeholder="El margen no lo permite" value={rejectReason} onChangeText={setRejectReason} />
+              <Button label="Rechazar" variant="outline" compact disabled={saving} onPress={reject} />
+            </> : <>
+              <View style={styles.readOnly}>
+                <Text style={styles.readOnlyDiscount}>-{selected?.descuentoPorcentaje}%</Text>
+                <Text style={styles.readOnlyPhrase}>{selected?.frasePromocional}</Text>
+              </View>
+              {!!selected?.razonIa && (
+                <View style={styles.reason}>
+                  <Text style={styles.reasonLabel}>Por qué se sugirió</Text>
+                  <Text style={styles.reasonText}>{selected.razonIa}</Text>
+                </View>
+              )}
+              {!!selected?.motivoRechazo && (
+                <View style={styles.reason}>
+                  <Text style={styles.reasonLabel}>Motivo del rechazo</Text>
+                  <Text style={styles.reasonText}>{selected.motivoRechazo}</Text>
+                </View>
+              )}
+              {selected?.estado === 'APROBADA' && selected.activa && (
+                <Button label="Finalizar oferta" variant="danger" loading={saving} onPress={finish} />
+              )}
+            </>}
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   </View>;
 };
 
 const styles = StyleSheet.create({
-  container:{flex:1,backgroundColor:'#F8FAFC'},filtersScroll:{flexGrow:0,marginBottom:14},filters:{gap:8,paddingRight:8},filter:{height:36,justifyContent:'center',paddingHorizontal:13,borderRadius:18,backgroundColor:'#FFF',borderWidth:1,borderColor:'#CBD5E1'},filterActive:{backgroundColor:'#1E293B',borderColor:'#1E293B'},filterText:{fontSize:10,fontWeight:'900',color:'#64748B'},filterTextActive:{color:'#FFF'},list:{flex:1},content:{padding:16,paddingTop:16,paddingBottom:30},eyebrow:{fontSize:10,fontWeight:'900',color:'#DC2626',letterSpacing:1},title:{fontSize:25,fontWeight:'900',color:'#0F172A'},subtitle:{color:'#64748B',fontSize:12,marginBottom:12},loader:{margin:30},card:{backgroundColor:'#FFF',borderRadius:15,padding:15,marginBottom:11,borderWidth:1,borderColor:'#E2E8F0'},cardTop:{flexDirection:'row',justifyContent:'space-between',gap:10},product:{flex:1,fontSize:15,fontWeight:'900',color:'#0F172A'},discount:{fontSize:20,fontWeight:'900',color:'#DC2626'},phrase:{color:'#334155',fontSize:13,fontWeight:'700',marginTop:7},lot:{color:'#64748B',fontSize:11,marginTop:8},status:{alignSelf:'flex-start',borderRadius:10,paddingHorizontal:9,paddingVertical:4,marginTop:10},pending:{backgroundColor:'#FEF3C7'},active:{backgroundColor:'#DCFCE7'},finished:{backgroundColor:'#E2E8F0'},rejected:{backgroundColor:'#FEE2E2'},statusText:{fontSize:9,fontWeight:'900',color:'#334155'},empty:{textAlign:'center',color:'#64748B',padding:35},backdrop:{flex:1,backgroundColor:'rgba(15,23,42,.6)',justifyContent:'flex-end'},modal:{maxHeight:'92%',backgroundColor:'#FFF',borderTopLeftRadius:24,borderTopRightRadius:24,padding:20},modalHeader:{flexDirection:'row',justifyContent:'space-between'},modalHeading:{flex:1},modalTitle:{fontSize:21,fontWeight:'900',color:'#0F172A'},modalSub:{color:'#64748B',fontSize:11,marginTop:3},close:{fontSize:32,color:'#64748B'},label:{fontSize:10,fontWeight:'900',color:'#475569',marginTop:15,marginBottom:6},input:{borderWidth:1,borderColor:'#CBD5E1',borderRadius:11,padding:11,color:'#0F172A',backgroundColor:'#F8FAFC'},textarea:{height:95,textAlignVertical:'top'},aiReason:{backgroundColor:'#F8FAFC',padding:12,borderRadius:11,color:'#475569',fontSize:12,lineHeight:17},save:{backgroundColor:'#1E293B',padding:14,borderRadius:12,alignItems:'center',marginTop:18},buttonText:{color:'#FFF',fontWeight:'900',fontSize:12},actionRow:{flexDirection:'row',gap:8,marginTop:9,alignItems:'stretch'},approve:{flex:1,minHeight:52,backgroundColor:'#16A34A',padding:13,borderRadius:11,alignItems:'center',justifyContent:'center'},delete:{flex:1,minHeight:52,backgroundColor:'#F87171',padding:13,borderRadius:11,alignItems:'center',justifyContent:'center',marginTop:9},rowDelete:{marginTop:0},rejectButton:{borderWidth:1,borderColor:'#F87171',padding:12,borderRadius:11,alignItems:'center',marginTop:9,marginBottom:12},rejectText:{color:'#F87171',fontWeight:'900'},readOnly:{backgroundColor:'#FEF2F2',borderRadius:14,padding:15,marginTop:15},readOnlyDiscount:{fontSize:28,fontWeight:'900',color:'#DC2626'},readOnlyPhrase:{fontSize:14,fontWeight:'700',color:'#334155',marginTop:6},
+  container: { flex: 1, backgroundColor: colors.aisle },
+  content: { padding: 16, paddingBottom: 32 },
+  flex: { flex: 1 },
+  filters: { gap: 8, paddingBottom: 14 },
+  loader: { margin: 30 },
+  card: {
+    flexDirection: 'row', backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1,
+    borderColor: colors.rule, marginBottom: 10, overflow: 'hidden',
+  },
+  discount: { width: 76, backgroundColor: colors.sticker, alignItems: 'center', justifyContent: 'center' },
+  discountText: { fontFamily: fonts.tag, fontSize: 26, color: colors.karen },
+  cardBody: { flex: 1, padding: 12, gap: 4 },
+  product: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
+  phrase: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.inkSoft },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4, flexWrap: 'wrap' },
+  status: { borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 3 },
+  statusText: { fontFamily: fonts.bold, fontSize: 12 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.55)', justifyContent: 'flex-end' },
+  sheet: { maxHeight: '92%', backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
+  sheetHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
+  sheetTitle: { fontFamily: fonts.tag, fontSize: 24, lineHeight: 26, color: colors.ink },
+  sheetSub: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted, marginTop: 4 },
+  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  textarea: { minHeight: 90, textAlignVertical: 'top', paddingTop: 12 },
+  reason: { backgroundColor: colors.aisle, borderRadius: radius.tag, padding: 12, marginBottom: 14 },
+  reasonLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, marginBottom: 4 },
+  reasonText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.inkSoft },
+  cols: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  divider: { height: 1, backgroundColor: colors.rule, marginVertical: 18 },
+  readOnly: { backgroundColor: colors.sticker, borderRadius: radius.tag, padding: 16, marginBottom: 14 },
+  readOnlyDiscount: { fontFamily: fonts.tag, fontSize: 40, lineHeight: 42, color: colors.karen },
+  readOnlyPhrase: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 21, color: colors.ink, marginTop: 6 },
 });

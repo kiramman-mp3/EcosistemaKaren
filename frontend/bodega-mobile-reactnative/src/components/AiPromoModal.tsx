@@ -1,67 +1,62 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
-import { BackendPromotion } from '../types';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BackendPromotion } from '../types';
+import { Button } from './ui';
+import { colors, fonts, radius } from '../theme/tokens';
 
 interface AiPromoModalProps {
   visible: boolean;
   promotion: BackendPromotion | null;
+  /** Solo un administrador puede revisar y publicar ofertas. */
+  canReview: boolean;
   onClose: () => void;
   onReview: () => void;
 }
 
-export const AiPromoModal: React.FC<AiPromoModalProps> = ({
-  visible,
-  promotion,
-  onClose,
-  onReview,
-}) => {
+export const AiPromoModal: React.FC<AiPromoModalProps> = ({ visible, promotion, canReview, onClose, onReview }) => {
   if (!promotion) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.backdrop}>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#94A3B8" />
-          </TouchableOpacity>
-
-          <View style={styles.iconCircle}>
-            <Ionicons name="sparkles-outline" size={28} color="#6366F1" />
-          </View>
-
-          <Text style={styles.badge}>ALGORITMO GEMINI IA • BORRADOR</Text>
-          <Text style={styles.title}>Promoción Generada</Text>
-          <View style={styles.statusBadge}>
-            <Ionicons name="time-outline" size={15} color="#B45309" /><Text style={styles.statusText}>PENDIENTE DE APROBACIÓN POR ADMIN</Text>
-          </View>
-          <Text style={styles.subtitle}>
-            Borrador generado en base a FEFO. Requiere aprobación de un Administrador antes de publicarse en tienda.
-          </Text>
-
-          <View style={styles.discountBox}>
-            <Text style={styles.discountLabel}>DESCUENTO SUGERIDO</Text>
-            <Text style={styles.discountValue}>-{promotion.descuentoPorcentaje}%</Text>
-          </View>
-
-          <View style={styles.phraseBox}>
-            <Text style={styles.phraseLabel}>FRASE COMERCIAL PROPUESTA:</Text>
-            <Text style={styles.phraseText}>"{promotion.frasePromocional}"</Text>
-          </View>
-
-          {promotion.razonIa && (
-            <View style={styles.reasonBox}>
-              <Text style={styles.reasonLabel}>JUSTIFICACIÓN TÉCNICA IA:</Text>
-              <Text style={styles.reasonText}>{promotion.razonIa}</Text>
+          <ScrollView>
+            <View style={styles.head}>
+              <Text style={styles.title}>Oferta sugerida</Text>
+              <TouchableOpacity onPress={onClose} style={styles.close} accessibilityLabel="Cerrar">
+                <Ionicons name="close" size={26} color={colors.inkMuted} />
+              </TouchableOpacity>
             </View>
-          )}
 
-          <TouchableOpacity style={styles.reviewBtn} onPress={onReview}>
-            <Text style={styles.doneBtnText}>Revisar y editar promoción</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
-            <Text style={styles.secondaryBtnText}>Guardar como borrador</Text>
-          </TouchableOpacity>
+            <View style={styles.tag}>
+              <Text style={styles.discount}>-{promotion.descuentoPorcentaje}%</Text>
+              <Text style={styles.phrase}>{promotion.frasePromocional}</Text>
+            </View>
+
+            {!!promotion.razonIa && (
+              <View style={styles.reason}>
+                <Text style={styles.reasonLabel}>Por qué se sugiere</Text>
+                <Text style={styles.reasonText}>{promotion.razonIa}</Text>
+              </View>
+            )}
+
+            <View style={styles.pending}>
+              <Ionicons name="time-outline" size={18} color={colors.ink} />
+              <Text style={styles.pendingText}>
+                {canReview
+                  ? 'Todavía no la ven los clientes. Revísala y publícala desde Ofertas.'
+                  : 'Todavía no la ven los clientes. Un administrador la revisará antes de publicarla.'}
+              </Text>
+            </View>
+
+            {canReview
+              ? <>
+                <Button label="Revisar y publicar" variant="danger" onPress={onReview} />
+                <Button label="Más tarde" variant="ghost" compact onPress={onClose} style={styles.secondary} />
+              </>
+              : <Button label="Entendido" onPress={onClose} />}
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -69,162 +64,18 @@ export const AiPromoModal: React.FC<AiPromoModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  card: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 22,
-    alignItems: 'center',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    padding: 6,
-  },
-  closeText: {
-    fontSize: 16,
-    color: '#94A3B8',
-    fontWeight: 'bold',
-  },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  icon: {
-    fontSize: 26,
-  },
-  badge: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#6366F1',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 16,
-  },
-  discountBox: {
-    width: '100%',
-    backgroundColor: '#FEF2F2',
-    borderRadius: 14,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    marginBottom: 12,
-  },
-  discountLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#DC2626',
-    letterSpacing: 0.5,
-  },
-  discountValue: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#DC2626',
-    marginTop: 2,
-  },
-  phraseBox: {
-    width: '100%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 10,
-  },
-  phraseLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  phraseText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E293B',
-    fontStyle: 'italic',
-  },
-  reasonBox: {
-    width: '100%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 18,
-  },
-  reasonLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  reasonText: {
-    fontSize: 11,
-    color: '#475569',
-    lineHeight: 15,
-  },
-  doneBtn: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    marginTop: 8,
-  },
-  reviewBtn: { width: '100%', backgroundColor: '#1E293B', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
-  doneBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  secondaryBtnText: { color: '#334155', fontWeight: '800', fontSize: 13 },
-  statusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#FEF3C7',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginVertical: 6,
-    borderWidth: 1,
-    borderColor: '#FCD34D',
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#B45309',
-  },
+  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.6)', justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.white, borderRadius: radius.tag, padding: 20, maxHeight: '90%', width: '100%', maxWidth: 460, alignSelf: 'center' },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  title: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },
+  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  tag: { backgroundColor: colors.sticker, borderRadius: radius.tag, padding: 16, marginBottom: 14 },
+  discount: { fontFamily: fonts.tag, fontSize: 48, lineHeight: 50, color: colors.karen },
+  phrase: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22, color: colors.ink, marginTop: 6 },
+  reason: { backgroundColor: colors.aisle, borderRadius: radius.tag, padding: 12, marginBottom: 14 },
+  reasonLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, marginBottom: 4 },
+  reasonText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.inkSoft },
+  pending: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 16 },
+  pendingText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: colors.inkSoft },
+  secondary: { marginTop: 8 },
 });

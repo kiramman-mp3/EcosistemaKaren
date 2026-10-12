@@ -1,5 +1,6 @@
 const { ValidationException, OverbookingException } = require('../exceptions/DomainExceptions');
 const { classifyExpiryDays } = require('../policies/BusinessRules');
+const { parseBusinessDate, toDateOnly, daysUntil } = require('../policies/BusinessDates');
 
 class Lot {
   constructor({
@@ -31,15 +32,15 @@ class Lot {
       throw new ValidationException('La fecha de caducidad es obligatoria.');
     }
 
-    const expirationDate = new Date(fechaCaducidad);
-    if (Number.isNaN(expirationDate.getTime())) {
+    const expirationDate = parseBusinessDate(fechaCaducidad);
+    if (!expirationDate) {
       throw new ValidationException('La fecha de caducidad no es válida.');
     }
 
     let productionDate = null;
     if (fechaElaboracion !== undefined && fechaElaboracion !== null && fechaElaboracion !== '') {
-      productionDate = new Date(fechaElaboracion);
-      if (Number.isNaN(productionDate.getTime())) {
+      productionDate = parseBusinessDate(fechaElaboracion);
+      if (!productionDate) {
         throw new ValidationException('La fecha de elaboración no es válida.');
       }
       if (productionDate >= expirationDate) {
@@ -81,10 +82,17 @@ class Lot {
   }
 
   calcularDiasParaVencer(referencia = new Date()) {
-    const inicioHoy = new Date(referencia.getFullYear(), referencia.getMonth(), referencia.getDate());
-    const caducidad = new Date(this.fechaCaducidad.getFullYear(), this.fechaCaducidad.getMonth(), this.fechaCaducidad.getDate());
-    const diffMs = caducidad - inicioHoy;
-    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return daysUntil(this.fechaCaducidad, referencia);
+  }
+
+  // Las fechas de lote son días calendario: se publican como 'AAAA-MM-DD' para que
+  // ningún cliente las desplace un día según su zona horaria.
+  toJSON() {
+    return {
+      ...this,
+      fechaElaboracion: toDateOnly(this.fechaElaboracion),
+      fechaCaducidad: toDateOnly(this.fechaCaducidad),
+    };
   }
 
   obtenerNivelAlerta() {

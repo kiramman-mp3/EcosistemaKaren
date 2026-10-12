@@ -1,4 +1,7 @@
 /** @type {import('tailwindcss').Config} */
+// Sistema "Fleje": la etiqueta de precio de percha del supermercado.
+// Rojo Karen para ofertas y urgencia, tinta azul para texto, amarillo de
+// etiqueta de precio rebajado, gris de pasillo para fondos.
 export default {
   content: [
     "./index.html",
@@ -7,31 +10,63 @@ export default {
   theme: {
     extend: {
       colors: {
-        navy: {
-          DEFAULT: '#1D3557',
-          dark: '#1E3A8A',
-          deep: '#0F172A',
-          surface: '#182C48'
+        karen: {
+          DEFAULT: '#D52B1E',
+          deep: '#A81E14',
+          tint: '#FBE9E7',
         },
-        karenRed: {
-          DEFAULT: '#EF4444',
-          hover: '#DC2626',
-          dark: '#B91C1C',
-          accent: '#E63946',
-          light: '#FEE2E2'
+        ink: {
+          DEFAULT: '#13284B',
+          soft: '#3B4A66',
+          muted: '#5E6B82',
+          faint: '#8C96A8',
         },
-        karenBg: '#F8FAFC'
+        sticker: {
+          DEFAULT: '#FFD400',
+          deep: '#E0B800',
+          tint: '#FFF6C7',
+        },
+        aisle: {
+          DEFAULT: '#EFF1F4',
+          rule: '#D9DDE3',
+          strong: '#C5CBD4',
+        },
+        fresh: {
+          DEFAULT: '#12805C',
+          tint: '#E3F3EC',
+        },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Outfit', 'Inter', 'sans-serif'],
+        sans: ['Archivo', 'system-ui', 'sans-serif'],
+        tag: ['"Archivo Narrow"', 'Archivo', 'sans-serif'],
+        stamp: ['Doto', '"Archivo Narrow"', 'monospace'],
+      },
+      borderRadius: {
+        tag: '6px',
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(29, 53, 87, 0.08), 0 2px 6px -1px rgba(29, 53, 87, 0.04)',
-        'card': '0 10px 30px -4px rgba(15, 23, 42, 0.07), 0 4px 10px -2px rgba(15, 23, 42, 0.03)',
-        'glow-red': '0 4px 20px rgba(239, 68, 68, 0.35)',
-        'glow-blue': '0 4px 20px rgba(30, 58, 138, 0.35)',
-      }
+        lift: '0 1px 0 rgba(19, 40, 75, 0.08), 0 8px 24px -12px rgba(19, 40, 75, 0.35)',
+      },
+      keyframes: {
+        'slide-up': {
+          from: { transform: 'translateY(12px)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
+        },
+        'drawer-in': {
+          from: { transform: 'translateX(100%)' },
+          to: { transform: 'translateX(0)' },
+        },
+        'tag-swing': {
+          '0%': { transform: 'rotate(-4deg)' },
+          '60%': { transform: 'rotate(1.5deg)' },
+          '100%': { transform: 'rotate(0deg)' },
+        },
+      },
+      animation: {
+        'slide-up': 'slide-up 220ms ease-out both',
+        'drawer-in': 'drawer-in 260ms cubic-bezier(.2,.8,.2,1) both',
+        'tag-swing': 'tag-swing 900ms cubic-bezier(.3,1.4,.5,1) both',
+      },
     },
   },
   plugins: [],

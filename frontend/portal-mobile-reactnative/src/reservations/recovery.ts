@@ -21,9 +21,9 @@ export function reservationToPass(reservation: BackendReservation, now = Date.no
     code: reservation.codigoRetiro,
     status: reservation.estado,
     remainingSeconds: secondsUntil(reservation.fechaExpiracion, now),
-    storeLocation: 'Sucursal Matriz - Caja SIACI',
+    storeLocation: 'Sucursal Matriz',
     items: reservation.detalles.map(detail => ({
-      productName: `Producto reservado · lote ${detail.loteId.slice(0, 8)}`,
+      productName: detail.productoNombre || `Producto reservado · lote ${detail.loteId.slice(0, 8)}`,
       quantity: Number(detail.cantidad),
       price: Number(detail.precioUnitario),
     })),

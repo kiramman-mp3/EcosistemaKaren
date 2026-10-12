@@ -1,4 +1,4 @@
-export type NavTab = 'inicio' | 'productos' | 'ofertas';
+export type NavTab = 'inicio' | 'productos' | 'ofertas' | 'reservas';
 
 export type ProductCategory = string;
 
@@ -9,9 +9,11 @@ export interface Product {
   price: number;
   originalPrice?: number;
   stock: number;
-  image: string;
+  image: string | null;
   badge?: string;
   unit?: string;
+  description?: string;
+  barcode?: string;
 }
 
 export interface FlashOffer {
@@ -26,7 +28,9 @@ export interface FlashOffer {
   stockTotal: number;
   stockAvailable: number;
   expiryText: string;
-  image: string;
+  expiresOn?: string;
+  productName?: string;
+  image: string | null;
   loteId?: string;
   productId?: string;
 }
@@ -43,6 +47,7 @@ export interface ReservationPass {
   status: string;
   remainingSeconds: number;
   storeLocation: string;
+  customerName?: string;
   items: {
     productName: string;
     quantity: number;

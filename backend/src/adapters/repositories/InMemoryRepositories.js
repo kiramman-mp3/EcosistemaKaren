@@ -190,9 +190,10 @@ class InMemoryRepositories {
   get productRepository() {
     return {
       findAll: async ({ q = '', categoriaId = null, limit = 30, offset = 0 } = {}) => {
-        const search = q.trim().toLocaleLowerCase('es');
+        const fold = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
+        const search = fold(q.trim());
         const filtered = this.products.filter(product =>
-          (!search || product.nombre.toLocaleLowerCase('es').includes(search) || product.codigoBarras.includes(search)) &&
+          (!search || fold(product.nombre).includes(search) || product.codigoBarras.includes(search)) &&
           (!categoriaId || product.categoriaId === categoriaId)
         );
         return { items: filtered.slice(offset, offset + limit), total: filtered.length };

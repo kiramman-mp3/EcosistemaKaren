@@ -20,6 +20,7 @@ export interface BackendProduct {
   precioVenta: number;
   impuestoPorcentaje: number;
   minStockAlerta: number;
+  imagenUrl?: string | null;
   aliasId?: string;
   created_at?: string;
   updated_at?: string;
@@ -131,6 +132,11 @@ export interface ReservationDetail {
   loteId: string;
   cantidad: number;
   precioUnitario: number;
+  productoId?: string;
+  productoNombre?: string;
+  numeroLote?: string;
+  codigoBarras?: string;
+  imagenUrl?: string | null;
 }
 
 export interface BackendReservation {
@@ -140,6 +146,7 @@ export interface BackendReservation {
   estado: 'PENDIENTE' | 'CONFIRMADA' | 'EXPIRADA' | 'CANCELADA';
   fechaExpiracion: string;
   detalles: ReservationDetail[];
+  clienteNombre?: string;
   created_at?: string;
   updated_at?: string;
 }

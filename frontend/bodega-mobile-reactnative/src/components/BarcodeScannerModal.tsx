@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Button } from './ui';
+import { colors, fonts, radius } from '../theme/tokens';
 
 interface Props {
   visible: boolean;
@@ -20,17 +23,15 @@ export const BarcodeScannerModal: React.FC<Props> = ({ visible, title = 'Escanea
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={close}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Text style={styles.title}>{title}</Text>
         {!permission?.granted ? (
-          <View style={styles.permissionBox}>
-            <Text style={styles.help}>La cámara se usa únicamente para leer el código solicitado.</Text>
-            <TouchableOpacity style={styles.primary} onPress={requestPermission}>
-              <Text style={styles.primaryText}>Autorizar cámara</Text>
-            </TouchableOpacity>
+          <View style={styles.permission}>
+            <Text style={styles.help}>La cámara solo se usa para leer el código. No se guardan fotos.</Text>
+            <Button label="Permitir cámara" variant="sticker" onPress={() => void requestPermission()} />
           </View>
         ) : (
-          <View style={styles.cameraContainer}>
+          <View style={styles.camera}>
             <CameraView
               style={StyleSheet.absoluteFill}
               facing="back"
@@ -41,30 +42,26 @@ export const BarcodeScannerModal: React.FC<Props> = ({ visible, title = 'Escanea
                 close();
               }}
             />
-            <View pointerEvents="none" style={styles.cameraOverlay}>
-              <View style={styles.frame}>
-                <Text style={styles.frameText}>Centra el código dentro del marco</Text>
-              </View>
+            <View pointerEvents="none" style={styles.overlay}>
+              <View style={styles.frame} />
+              <Text style={styles.frameText}>Centra el código en el recuadro</Text>
             </View>
           </View>
         )}
-        <TouchableOpacity style={styles.close} onPress={close}><Text style={styles.closeText}>Cancelar</Text></TouchableOpacity>
-      </View>
+        <Button label="Cancelar" variant="ghost" onPress={close} style={styles.cancel} />
+      </SafeAreaView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F172A', padding: 20, paddingTop: 50 },
-  title: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', marginBottom: 16, textAlign: 'center' },
-  cameraContainer: { flex: 1, borderRadius: 20, overflow: 'hidden' },
-  cameraOverlay: { position: 'absolute', inset: 0, justifyContent: 'center', padding: 24 },
-  frame: { height: 190, borderWidth: 3, borderColor: '#22C55E', borderRadius: 18, justifyContent: 'flex-end' },
-  frameText: { color: '#FFFFFF', textAlign: 'center', backgroundColor: 'rgba(0,0,0,.65)', padding: 8 },
-  permissionBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 },
-  help: { color: '#CBD5E1', textAlign: 'center', lineHeight: 20 },
-  primary: { backgroundColor: '#2563EB', paddingHorizontal: 22, paddingVertical: 13, borderRadius: 12 },
-  primaryText: { color: '#FFFFFF', fontWeight: '800' },
-  close: { marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: '#334155', alignItems: 'center' },
-  closeText: { color: '#FFFFFF', fontWeight: '800' },
+  container: { flex: 1, backgroundColor: colors.ink, padding: 20 },
+  title: { fontFamily: fonts.tag, fontSize: 26, color: colors.white, marginBottom: 16, textAlign: 'center' },
+  camera: { flex: 1, borderRadius: radius.tag, overflow: 'hidden' },
+  overlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, justifyContent: 'center', padding: 24, gap: 12 },
+  frame: { height: 180, borderWidth: 4, borderColor: colors.sticker, borderRadius: radius.tag },
+  frameText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.white, textAlign: 'center' },
+  permission: { flex: 1, alignItems: 'stretch', justifyContent: 'center', gap: 18 },
+  help: { fontFamily: fonts.body, fontSize: 16, lineHeight: 22, color: 'rgba(255,255,255,0.8)', textAlign: 'center' },
+  cancel: { marginTop: 16 },
 });

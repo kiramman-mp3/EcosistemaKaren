@@ -17,6 +17,9 @@
  * (lotes 'SEED-%' y usuarios '@demo.karen.ec') y actualiza el catálogo por código de barras.
  */
 require('dotenv').config();
+const { applyBusinessTimezone, toDateOnly } = require('../src/domain/policies/BusinessDates');
+
+applyBusinessTimezone();
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -63,8 +66,10 @@ const round2 = n => Math.round(n * 100) / 100;
 const uuid = () => crypto.randomUUID();
 
 const NOW = Date.now();
-const TODAY = Date.UTC(new Date(NOW).getUTCFullYear(), new Date(NOW).getUTCMonth(), new Date(NOW).getUTCDate());
-const dateOnly = ms => new Date(ms).toISOString().slice(0, 10);
+// Medianoche del día de negocio (TZ fijada por applyBusinessTimezone), igual que CURRENT_DATE.
+const startOfDay = ms => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+const TODAY = startOfDay(NOW);
+const dateOnly = ms => toDateOnly(new Date(ms));
 const iso = ms => new Date(ms).toISOString();
 
 function weightedPicker(items, weightOf) {
@@ -249,7 +254,7 @@ function buildLots(products) {
       const daysAgo = i === count - 1 ? randInt(1, 6) : Math.round(window * (count - 1 - i) / (count - 1)) + randInt(0, 6);
       const ingreso = NOW - daysAgo * DAY_MS - randInt(6, 11) * 3600000;
       const shelf = randInt(info.shelf[0], info.shelf[1]);
-      const elaboracion = Date.UTC(new Date(ingreso).getUTCFullYear(), new Date(ingreso).getUTCMonth(), new Date(ingreso).getUTCDate())
+      const elaboracion = startOfDay(ingreso)
         - randInt(1, Math.max(1, Math.min(10, Math.floor(shelf / 4)))) * DAY_MS;
       const qty = ingressQuantity(product.pvp);
       const baseCost = product.pvp / (1 + product.iva / 100);
@@ -339,10 +344,10 @@ function simulate({ products, lots, users }) {
   }
   const totalReservations = Math.round(6000 * SCALE);
   for (let i = 0; i < totalReservations; i++) {
-    // Más actividad reciente y en horario comercial (8h–21h, hora Ecuador = UTC-5)
+    // Más actividad reciente y en horario comercial (8h–21h, hora del negocio)
     const day = Math.floor(Math.pow(rand(), 1.3) * HISTORY_DAYS) + 1;
     const hourLocal = randInt(8, 20);
-    const t = TODAY - day * DAY_MS + (hourLocal + 5) * 3600000 + randInt(0, 3599) * 1000;
+    const t = TODAY - day * DAY_MS + hourLocal * 3600000 + randInt(0, 3599) * 1000;
     if (t < NOW - 15 * MIN_MS) events.push({ t, kind: 'reserva' });
   }
   events.sort((a, b) => a.t - b.t);
@@ -439,6 +444,8 @@ function simulate({ products, lots, users }) {
       const q = Math.min(lot.disp, randInt(1, 6));
       const before = { disp: lot.disp, res: lot.res };
       lot.disp -= q;
+      // Igual que registerWasteWithAudit: una merma que deja el lote en cero lo marca MERMA.
+      if (lot.disp + lot.res === 0) lot.writtenOff = true;
       const actor = pick(warehouse).id;
       const movement = move(lot, 'MERMA', q, before, { disp: lot.disp, res: lot.res }, { motivo: pick(MERMA_REASONS), actor, at: t });
       wastes.push({ id: uuid(), lote_id: lot.id, movimiento_id: movement.id, cantidad: q,
@@ -454,6 +461,7 @@ function simulate({ products, lots, users }) {
       const q = lot.disp;
       const before = { disp: lot.disp, res: lot.res };
       lot.disp = 0;
+      if (lot.res === 0) lot.writtenOff = true;
       const actor = pick(warehouse).id;
       const movement = move(lot, 'MERMA', q, before, { disp: 0, res: lot.res }, { motivo: EXPIRED_WASTE_REASON, actor, at: t });
       wastes.push({ id: uuid(), lote_id: lot.id, movimiento_id: movement.id, cantidad: q, razon: EXPIRED_WASTE_REASON,
@@ -474,7 +482,8 @@ function simulate({ products, lots, users }) {
 
 function finalizeLots(lots) {
   for (const lot of lots) {
-    if (lot.caducidad <= TODAY) lot.estado = lot.disp + lot.res > 0 ? 'VENCIDO' : 'AGOTADO';
+    if (lot.writtenOff) lot.estado = 'MERMA';
+    else if (lot.caducidad <= TODAY) lot.estado = lot.disp + lot.res > 0 ? 'VENCIDO' : 'AGOTADO';
     else lot.estado = lot.disp + lot.res > 0 ? 'ACTIVO' : 'AGOTADO';
   }
   // Lotes no perecibles con stock que entran en ventana de caducidad cercana,

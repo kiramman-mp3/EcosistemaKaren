@@ -3,46 +3,66 @@
 
 @layer base {
   html {
-    scroll-behavior: smooth;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Archivo', system-ui, sans-serif;
+    color: #13284B;
+    background: #EFF1F4;
+    -webkit-tap-highlight-color: transparent;
   }
-  
-  h1, h2, h3, h4, .font-display {
-    font-family: 'Outfit', 'Inter', sans-serif;
+
+  body {
+    background: #EFF1F4;
+  }
+
+  :focus-visible {
+    outline: 3px solid #FFD400;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
   }
 }
 
-@keyframes pulseSlow {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.08);
-  }
+/* Cifras de precio y conteos alineadas en columna */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
-.animate-pulse-slow {
-  animation: pulseSlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Borde dentado del ticket térmico del pase de retiro */
+.ticket-edge {
+  --notch: 8px;
+  background:
+    radial-gradient(circle at 50% 0, transparent calc(var(--notch) - 1px), #FFFFFF var(--notch)) 0 0 / calc(var(--notch) * 2) 100% repeat-x;
+  height: var(--notch);
 }
 
-@keyframes pulseGlowRed {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+.ticket-edge-bottom {
+  --notch: 8px;
+  background:
+    radial-gradient(circle at 50% 100%, transparent calc(var(--notch) - 1px), #FFFFFF var(--notch)) 0 0 / calc(var(--notch) * 2) 100% repeat-x;
+  height: var(--notch);
+}
+
+.rule-dashed {
+  background-image: linear-gradient(to right, #C5CBD4 50%, transparent 50%);
+  background-size: 8px 1px;
+  background-repeat: repeat-x;
+  height: 1px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
-  50% {
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.9);
-  }
-}
-
-.pulse-glow-red {
-  animation: pulseGlowRed 1.8s ease-in-out infinite;
-}
-
-/* Custom QR block styling */
-.qr-grid-block {
-  aspect-ratio: 1 / 1;
-  border-radius: 2px;
-  transition: all 0.2s ease;
 }

@@ -28,12 +28,12 @@ export function reservationToPass(
     initialSeconds: remainingSeconds,
     remainingSeconds,
     customerName,
-    storeLocation: 'Sucursal Matriz - Caja SIACI',
+    storeLocation: 'Sucursal Matriz',
     items: reservation.detalles.map(detail => ({
-      productName: `Producto reservado · lote ${detail.loteId.slice(0, 8)}`,
+      productName: detail.productoNombre || `Producto reservado · lote ${detail.loteId.slice(0, 8)}`,
       quantity: Number(detail.cantidad),
       price: Number(detail.precioUnitario),
-      lotCode: detail.loteId,
+      lotCode: detail.numeroLote || detail.loteId,
     })),
     total: reservation.detalles.reduce(
       (total, detail) => total + Number(detail.cantidad) * Number(detail.precioUnitario), 0

@@ -5,6 +5,7 @@ const User = require('../../domain/entities/User');
 const Reservation = require('../../domain/entities/Reservation');
 const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
+const { toDateOnly } = require('../../domain/policies/BusinessDates');
 const {
   buildPromotionCacheKey,
   assertPromotableLot
@@ -56,7 +57,9 @@ class PostgresProductRepository {
   }
 
   async findAll({ q = '', categoriaId = null, limit = 30, offset = 0 } = {}) {
-    const search = q.trim() ? `%${q.trim()}%` : null;
+    // Escapa comodines de LIKE para que '%' o '_' se busquen como texto literal.
+    const term = q.trim().replace(/[\\%_]/g, char => `\\${char}`);
+    const search = term ? `%${term}%` : null;
     const [res, countResult] = await Promise.all([
       this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
@@ -65,7 +68,7 @@ class PostgresProductRepository {
              p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
              p.created_at, p.updated_at
       FROM productos p
-      WHERE ($1::text IS NULL OR p.nombre ILIKE $1 OR p.codigo_barras ILIKE $1)
+      WHERE ($1::text IS NULL OR unaccent(p.nombre) ILIKE unaccent($1) OR p.codigo_barras ILIKE $1)
         AND ($2::uuid IS NULL OR p.categoria_id = $2)
       ORDER BY p.nombre ASC
       LIMIT $3 OFFSET $4
@@ -73,7 +76,7 @@ class PostgresProductRepository {
       this.pool.query(`
         SELECT COUNT(*)::integer AS total
         FROM productos p
-        WHERE ($1::text IS NULL OR p.nombre ILIKE $1 OR p.codigo_barras ILIKE $1)
+        WHERE ($1::text IS NULL OR unaccent(p.nombre) ILIKE unaccent($1) OR p.codigo_barras ILIKE $1)
           AND ($2::uuid IS NULL OR p.categoria_id = $2)
       `, [search, categoriaId])
     ]);
@@ -232,7 +235,7 @@ class PostgresLotRepository {
                    costo_unitario as "costoUnitario", cantidad_ingresada as "cantidadIngresada",
                    cantidad_disponible as "cantidadDisponible", cantidad_reservada as "cantidadReservada",
                    ubicacion, estado, created_at, updated_at`,
-        [lot.productoId, lot.numeroLote, lot.fechaElaboracion, lot.fechaCaducidad, lot.costoUnitario,
+        [lot.productoId, lot.numeroLote, toDateOnly(lot.fechaElaboracion), toDateOnly(lot.fechaCaducidad), lot.costoUnitario,
           lot.cantidadIngresada, lot.cantidadDisponible, lot.cantidadReservada, lot.ubicacion, lot.estado]
       );
       const row = res.rows[0];
@@ -647,10 +650,10 @@ class PostgresReservationRepository {
       }
 
       const details = await this._findDetails(client, reservationId);
-        await this._releaseLockedDetails(client, details, {
-          tipo: 'LIBERACION', actorId: actor.id, reservaId,
-          motivo: 'Liberación por cancelación o expiración durante cancelación'
-        });
+      await this._releaseLockedDetails(client, details, {
+        tipo: 'LIBERACION', actorId: actor.id, reservaId: reservationId,
+        motivo: 'Liberación por cancelación o expiración durante cancelación'
+      });
       expired = new Date(reservationRow.fechaExpiracion) <= new Date();
       const nextState = expired ? 'EXPIRADA' : 'CANCELADA';
       const updatedResult = await client.query(`
@@ -697,31 +700,41 @@ class PostgresReservationRepository {
       }
 
       const detailsResult = await client.query(`
-        SELECT lote_id as "loteId", SUM(cantidad)::int as cantidad
+        SELECT reserva_id as "reservaId", lote_id as "loteId", SUM(cantidad)::int as cantidad
         FROM reserva_detalles
         WHERE reserva_id = ANY($1::uuid[])
-        GROUP BY lote_id
-        ORDER BY lote_id ASC
+        GROUP BY reserva_id, lote_id
+        ORDER BY lote_id ASC, reserva_id ASC
       `, [reservationIds]);
-      const grouped = new Map(detailsResult.rows.map(row => [row.loteId, Number(row.cantidad)]));
+      const grouped = new Map();
+      for (const row of detailsResult.rows) {
+        grouped.set(row.loteId, (grouped.get(row.loteId) || 0) + Number(row.cantidad));
+      }
       const lots = await this._lockLots(client, [...grouped.keys()]);
       this._assertReservedQuantities(lots, grouped);
 
-      for (const lot of lots) {
-        const quantity = grouped.get(lot.id);
+      // Un movimiento por reserva y lote: la liberación queda trazable a su reserva.
+      const balances = new Map(lots.map(lot => [lot.id, {
+        disponible: Number(lot.cantidadDisponible), reservada: Number(lot.cantidadReservada)
+      }]));
+      for (const detail of detailsResult.rows) {
+        const quantity = Number(detail.cantidad);
+        const balance = balances.get(detail.loteId);
         await client.query(`
           UPDATE lotes
           SET cantidad_disponible = cantidad_disponible + $1,
               cantidad_reservada = cantidad_reservada - $1,
               updated_at = CURRENT_TIMESTAMP
           WHERE id = $2
-        `, [quantity, lot.id]);
+        `, [quantity, detail.loteId]);
         await this._insertMovement(client, {
-          loteId: lot.id, tipo: 'LIBERACION', cantidad: quantity,
-          disponibleAntes: Number(lot.cantidadDisponible), disponibleDespues: Number(lot.cantidadDisponible) + quantity,
-          reservadaAntes: Number(lot.cantidadReservada), reservadaDespues: Number(lot.cantidadReservada) - quantity,
-          motivo: 'Liberación automática por expiración', metadata: { reservationIds }
+          loteId: detail.loteId, tipo: 'LIBERACION', cantidad: quantity,
+          disponibleAntes: balance.disponible, disponibleDespues: balance.disponible + quantity,
+          reservadaAntes: balance.reservada, reservadaDespues: balance.reservada - quantity,
+          motivo: 'Liberación automática por expiración', reservaId: detail.reservaId
         });
+        balance.disponible += quantity;
+        balance.reservada -= quantity;
       }
 
       await client.query(`
@@ -830,96 +843,61 @@ class PostgresReservationRepository {
   }
 
   async findByCode(code) {
-    const resHead = await this.pool.query(`
-      SELECT id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
-             estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
-      FROM reservas
-      WHERE codigo_retiro = $1
-    `, [code]);
-
-    if (!resHead.rows.length) return null;
-
-    const resDetails = await this.pool.query(`
-      SELECT id, reserva_id as "reservaId", lote_id as "loteId",
-             cantidad, precio_unitario as "precioUnitario"
-      FROM reserva_detalles
-      WHERE reserva_id = $1
-    `, [resHead.rows[0].id]);
-
-    const reservation = new Reservation(resHead.rows[0]);
-    reservation.detalles = resDetails.rows;
-    return reservation;
+    const [reservation] = await this._findWithDetails('r.codigo_retiro = $1', [code]);
+    return reservation || null;
   }
 
   async findById(id) {
-    const resHead = await this.pool.query(`
-      SELECT id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
-             estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
-      FROM reservas
-      WHERE id = $1
-    `, [id]);
-
-    if (!resHead.rows.length) return null;
-
-    const resDetails = await this.pool.query(`
-      SELECT id, reserva_id as "reservaId", lote_id as "loteId",
-             cantidad, precio_unitario as "precioUnitario"
-      FROM reserva_detalles
-      WHERE reserva_id = $1
-    `, [id]);
-
-    const reservation = new Reservation(resHead.rows[0]);
-    reservation.detalles = resDetails.rows;
-    return reservation;
+    const [reservation] = await this._findWithDetails('r.id = $1', [id]);
+    return reservation || null;
   }
 
   async findByUserId(userId, { limit = 50, offset = 0 } = {}) {
-    const resHead = await this.pool.query(`
-      SELECT id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
-             estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
-      FROM reservas
-      WHERE usuario_id = $1
-      ORDER BY created_at DESC
-      LIMIT $2 OFFSET $3
-    `, [userId, limit, offset]);
-
-    const list = [];
-    for (const row of resHead.rows) {
-      const resDetails = await this.pool.query(`
-        SELECT id, reserva_id as "reservaId", lote_id as "loteId",
-               cantidad, precio_unitario as "precioUnitario"
-        FROM reserva_detalles
-        WHERE reserva_id = $1
-      `, [row.id]);
-      const r = new Reservation(row);
-      r.detalles = resDetails.rows;
-      list.push(r);
-    }
-    return list;
+    return this._findWithDetails('r.usuario_id = $1', [userId], { limit, offset });
   }
 
   async findExpiredPending() {
-    const resHead = await this.pool.query(`
-      SELECT id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
-             estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
-      FROM reservas
-      WHERE estado = 'PENDIENTE' AND fecha_expiracion < CURRENT_TIMESTAMP
-    `);
+    return this._findWithDetails("r.estado = 'PENDIENTE' AND r.fecha_expiracion < CURRENT_TIMESTAMP", []);
+  }
 
-    const list = [];
-    for (const row of resHead.rows) {
-      const resDetails = await this.pool.query(`
-        SELECT id, reserva_id as "reservaId", lote_id as "loteId",
-               cantidad, precio_unitario as "precioUnitario"
-        FROM reserva_detalles
-        WHERE reserva_id = $1
-      `, [row.id]);
-      const r = new Reservation(row);
-      r.detalles = resDetails.rows;
-      list.push(r);
+  // Cabeceras y detalles en dos consultas (sin N+1), con nombre de cliente y de producto
+  // para que caja y el historial del cliente no muestren identificadores internos.
+  async _findWithDetails(where, params, { limit = null, offset = 0 } = {}) {
+    const paging = limit === null ? '' : ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    const heads = await this.pool.query(`
+      SELECT r.id, r.usuario_id as "usuarioId", r.codigo_retiro as "codigoRetiro",
+             r.estado, r.fecha_expiracion as "fechaExpiracion", r.created_at, r.updated_at,
+             u.nombre as "clienteNombre"
+      FROM reservas r
+      JOIN usuarios u ON u.id = r.usuario_id
+      WHERE ${where}
+      ORDER BY r.created_at DESC, r.id${paging}
+    `, limit === null ? params : [...params, limit, offset]);
+    if (!heads.rows.length) return [];
+
+    const details = await this.pool.query(`
+      SELECT d.id, d.reserva_id as "reservaId", d.lote_id as "loteId",
+             d.cantidad, d.precio_unitario as "precioUnitario",
+             l.numero_lote as "numeroLote", p.id as "productoId", p.nombre as "productoNombre",
+             p.codigo_barras as "codigoBarras", p.imagen_url as "imagenUrl"
+      FROM reserva_detalles d
+      JOIN lotes l ON l.id = d.lote_id
+      JOIN productos p ON p.id = l.producto_id
+      WHERE d.reserva_id = ANY($1::uuid[])
+      ORDER BY p.nombre ASC, d.id ASC
+    `, [heads.rows.map(row => row.id)]);
+    const byReservation = new Map();
+    for (const detail of details.rows) {
+      if (!byReservation.has(detail.reservaId)) byReservation.set(detail.reservaId, []);
+      byReservation.get(detail.reservaId).push({ ...detail, precioUnitario: Number(detail.precioUnitario) });
     }
 
-    return list;
+    return heads.rows.map(row => {
+      const reservation = new Reservation(row);
+      reservation.clienteNombre = row.clienteNombre;
+      reservation.detalles = byReservation.get(row.id) || [];
+      return reservation;
+    });
   }
 
   async saveWithDetails(reservation, modifiedLots) {

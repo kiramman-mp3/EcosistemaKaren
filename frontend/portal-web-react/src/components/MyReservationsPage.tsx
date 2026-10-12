@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CalendarClock, Clock, QrCode, RefreshCw, ShoppingBag } from 'lucide-react';
+import { AlertTriangle, QrCode, RefreshCw } from 'lucide-react';
 import type { BackendReservation } from '../api/client';
+import { formatDateTime } from '../utils/dates';
 
 interface Props {
   authenticated: boolean;
@@ -15,18 +16,25 @@ interface Props {
 
 type ReservationFilter = 'TODAS' | 'PENDIENTES' | 'COMPLETADAS' | 'CANCELADAS';
 
+const FILTERS: { id: ReservationFilter; label: string }[] = [
+  { id: 'TODAS', label: 'Todas' },
+  { id: 'PENDIENTES', label: 'Por retirar' },
+  { id: 'COMPLETADAS', label: 'Retiradas' },
+  { id: 'CANCELADAS', label: 'Canceladas o vencidas' },
+];
+
 const statusLabel: Record<BackendReservation['estado'], string> = {
-  PENDIENTE: 'Pendiente de retiro',
-  CONFIRMADA: 'Completada',
-  EXPIRADA: 'Expirada',
+  PENDIENTE: 'Por retirar',
+  CONFIRMADA: 'Retirada',
+  EXPIRADA: 'Venció',
   CANCELADA: 'Cancelada',
 };
 
 const statusClass: Record<BackendReservation['estado'], string> = {
-  PENDIENTE: 'bg-amber-100 text-amber-800',
-  CONFIRMADA: 'bg-emerald-100 text-emerald-700',
-  EXPIRADA: 'bg-slate-100 text-slate-600',
-  CANCELADA: 'bg-red-50 text-red-700',
+  PENDIENTE: 'bg-sticker text-ink',
+  CONFIRMADA: 'bg-fresh-tint text-fresh',
+  EXPIRADA: 'bg-aisle text-ink-muted',
+  CANCELADA: 'bg-aisle text-ink-muted',
 };
 
 export const MyReservationsPage: React.FC<Props> = ({
@@ -36,126 +44,140 @@ export const MyReservationsPage: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ReservationFilter>('TODAS');
 
-  const normalizedReservations = useMemo(() => reservations.map(reservation => {
+  const normalized = useMemo(() => reservations.map(reservation => {
     const isExpiredPending = reservation.estado === 'PENDIENTE'
       && new Date(reservation.fechaExpiracion).getTime() <= Date.now();
     return { reservation, effectiveStatus: isExpiredPending ? 'EXPIRADA' as const : reservation.estado };
   }), [reservations]);
 
-  const filteredReservations = useMemo(() => normalizedReservations.filter(({ effectiveStatus }) => {
+  const filtered = useMemo(() => normalized.filter(({ effectiveStatus }) => {
     if (filter === 'TODAS') return true;
     if (filter === 'PENDIENTES') return effectiveStatus === 'PENDIENTE';
     if (filter === 'COMPLETADAS') return effectiveStatus === 'CONFIRMADA';
     return effectiveStatus === 'CANCELADA' || effectiveStatus === 'EXPIRADA';
-  }), [filter, normalizedReservations]);
+  }), [filter, normalized]);
 
   const cancel = async (id: string) => {
-    if (!window.confirm('¿Cancelar esta reserva y liberar inmediatamente el stock?')) return;
+    if (!window.confirm('¿Cancelar esta reserva? Las unidades vuelven a la percha de inmediato.')) return;
     setCancelling(id);
     setError(null);
     try {
       await onCancel(id);
     } catch (cause: any) {
-      setError(cause?.message || 'No se pudo cancelar la reserva.');
+      setError(cause?.message || 'No se pudo cancelar la reserva. Inténtalo de nuevo.');
     } finally {
       setCancelling(null);
     }
   };
 
   return (
-    <section className="min-h-[65vh] bg-slate-50 py-8 sm:py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between mb-7">
-          <div>
-            <span className="text-xs font-black tracking-widest uppercase text-karenRed">Historial personal</span>
-            <h1 className="mt-1 text-3xl sm:text-4xl font-display font-black text-navy">Mis reservas</h1>
-            <p className="mt-2 text-sm sm:text-base text-slate-500">Consulta tus pases y estados sincronizados con caja e inventario.</p>
-          </div>
-          {authenticated && (
-            <button
-              onClick={() => void onRefresh()}
-              disabled={syncing}
-              className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-navy shadow-sm disabled:opacity-60"
-            >
-              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Actualizando…' : 'Actualizar estados'}
-            </button>
-          )}
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 min-h-[60vh]">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <h1 className="font-tag font-bold text-4xl sm:text-5xl text-ink leading-none">Mis reservas</h1>
+          <p className="mt-2 text-ink-soft">Tus códigos de retiro y lo que ya pasó por caja.</p>
         </div>
-
-        {!authenticated ? (
-          <div className="max-w-xl mx-auto mt-12 p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 text-center shadow-soft">
-            <ShoppingBag className="w-12 h-12 mx-auto text-slate-300" />
-            <h2 className="mt-4 text-xl font-black text-navy">Inicia sesión para ver tus reservas</h2>
-            <p className="mt-2 text-sm text-slate-500">Tu historial está asociado a tu cuenta para proteger los pases de retiro.</p>
-            <button onClick={onLogin} className="mt-6 w-full sm:w-auto px-6 py-3 rounded-xl bg-navy text-white text-sm font-bold">Iniciar sesión</button>
-          </div>
-        ) : (
-          <>
-            {error && (
-              <div className="mb-5 p-3 bg-red-50 text-red-700 rounded-xl flex items-center gap-2 text-sm">
-                <AlertTriangle className="w-4 h-4 shrink-0" />{error}
-              </div>
-            )}
-
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-5" aria-label="Filtrar reservas">
-              {(['TODAS', 'PENDIENTES', 'COMPLETADAS', 'CANCELADAS'] as ReservationFilter[]).map(option => (
-                <button
-                  key={option}
-                  onClick={() => setFilter(option)}
-                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors ${filter === option ? 'bg-navy text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
-                >
-                  {option.charAt(0) + option.slice(1).toLowerCase()}
-                </button>
-              ))}
-            </div>
-
-            {!syncing && reservations.length === 0 ? (
-              <div className="p-10 text-center bg-white border border-slate-200 rounded-3xl">
-                <CalendarClock className="w-12 h-12 mx-auto text-slate-300" />
-                <h2 className="mt-4 text-xl font-black text-navy">Todavía no tienes reservas</h2>
-                <button onClick={onExplore} className="mt-5 px-6 py-3 rounded-xl bg-karenRed text-white text-sm font-bold">Explorar productos</button>
-              </div>
-            ) : filteredReservations.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 bg-white border border-slate-200 rounded-2xl">No hay reservas en este estado.</div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {filteredReservations.map(({ reservation, effectiveStatus }) => {
-                  const pending = effectiveStatus === 'PENDIENTE';
-                  const total = reservation.detalles.reduce((sum, item) => sum + Number(item.cantidad) * Number(item.precioUnitario), 0);
-                  return (
-                    <article key={reservation.id} className="flex flex-col bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="min-w-0">
-                          <div className="font-mono text-lg font-black text-navy break-all">{reservation.codigoRetiro}</div>
-                          <div className="mt-1 text-xs text-slate-500 flex items-start gap-1.5">
-                            <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                            <span>{new Date(reservation.fechaExpiracion).toLocaleString()}</span>
-                          </div>
-                        </div>
-                        <span className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold ${statusClass[effectiveStatus]}`}>{statusLabel[effectiveStatus]}</span>
-                      </div>
-                      <div className="mt-4 text-sm text-slate-600">
-                        {reservation.detalles.length} lote(s) · Total reservado: <strong className="text-navy">${total.toFixed(2)}</strong>
-                      </div>
-                      {pending && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-auto pt-4">
-                          <button onClick={() => onOpenPass(reservation)} className="min-h-11 rounded-xl bg-navy text-white text-sm font-bold flex items-center justify-center gap-2">
-                            <QrCode className="w-4 h-4" />Ver pase QR
-                          </button>
-                          <button onClick={() => void cancel(reservation.id)} disabled={cancelling === reservation.id} className="min-h-11 rounded-xl border border-red-300 text-red-700 text-sm font-bold disabled:opacity-60">
-                            {cancelling === reservation.id ? 'Cancelando…' : 'Cancelar reserva'}
-                          </button>
-                        </div>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </>
+        {authenticated && (
+          <button
+            onClick={() => void onRefresh()}
+            disabled={syncing}
+            className="h-10 px-4 rounded-tag border border-aisle-rule bg-white text-sm font-semibold text-ink flex items-center gap-2 disabled:opacity-60"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Actualizando…' : 'Actualizar'}
+          </button>
         )}
       </div>
+
+      {!authenticated ? (
+        <div className="max-w-lg rounded-tag bg-white border border-aisle-rule p-8">
+          <h2 className="font-tag font-bold text-2xl text-ink">Ingresa para ver tus reservas</h2>
+          <p className="mt-2 text-ink-soft">Tus códigos de retiro están protegidos por tu cuenta.</p>
+          <button onClick={onLogin} className="mt-5 h-11 px-5 rounded-tag bg-ink text-white font-semibold">Ingresar</button>
+        </div>
+      ) : (
+        <>
+          {error && (
+            <p role="alert" className="mb-5 flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm p-3">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{error}
+            </p>
+          )}
+
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6" role="tablist" aria-label="Filtrar reservas">
+            {FILTERS.map(option => (
+              <button
+                key={option.id}
+                role="tab"
+                aria-selected={filter === option.id}
+                onClick={() => setFilter(option.id)}
+                className={`shrink-0 h-9 px-3.5 rounded-tag text-sm font-semibold ${
+                  filter === option.id ? 'bg-ink text-white' : 'bg-white text-ink-soft border border-aisle-rule'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {!syncing && reservations.length === 0 ? (
+            <div className="max-w-lg rounded-tag bg-white border border-aisle-rule p-8">
+              <h2 className="font-tag font-bold text-2xl text-ink">Todavía no tienes reservas</h2>
+              <p className="mt-2 text-ink-soft">Agrega productos a tu lista y reserva para recibir tu código de retiro.</p>
+              <button onClick={onExplore} className="mt-5 h-11 px-5 rounded-tag bg-karen text-white font-semibold">Ver productos</button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-ink-muted">No tienes reservas en este grupo.</p>
+          ) : (
+            <ul className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filtered.map(({ reservation, effectiveStatus }) => {
+                const pending = effectiveStatus === 'PENDIENTE';
+                const total = reservation.detalles.reduce((sum, item) => sum + Number(item.cantidad) * Number(item.precioUnitario), 0);
+                const names = reservation.detalles.map(detail => detail.productoNombre).filter(Boolean) as string[];
+                return (
+                  <li key={reservation.id} className={`flex flex-col rounded-tag bg-white border ${pending ? 'border-ink' : 'border-aisle-rule'}`}>
+                    <div className="flex items-start justify-between gap-3 p-4">
+                      <div className="min-w-0">
+                        <p className="font-tag font-bold text-2xl text-ink tracking-wide leading-none">{reservation.codigoRetiro}</p>
+                        <p className="mt-1.5 text-xs text-ink-muted">
+                          {pending
+                            ? `Retira antes de ${formatDateTime(reservation.fechaExpiracion)}`
+                            : `Reservada el ${formatDateTime(reservation.created_at || reservation.fechaExpiracion)}`}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 rounded-tag px-2 py-1 text-xs font-semibold ${statusClass[effectiveStatus]}`}>
+                        {statusLabel[effectiveStatus]}
+                      </span>
+                    </div>
+                    <div className="rule-dashed mx-4" aria-hidden="true" />
+                    <div className="p-4 flex-1">
+                      {names.length > 0 && (
+                        <p className="text-sm text-ink-soft line-clamp-2">{names.join(', ')}</p>
+                      )}
+                      <p className="mt-2 text-sm text-ink-soft">
+                        Total reservado: <strong className="text-ink tabular">${total.toFixed(2)}</strong>
+                      </p>
+                    </div>
+                    {pending && (
+                      <div className="grid grid-cols-2 gap-2 p-4 pt-0">
+                        <button onClick={() => onOpenPass(reservation)} className="h-11 rounded-tag bg-ink text-white text-sm font-semibold flex items-center justify-center gap-2">
+                          <QrCode className="w-4 h-4" />Ver pase QR
+                        </button>
+                        <button
+                          onClick={() => void cancel(reservation.id)}
+                          disabled={cancelling === reservation.id}
+                          className="h-11 rounded-tag border border-aisle-strong text-karen-deep text-sm font-semibold disabled:opacity-60"
+                        >
+                          {cancelling === reservation.id ? 'Cancelando…' : 'Cancelar reserva'}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
+      )}
     </section>
   );
 };

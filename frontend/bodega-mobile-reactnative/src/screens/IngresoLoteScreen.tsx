@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { BackendProduct, UbicacionLote, CreateLotPayload } from '../types';
 import { api } from '../api/client';
+import { addDays, daysUntil, parseBusinessDate, toDateOnly } from '../utils/dates';
 import { classifyExpiryDays } from '../config/businessRules';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
-import { Ionicons } from '@expo/vector-icons';
+import { Button, DaysCounter, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
+import { colors, fonts, levelColors, radius } from '../theme/tokens';
 
 type BarcodeLookupState = 'idle' | 'loading' | 'found' | 'invalid' | 'not-found' | 'error';
 
@@ -26,12 +20,10 @@ interface IngresoLoteScreenProps {
   refreshing: boolean;
 }
 
+const newLotNumber = () => `LOT-IN-${Math.floor(1000 + Math.random() * 9000)}`;
+
 export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
-  products,
-  onLotCreated,
-  onOpenCatalog,
-  onRefresh,
-  refreshing,
+  products, onLotCreated, onOpenCatalog, onRefresh, refreshing,
 }) => {
   const [barcode, setBarcode] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<BackendProduct | null>(null);
@@ -47,22 +39,15 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   const [scannerOpen, setScannerOpen] = useState(false);
   const [barcodeState, setBarcodeState] = useState<BarcodeLookupState>('idle');
 
-  // Set default expiration date 20 days ahead
+  // Fechas por defecto: elaborado hoy y caducidad en 20 días.
   useEffect(() => {
-    const d = new Date();
-    const productionYear = d.getFullYear();
-    const productionMonth = String(d.getMonth() + 1).padStart(2, '0');
-    const productionDay = String(d.getDate()).padStart(2, '0');
-    setFechaElaboracion(`${productionYear}-${productionMonth}-${productionDay}`);
-    d.setDate(d.getDate() + 20);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    setFechaCaducidad(`${yyyy}-${mm}-${dd}`);
-    setNumeroLote(`LOT-IN-${Math.floor(1000 + Math.random() * 9000)}`);
+    const today = new Date();
+    setFechaElaboracion(toDateOnly(today));
+    setFechaCaducidad(toDateOnly(addDays(today, 20)));
+    setNumeroLote(newLotNumber());
   }, []);
 
-  // Validate the GTIN and resolve it against the product master.
+  // Valida el GTIN y lo busca en el catálogo maestro.
   useEffect(() => {
     const normalized = normalizeBarcode(barcode);
     let cancelled = false;
@@ -77,7 +62,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       return () => { cancelled = true; };
     }
 
-    const localProduct = products.find((product) => product.codigoBarras === normalized);
+    const localProduct = products.find(product => product.codigoBarras === normalized);
     if (localProduct) {
       setSelectedProduct(localProduct);
       setBarcodeState('found');
@@ -88,7 +73,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
     setBarcodeState('loading');
     const timer = setTimeout(() => {
       void api.getProductByBarcode(normalized)
-        .then((product) => {
+        .then(product => {
           if (cancelled) return;
           setSelectedProduct(product);
           setBarcodeState(product ? 'found' : 'not-found');
@@ -104,75 +89,45 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
     };
   }, [barcode, products]);
 
-  // Calculate days to expire
-  const calculateDaysLeft = (): number | null => {
-    if (!fechaCaducidad || !fechaCaducidad.includes('-')) return null;
-    try {
-      const target = new Date(fechaCaducidad);
-      if (isNaN(target.getTime())) return null;
-      const now = new Date();
-      const diffMs = target.getTime() - now.getTime();
-      return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    } catch {
-      return null;
-    }
-  };
-
-  const daysLeft = calculateDaysLeft();
-
-  const getFefoBadge = () => {
-    if (daysLeft === null) return null;
-    const level = classifyExpiryDays(daysLeft);
-    if (level === 'VENCIDO') {
-      return { bg: '#FEE2E2', text: '#DC2626', label: '⛔ FECHA CADUCADA' };
-    }
-    if (level === 'ROJO') {
-      return { bg: '#FEE2E2', text: '#DC2626', label: `CRÍTICO: ${daysLeft} DÍAS` };
-    }
-    if (level === 'AMARILLO') {
-      return { bg: '#FEF3C7', text: '#D97706', label: `PREVENTIVO: ${daysLeft} DÍAS` };
-    }
-    return { bg: '#DCFCE7', text: '#15803D', label: `NORMAL: ${daysLeft} DÍAS` };
-  };
-
-  const fefoStatus = getFefoBadge();
-
-  const handleScan = (code: string) => {
-    setError(null);
-    setBarcode(normalizeBarcode(code));
-  };
+  const daysLeft = (() => {
+    const days = daysUntil(fechaCaducidad);
+    return Number.isFinite(days) ? days : null;
+  })();
+  const level = daysLeft === null ? null : classifyExpiryDays(daysLeft);
 
   const handleSave = async () => {
     if (!selectedProduct) {
       setError(
         barcodeState === 'not-found'
-          ? 'El código es válido, pero el producto no está registrado en el catálogo maestro.'
+          ? 'El código es válido, pero el producto no está en el catálogo. Regístralo primero.'
           : barcodeState === 'error'
-            ? 'No se pudo consultar el catálogo. Verifica la conexión con el backend.'
-            : 'El código no es un GTIN/EAN válido. Revisa la lectura o el dígito verificador.'
+            ? 'No se pudo consultar el catálogo. Revisa la conexión con la tienda.'
+            : 'Escanea o escribe un código de barras válido.'
       );
       return;
     }
     if (!numeroLote.trim()) {
-      setError('El número de lote es obligatorio');
+      setError('Escribe el número de lote impreso en la caja.');
       return;
     }
-    if (!fechaCaducidad.trim()) {
-      setError('La fecha de caducidad es requerida (YYYY-MM-DD)');
+    const produced = parseBusinessDate(fechaElaboracion);
+    const expires = parseBusinessDate(fechaCaducidad);
+    if (!expires) {
+      setError('La fecha de caducidad no es válida. Usa el formato AAAA-MM-DD.');
       return;
     }
-    if (!fechaElaboracion.trim() || new Date(fechaElaboracion) >= new Date(fechaCaducidad)) {
-      setError('La fecha de elaboración es obligatoria y debe ser anterior a la caducidad');
+    if (!produced || produced >= expires) {
+      setError('La fecha de elaboración debe ser anterior a la de caducidad.');
       return;
     }
     const cost = Number(costoUnitario.replace(',', '.'));
     if (!Number.isFinite(cost) || cost <= 0) {
-      setError('El costo unitario debe ser un número mayor a cero');
+      setError('Escribe el costo unitario de compra (mayor a cero).');
       return;
     }
     const qty = parseInt(cantidad, 10);
     if (isNaN(qty) || qty <= 0) {
-      setError('La cantidad ingresada debe ser un número mayor a cero');
+      setError('Escribe cuántas unidades llegaron.');
       return;
     }
 
@@ -192,624 +147,189 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
 
     try {
       const created = await api.createLot(payload);
-      setSuccessMsg(
-        `✓ Lote ${created.numeroLote} ingresado con éxito en ${created.ubicacion} (${created.cantidadIngresada} un.)`
-      );
-      // Reset form
-      setNumeroLote(`LOT-IN-${Math.floor(1000 + Math.random() * 9000)}`);
+      setSuccessMsg(`Lote ${created.numeroLote} registrado: ${created.cantidadIngresada} unidades en ${created.ubicacion === 'PERCHA' ? 'percha' : 'bodega'}.`);
+      setNumeroLote(newLotNumber());
+      setBarcode('');
       onLotCreated();
-      setTimeout(() => setSuccessMsg(null), 4000);
+      setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al guardar el lote');
+      setError(err.response?.data?.message || err.message || 'No se pudo registrar el lote.');
     } finally {
       setLoading(false);
     }
   };
 
+  const hint = barcodeState === 'invalid'
+    ? 'El código no es un EAN válido. Revisa la lectura o el último dígito.'
+    : barcodeState === 'not-found'
+      ? 'Código válido, pero no está en el catálogo.'
+      : barcodeState === 'error'
+        ? 'No se pudo consultar el catálogo.'
+        : undefined;
+
   return (
     <ScrollView
       style={styles.container}
-      showsVerticalScrollIndicator={false}
-      alwaysBounceVertical
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" colors={['#4F46E5']} />}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} colors={[colors.ink]} />}
     >
-      {/* Title */}
-      <View style={styles.sectionHeader}>
-        <View style={styles.badgeTop}>
-          <Text style={styles.badgeTopText}>RECEPCIÓN DE MERCADERÍA</Text>
-        </View>
-        <Text style={styles.title}>Ingreso de Lotes por Caducidad</Text>
-        <Text style={styles.subtitle}>
-          Registra mercadería recibida de proveedores para control FEFO inmediato.
-        </Text>
-      </View>
+      <ScreenTitle title="Recibir mercadería" subtitle="Escanea el producto y registra el lote que llegó del proveedor." />
 
-      {/* Scanner de cámara o lector físico conectado al campo */}
-      <View style={styles.scanSimBox}>
-        <Text style={styles.scanSimLabel}>LECTOR DE PRODUCTOS</Text>
-        <TouchableOpacity style={styles.scanPill} onPress={() => setScannerOpen(true)}>
-          <Ionicons name="barcode-outline" size={19} color="#FFFFFF" />
-          <Text style={styles.scanPillText}>Escanear producto</Text>
-        </TouchableOpacity>
-      </View>
+      {error && <Notice tone="error" text={error} />}
+      {successMsg && <Notice tone="success" text={successMsg} />}
 
-      {/* Form Card */}
-      <View style={styles.card}>
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+      <Section step={1} title="Producto">
+        <Button label="Escanear código de barras" icon="barcode-outline" onPress={() => setScannerOpen(true)} />
+        <View style={styles.gap} />
+        <Field
+          label="O escríbelo"
+          placeholder="7861000100014"
+          value={barcode}
+          onChangeText={value => { setError(null); setBarcode(value); }}
+          keyboardType="number-pad"
+          invalid={barcodeState === 'invalid'}
+          hint={hint}
+          right={barcode ? (
+            <TouchableOpacity style={styles.clear} onPress={() => setBarcode('')} accessibilityLabel="Borrar código">
+              <Ionicons name="close" size={22} color={colors.inkMuted} />
+            </TouchableOpacity>
+          ) : null}
+        />
+        {barcodeState === 'loading' && (
+          <View style={styles.lookup}>
+            <ActivityIndicator size="small" color={colors.ink} />
+            <Text style={styles.lookupText}>Buscando en el catálogo…</Text>
           </View>
         )}
-
-        {successMsg && (
-          <View style={styles.successBox}>
-            <Text style={styles.successText}>{successMsg}</Text>
-          </View>
-        )}
-
-        {/* Barcode Input */}
-        <View style={styles.field}>
-          <Text style={styles.label}>CÓDIGO DE BARRAS / EAN-13:</Text>
-          <View style={styles.barcodeInputRow}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              placeholder="Ej: 7861000100014"
-              placeholderTextColor="#94A3B8"
-              value={barcode}
-              onChangeText={(value) => {
-                setError(null);
-                setBarcode(value);
-              }}
-              keyboardType="numeric"
-            />
-            {barcode ? (
-              <TouchableOpacity style={styles.clearBtn} onPress={() => setBarcode('')}>
-                <Ionicons name="close" size={21} color="#64748B" />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Detected Product Card */}
-        {selectedProduct ? (
-          <View style={styles.productDetectedCard}>
-            <View style={styles.productDetectedHeader}>
-              <Text style={styles.productDetectedBadge}>✓ PRODUCTO VINCULADO</Text>
-              <Text style={styles.productDetectedPrice}>
-                ${Number(selectedProduct.precioVenta).toFixed(2)}
+        {selectedProduct && (
+          <View style={styles.product} accessibilityLabel={`Producto: ${selectedProduct.nombre}`}>
+            <Ionicons name="checkmark-circle" size={22} color={colors.fresh} />
+            <View style={styles.productInfo}>
+              <Text style={styles.productName}>{selectedProduct.nombre}</Text>
+              <Text style={styles.productMeta}>
+                EAN {selectedProduct.codigoBarras}   PVP ${Number(selectedProduct.precioVenta).toFixed(2)}
               </Text>
             </View>
-            <Text style={styles.productDetectedName}>{selectedProduct.nombre}</Text>
-            <Text style={styles.productDetectedDesc}>
-              EAN: {selectedProduct.codigoBarras} • Alerta mínima: {selectedProduct.minStockAlerta} un.
-            </Text>
-          </View>
-        ) : barcodeState === 'loading' ? (
-          <View style={styles.productEmptyHint}>
-            <ActivityIndicator size="small" color="#4F46E5" />
-            <Text style={styles.productEmptyText}>Consultando catálogo maestro…</Text>
-          </View>
-        ) : (
-          <View style={styles.productEmptyHint}>
-            <Text style={styles.productEmptyText}>
-              {barcodeState === 'invalid'
-                ? 'El formato o dígito verificador del código no es válido.'
-                : barcodeState === 'not-found'
-                  ? `El código ${normalizeBarcode(barcode)} es válido, pero no está registrado en el catálogo maestro.`
-                  : barcodeState === 'error'
-                    ? 'No se pudo consultar el catálogo maestro.'
-                    : 'Ingresa o escanea un código de barras para cargar el producto maestro.'}
-            </Text>
           </View>
         )}
-
         {barcodeState === 'not-found' && (
-          <TouchableOpacity style={styles.registerProductBtn} onPress={onOpenCatalog}>
-            <Text style={styles.registerProductBtnText}>Abrir Catálogo para registrar producto</Text>
-          </TouchableOpacity>
+          <Button label="Registrar producto en el catálogo" icon="add-circle-outline" variant="outline" compact onPress={onOpenCatalog} />
         )}
+      </Section>
 
-        {/* Lot Number */}
-        <View style={styles.field}>
-          <Text style={styles.label}>NÚMERO DE LOTE:</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: LOT-VT-2026-99"
-            placeholderTextColor="#94A3B8"
-            value={numeroLote}
-            onChangeText={setNumeroLote}
-            autoCapitalize="characters"
-          />
-        </View>
-
-        {/* Expiration Date */}
-        <View style={styles.field}>
-          <Text style={styles.label}>FECHA DE ELABORACIÓN (YYYY-MM-DD):</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="2026-09-01"
-            placeholderTextColor="#94A3B8"
-            value={fechaElaboracion}
-            onChangeText={setFechaElaboracion}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>FECHA DE CADUCIDAD (YYYY-MM-DD):</Text>
-            {fefoStatus && (
-              <View style={[styles.fefoBadge, { backgroundColor: fefoStatus.bg }]}>
-                <Text style={[styles.fefoBadgeText, { color: fefoStatus.text }]}>
-                  {fefoStatus.label}
-                </Text>
-              </View>
-            )}
+      <Section step={2} title="Lote y fechas">
+        <Field label="Número de lote" value={numeroLote} onChangeText={setNumeroLote} autoCapitalize="characters" placeholder="LOT-VT-2026-99" />
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Field label="Elaboración" value={fechaElaboracion} onChangeText={setFechaElaboracion} placeholder="AAAA-MM-DD" autoCorrect={false} />
           </View>
-          <TextInput
-            style={styles.input}
-            placeholder="2026-09-25"
-            placeholderTextColor="#94A3B8"
-            value={fechaCaducidad}
-            onChangeText={setFechaCaducidad}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>COSTO UNITARIO DE ADQUISICIÓN:</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: 1.2500"
-            placeholderTextColor="#94A3B8"
-            value={costoUnitario}
-            onChangeText={setCostoUnitario}
-            keyboardType="decimal-pad"
-          />
-        </View>
-
-        {/* Quantity */}
-        <View style={styles.field}>
-          <Text style={styles.label}>CANTIDAD INGRESADA (UNIDADES):</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="50"
-            placeholderTextColor="#94A3B8"
-            value={cantidad}
-            onChangeText={setCantidad}
-            keyboardType="numeric"
-          />
-        </View>
-
-        {/* Location selector */}
-        <View style={styles.field}>
-          <Text style={styles.label}>UBICACIÓN FÍSICA INICIAL:</Text>
-          <View style={styles.locationToggleRow}>
-            <TouchableOpacity
-              style={[
-                styles.locationBtn,
-                ubicacion === 'BODEGA' && styles.locationBtnActive,
-              ]}
-              onPress={() => setUbicacion('BODEGA')}
-              accessibilityRole="button"
-              accessibilityLabel="Ubicación inicial: Bodega"
-            >
-              <View style={styles.locationBtnContent}>
-                <Ionicons name="cube-outline" size={22} color={ubicacion === 'BODEGA' ? '#FFFFFF' : '#334155'} />
-                <Text style={[styles.locationBtnText, ubicacion === 'BODEGA' && styles.locationBtnTextActive]}>
-                  Bodega
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.locationBtn,
-                ubicacion === 'PERCHA' && styles.locationBtnActive,
-              ]}
-              onPress={() => setUbicacion('PERCHA')}
-              accessibilityRole="button"
-              accessibilityLabel="Ubicación inicial: Percha"
-            >
-              <View style={styles.locationBtnContent}>
-                <Ionicons name="storefront-outline" size={22} color={ubicacion === 'PERCHA' ? '#FFFFFF' : '#334155'} />
-                <Text style={[styles.locationBtnText, ubicacion === 'PERCHA' && styles.locationBtnTextActive]}>
-                  Percha
-                </Text>
-              </View>
-            </TouchableOpacity>
+          <View style={styles.col}>
+            <Field label="Caducidad" value={fechaCaducidad} onChangeText={setFechaCaducidad} placeholder="AAAA-MM-DD" autoCorrect={false} />
           </View>
         </View>
+        {daysLeft !== null && level && (
+          <View style={[styles.preview, { borderLeftColor: levelColors(level).band }]}>
+            <DaysCounter days={daysLeft} color={level === 'AMARILLO' ? colors.ink : levelColors(level).band} />
+            <View style={styles.previewText}>
+              <Text style={[styles.previewLevel, { color: levelColors(level).text }]}>{levelColors(level).label}</Text>
+              <ExpiryStamp date={fechaCaducidad} />
+              {level !== 'NORMAL' && (
+                <Text style={styles.previewNote}>
+                  {level === 'VENCIDO' ? 'No se puede vender un lote vencido.' : 'Este lote aparecerá en "Por vencer" apenas se registre.'}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+      </Section>
 
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={styles.submitBtn}
-          onPress={handleSave}
-          disabled={loading}
-          activeOpacity={0.85}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <><Ionicons name="save-outline" size={20} color="#FFFFFF" /><Text style={styles.submitBtnText}>Guardar e Ingresar a Inventario FEFO</Text></>
-          )}
-        </TouchableOpacity>
-      </View>
+      <Section step={3} title="Cantidad y ubicación">
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Field label="Unidades" value={cantidad} onChangeText={setCantidad} keyboardType="number-pad" />
+          </View>
+          <View style={styles.col}>
+            <Field label="Costo unitario ($)" value={costoUnitario} onChangeText={setCostoUnitario} keyboardType="decimal-pad" placeholder="1.2500" />
+          </View>
+        </View>
+        <Text style={styles.label}>Dónde queda</Text>
+        <View style={styles.row}>
+          {(['BODEGA', 'PERCHA'] as UbicacionLote[]).map(option => {
+            const active = ubicacion === option;
+            return (
+              <TouchableOpacity
+                key={option}
+                style={[styles.toggle, active && styles.toggleActive]}
+                onPress={() => setUbicacion(option)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: active }}
+              >
+                <Ionicons name={option === 'BODEGA' ? 'cube-outline' : 'storefront-outline'} size={22} color={active ? colors.white : colors.ink} />
+                <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{option === 'BODEGA' ? 'Bodega' : 'Percha'}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </Section>
+
+      <Button label="Registrar lote" icon="checkmark-outline" variant="danger" loading={loading} onPress={() => void handleSave()} />
+
       <BarcodeScannerModal
         visible={scannerOpen}
         onClose={() => setScannerOpen(false)}
-        onScanned={handleScan}
+        onScanned={code => { setError(null); setBarcode(normalizeBarcode(code)); }}
       />
     </ScrollView>
   );
 };
 
+const Section: React.FC<{ step: number; title: string; children: React.ReactNode }> = ({ step, title, children }) => (
+  <View style={styles.section}>
+    <View style={styles.sectionHead}>
+      <Text style={styles.step}>{step}</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+    {children}
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 16,
+  container: { flex: 1, backgroundColor: colors.aisle },
+  content: { padding: 16, paddingBottom: 40 },
+  section: {
+    backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule,
+    padding: 16, marginBottom: 14,
   },
-  sectionHeader: {
-    marginBottom: 14,
+  sectionHead: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginBottom: 14 },
+  step: { fontFamily: fonts.tag, fontSize: 26, color: colors.karen },
+  sectionTitle: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink },
+  gap: { height: 14 },
+  clear: { width: 48, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: radius.tag, backgroundColor: colors.aisle },
+  lookup: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  lookupText: { fontFamily: fonts.medium, fontSize: 14, color: colors.inkSoft },
+  product: {
+    flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: colors.freshTint,
+    borderRadius: radius.tag, padding: 12, marginBottom: 4,
   },
-  badgeTop: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 4,
+  productInfo: { flex: 1 },
+  productName: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 21, color: colors.ink },
+  productMeta: { fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft, marginTop: 2 },
+  row: { flexDirection: 'row', gap: 10 },
+  col: { flex: 1, minWidth: 0 },
+  preview: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.aisle,
+    borderRadius: radius.tag, borderLeftWidth: 6, padding: 12,
   },
-  badgeTopText: {
-    color: '#4F46E5',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+  previewText: { flex: 1, gap: 2 },
+  previewLevel: { fontFamily: fonts.bold, fontSize: 15 },
+  previewNote: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.inkSoft, marginTop: 2 },
+  label: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, marginBottom: 6 },
+  toggle: {
+    flex: 1, minHeight: 56, borderRadius: radius.tag, borderWidth: 2, borderColor: colors.ink,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.white,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#1E293B',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  scanSimBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 14,
-  },
-  scanSimLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
-    marginBottom: 6,
-  },
-  scanRow: {
-    gap: 6,
-  },
-  scanPill: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-  },
-  scanPillText: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-    marginBottom: 40,
-  },
-  errorBox: {
-    backgroundColor: '#FEE2E2',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  successBox: {
-    backgroundColor: '#DCFCE7',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-  successText: {
-    color: '#15803D',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  field: {
-    marginBottom: 14,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#475569',
-    marginBottom: 4,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  fefoBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  fefoBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  barcodeInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  clearBtn: {
-    backgroundColor: '#E2E8F0',
-    width: 38,
-    height: 42,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clearBtnText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#64748B',
-  },
-  input: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#1E293B',
-    fontWeight: '600',
-  },
-  productDetectedCard: {
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-  },
-  productDetectedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  productDetectedBadge: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#16A34A',
-  },
-  productDetectedPrice: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#15803D',
-  },
-  productDetectedName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#14532D',
-  },
-  productDetectedDesc: {
-    fontSize: 11,
-    color: '#166534',
-    marginTop: 2,
-  },
-  productEmptyHint: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-  },
-  productEmptyText: {
-    fontSize: 11,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  registerProductBtn: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-    marginTop: -6,
-    marginBottom: 14,
-  },
-  registerProductBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  adminNotice: {
-    color: '#92400E',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 11,
-    marginTop: -6,
-    marginBottom: 14,
-  },
-  productFormCard: {
-    backgroundColor: '#EEF2FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 14,
-    padding: 12,
-    marginTop: -6,
-    marginBottom: 16,
-  },
-  productFormTitle: {
-    color: '#312E81',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  productFormSubtitle: {
-    color: '#6366F1',
-    fontSize: 10,
-    marginTop: 3,
-    marginBottom: 12,
-  },
-  productFormError: {
-    color: '#B91C1C',
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  categoryLoader: {
-    marginVertical: 10,
-  },
-  categoryList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
-  },
-  categoryBtn: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  categoryBtnActive: {
-    backgroundColor: '#4338CA',
-    borderColor: '#4338CA',
-  },
-  categoryBtnText: {
-    color: '#4338CA',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  categoryBtnTextActive: {
-    color: '#FFFFFF',
-  },
-  productFormInput: {
-    marginBottom: 11,
-    backgroundColor: '#FFFFFF',
-  },
-  productNumericRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  productNumericField: {
-    flex: 1,
-  },
-  productFormActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cancelProductBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#A5B4FC',
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  cancelProductBtnText: {
-    color: '#4338CA',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  saveProductBtn: {
-    flex: 1.5,
-    backgroundColor: '#4338CA',
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  saveProductBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  locationToggleRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  locationBtn: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  locationBtnActive: {
-    backgroundColor: '#1E293B',
-    borderColor: '#1E293B',
-  },
-  locationBtnText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#475569',
-  },
-  locationBtnContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-  },
-  locationBtnIcon: {
-    fontSize: 18,
-  },
-  locationBtnTextActive: {
-    color: '#FFFFFF',
-  },
-  submitBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#1E293B',
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  submitBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 13,
-  },
+  toggleActive: { backgroundColor: colors.ink },
+  toggleText: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
+  toggleTextActive: { color: colors.white },
 });

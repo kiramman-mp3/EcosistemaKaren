@@ -27,6 +27,13 @@ const getBaseUrl = (): string => {
 
 export const BASE_URL = getBaseUrl();
 
+/** Las imágenes llegan como rutas del backend (/api/v1/media/...); la app nativa necesita la URL completa. */
+export function mediaUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return BASE_URL.replace(/\/api\/v1$/, '') + path;
+}
+
 let authToken: string | null = null;
 let sessionExpiredListener: (() => void) | null = null;
 
@@ -113,11 +120,15 @@ export const api = {
   },
 
   // 2. Catálogo de Productos
+  // El backend pagina de a 100: se recorren las páginas para tener el catálogo completo.
   async getProducts(): Promise<BackendProduct[]> {
-      const res = await axios.get<{ success: boolean; data: BackendProduct[] }>(`${BASE_URL}/products`, {
-        params: { limit: 100, offset: 0 }, timeout: 4000
-      });
-      return res.data.data || [];
+    const pageSize = 100;
+    const all: BackendProduct[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const page = await this.getProductsPage({ limit: pageSize, offset });
+      all.push(...page.items);
+      if (page.items.length < pageSize || all.length >= page.total) return all;
+    }
   },
 
   async getProductsPage(params: { q?: string; categoriaId?: string; limit?: number; offset?: number }): Promise<{ items: BackendProduct[]; total: number }> {

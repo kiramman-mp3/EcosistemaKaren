@@ -69,3 +69,20 @@ test('las cuentas seed aceptan demo123 y rechazan contraseñas incorrectas', asy
     error => error.statusCode === 401
   );
 });
+
+test('el login responde igual para correo inexistente y contraseña incorrecta', async () => {
+  const memory = new InMemoryRepositories();
+  const useCase = new LoginUser(memory.userRepository, SECRET);
+  const messages = [];
+  for (const credentials of [
+    { email: 'no-existe@karen.com', password: 'demo123' },
+    { email: 'cliente@karen.com', password: 'incorrecta' },
+  ]) {
+    await assert.rejects(() => useCase.execute(credentials), error => {
+      assert.equal(error.statusCode, 401);
+      messages.push(error.message);
+      return true;
+    });
+  }
+  assert.equal(messages[0], messages[1]);
+});

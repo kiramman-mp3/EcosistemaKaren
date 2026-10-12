@@ -1,35 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  View,
-  Text,
-  Alert,
-  AppState,
-} from 'react-native';
-import { NavbarMobile } from './src/components/NavbarMobile';
-import { HeroSectionMobile } from './src/components/HeroSectionMobile';
-import { CategoriesGridMobile } from './src/components/CategoriesGridMobile';
-import { AntiOverbookingBannerMobile } from './src/components/AntiOverbookingBannerMobile';
-import { ProductCatalogMobile } from './src/components/ProductCatalogMobile';
-import { FlashOffersMobile } from './src/components/FlashOffersMobile';
+import { ActivityIndicator, AppState, StatusBar, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useFonts, Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold } from '@expo-google-fonts/archivo';
+import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow';
+import { Doto_900Black } from '@expo-google-fonts/doto';
+import { NavbarMobile, TabBar } from './src/components/NavbarMobile';
 import { PickupPassModal } from './src/components/PickupPassModal';
 import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
-import { MyReservationsModalMobile } from './src/components/MyReservationsModalMobile';
-import {
-  NavTab,
-  ProductCategory,
-  Product,
-  FlashOffer,
-  CartItem,
-  ReservationPass,
-  DataLoadState,
-} from './src/types';
-import { api, BackendReservation } from './src/api/client';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { CatalogScreen } from './src/screens/CatalogScreen';
+import { OffersScreen } from './src/screens/OffersScreen';
+import { ReservationsScreen } from './src/screens/ReservationsScreen';
+import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './src/types';
+import { api, BackendReservation, mediaUrl } from './src/api/client';
 import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
+import { formatDate } from './src/utils/dates';
+import { notify } from './src/utils/dialogs';
+import { colors } from './src/theme/tokens';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
 
@@ -40,16 +28,14 @@ function secondsUntilExpiration(expiration: string | undefined): number {
   return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
 }
 
-const CATEGORY_IMAGES: Record<string, string> = {
-  'Lácteos': 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=600&q=80',
-  'Carnes': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
-  'Panadería': 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
-  'Verduras': 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&w=600&q=80',
-  'Frutas': 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=600&q=80',
-  'Conservas': 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?auto=format&fit=crop&w=600&q=80',
-};
+// Las descripciones del catálogo vienen como "Marca · contenido".
+const describe = (value?: string) => value?.replace(/\s*·\s*/g, ', ').trim() || undefined;
 
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts({
+    Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold,
+    ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold, Doto_900Black,
+  });
   const [activeTab, setActiveTab] = useState<NavTab>('inicio');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Todos');
   const [categoriesList, setCategoriesList] = useState<ProductCategory[]>(['Todos']);
@@ -61,25 +47,24 @@ export default function App() {
   const [syncingReservations, setSyncingReservations] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol?: string } | null>(null);
 
-  // Connection & status
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [reservingOfferId, setReservingOfferId] = useState<string | null>(null);
   const [dataState, setDataState] = useState<DataLoadState>('loading');
+  const [refreshing, setRefreshing] = useState(false);
   const [dataError, setDataError] = useState<string>();
 
-  // Modales
   const [isPassOpen, setIsPassOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const syncReservations = useCallback(async (userId: string) => {
+  const syncReservations = useCallback(async (user: { id: string; nombre: string }) => {
     setSyncingReservations(true);
     try {
-      const list = await api.getUserReservations(userId);
+      const list = await api.getUserReservations(user.id);
       setReservations(list);
       const active = selectActiveReservation(list);
-      if (active) setPass(reservationToPass(active));
+      if (active) setPass({ ...reservationToPass(active), customerName: user.nombre });
       else {
         setPass(null);
         setIsPassOpen(false);
@@ -89,7 +74,6 @@ export default function App() {
     } finally { setSyncingReservations(false); }
   }, []);
 
-  // 1. Fetch Backend Heartbeat
   const checkHeartbeat = useCallback(async () => {
     try {
       const hb = await api.getHeartbeat();
@@ -99,83 +83,77 @@ export default function App() {
     }
   }, []);
 
-  // 2. Fetch Catalog & Data from Live Backend
   const loadBackendData = useCallback(async () => {
-    setDataState('loading');
     setDataError(undefined);
     try {
       await checkHeartbeat();
       const [backendCats, backendProds, backendLots, backendPromos] = await Promise.all([
         api.getCategories(), api.getProducts(), api.getLots(), api.getPromotions(),
       ]);
-      const categoryById = new Map(backendCats.map((category) => [category.id, category.nombre]));
-      setCategoriesList(Array.from(new Set(['Todos', ...backendCats.map((category) => category.nombre)])));
+      const categoryById = new Map(backendCats.map(category => [category.id, category.nombre]));
+      setCategoriesList(Array.from(new Set(['Todos', ...backendCats.map(category => category.nombre)])));
 
-      const mappedProducts: Product[] = backendProds.map((bp) => {
-          const matchingLots = backendLots.filter(
-            (l) => l.productoId === bp.id || l.productoNombre === bp.nombre
-          );
-          const totalStock = matchingLots.reduce(
-            (sum, l) => sum + (l.cantidadDisponible || 0),
-            0
-          );
-
-          return {
-            id: bp.id,
-            name: bp.nombre,
-            category: categoryById.get(bp.categoriaId) || 'Sin categoría',
-            price: Number(bp.precioVenta),
-            stock: totalStock,
-            image:
-              CATEGORY_IMAGES[categoryById.get(bp.categoriaId) || ''] ||
-              'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
-            badge: bp.codigoBarras ? `EAN: ${bp.codigoBarras}` : undefined,
-          };
-      });
+      const stockByProduct = new Map<string, number>();
+      for (const lot of backendLots) {
+        stockByProduct.set(lot.productoId, (stockByProduct.get(lot.productoId) || 0) + (lot.cantidadDisponible || 0));
+      }
+      const mappedProducts: Product[] = backendProds.map(bp => ({
+        id: bp.id,
+        name: bp.nombre,
+        category: categoryById.get(bp.categoriaId) || 'Sin categoría',
+        price: Number(bp.precioVenta),
+        stock: stockByProduct.get(bp.id) || 0,
+        image: mediaUrl(bp.imagenUrl),
+        description: describe(bp.descripcion),
+        barcode: bp.codigoBarras,
+      }));
       setProducts(mappedProducts);
 
-      const mappedOffers: FlashOffer[] = backendPromos.flatMap((pr) => {
-          const relatedLot = backendLots.find((l) => l.id === pr.loteId);
-          const relatedProduct = relatedLot && backendProds.find((product) => product.id === relatedLot.productoId);
-          if (!relatedLot || !relatedProduct || relatedLot.cantidadDisponible <= 0) return [];
-          const originalPrice = Number(relatedProduct.precioVenta);
-          const discountedPrice = originalPrice * (1 - pr.descuentoPorcentaje / 100);
-
-          return [{
-            id: pr.id,
-            title: pr.frasePromocional || relatedProduct.nombre,
-            category: categoryById.get(relatedProduct.categoriaId) || 'Sin categoría',
-            discountBadge: `-${pr.descuentoPorcentaje}%`,
-            aiBadge: Boolean(pr.razonIa),
-            urgencyBadge: `${relatedLot.cantidadDisponible} disponibles`,
-            price: Number(discountedPrice.toFixed(2)),
-            originalPrice,
-            stockTotal: relatedLot.cantidadIngresada,
-            stockAvailable: relatedLot.cantidadDisponible,
-            expiryText: `Caduca: ${new Date(relatedLot.fechaCaducidad).toLocaleDateString()}`,
-            image:
-              'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
-            loteId: relatedLot.id,
-            productId: relatedProduct.id,
-          }];
+      const productById = new Map(backendProds.map(product => [product.id, product]));
+      const mappedOffers: FlashOffer[] = backendPromos.flatMap(promo => {
+        const lot = backendLots.find(l => l.id === promo.loteId);
+        const product = lot && productById.get(lot.productoId);
+        if (!lot || !product || lot.cantidadDisponible <= 0) return [];
+        const originalPrice = Number(product.precioVenta);
+        return [{
+          id: promo.id,
+          title: promo.frasePromocional || product.nombre,
+          category: categoryById.get(product.categoriaId) || 'Oferta',
+          discountBadge: `-${promo.descuentoPorcentaje}%`,
+          aiBadge: Boolean(promo.razonIa),
+          urgencyBadge: `Quedan ${lot.cantidadDisponible}`,
+          price: Number((originalPrice * (1 - promo.descuentoPorcentaje / 100)).toFixed(2)),
+          originalPrice,
+          stockTotal: Math.max(lot.cantidadIngresada || 0, lot.cantidadDisponible),
+          stockAvailable: lot.cantidadDisponible,
+          expiryText: `Vence: ${formatDate(lot.fechaCaducidad)}`,
+          expiresOn: lot.fechaCaducidad,
+          productName: product.nombre,
+          image: mediaUrl(product.imagenUrl),
+          loteId: lot.id,
+          productId: product.id,
+        }];
       });
       setOffers(mappedOffers);
       setDataState(mappedProducts.length > 0 ? 'ready' : 'empty');
     } catch (error: any) {
-      setProducts([]);
-      setOffers([]);
-      setCategoriesList(['Todos']);
       setIsOnline(false);
       setDataState(error?.response ? 'error' : 'offline');
-      setDataError(error?.response?.data?.message || 'No fue posible obtener información del servidor.');
+      setDataError(error?.response?.data?.message || 'La tienda no respondió.');
     }
   }, [checkHeartbeat]);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadBackendData();
+    setRefreshing(false);
+  }, [loadBackendData]);
 
   useEffect(() => {
     void api.restoreSession().then(user => {
       if (user) {
         setCurrentUser(user);
-        void syncReservations(user.id);
+        void syncReservations(user);
       }
     });
     const unsubscribe = api.onSessionExpired(() => {
@@ -183,7 +161,7 @@ export default function App() {
       setPass(null);
       setReservations([]);
     });
-    loadBackendData();
+    void loadBackendData();
     const interval = setInterval(checkHeartbeat, 15000);
     return () => {
       clearInterval(interval);
@@ -193,303 +171,246 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const refresh = () => { void syncReservations(currentUser.id); };
-    const interval = setInterval(refresh, 15000);
+    const refreshReservations = () => { void syncReservations(currentUser); };
+    const interval = setInterval(refreshReservations, 15000);
     const subscription = AppState.addEventListener('change', state => {
-      if (state === 'active') refresh();
+      if (state === 'active') refreshReservations();
     });
     return () => { clearInterval(interval); subscription.remove(); };
   }, [currentUser, syncReservations]);
 
-  const totalCartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
-
   const handleAddToCart = (product: Product) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
+    setCart(prev => {
+      const existing = prev.find(i => i.product.id === product.id);
+      // Nunca más unidades que el stock disponible: la reserva fallaría por sobreventa.
       if (existing) {
-        return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
+        return prev.map(i => i.product.id === product.id ? { ...i, quantity: Math.min(i.quantity + 1, i.product.stock) } : i);
       }
-      return [...prev, { product, quantity: 1 }];
+      return product.stock > 0 ? [...prev, { product, quantity: 1 }] : prev;
     });
   };
 
   const handleUpdateQuantity = (id: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((i) => {
-          if (i.product.id === id) {
-            const next = i.quantity + delta;
-            return next > 0 ? { ...i, quantity: next } : null;
-          }
-          return i;
-        })
-        .filter(Boolean) as CartItem[]
-    );
+    setCart(prev => prev
+      .map(i => {
+        if (i.product.id !== id) return i;
+        const next = Math.min(i.quantity + delta, i.product.stock);
+        return next > 0 ? { ...i, quantity: next } : null;
+      })
+      .filter(Boolean) as CartItem[]);
   };
 
-  const handleSelectCategory = (cat: ProductCategory) => {
-    setSelectedCategory(cat);
-    setActiveTab('productos');
+  const openPassFor = async (code: string, fallback: ReservationPass) => {
+    const saved = await api.getReservationByCode(code).catch(() => null);
+    setPass(saved ? { ...reservationToPass(saved), customerName: currentUser?.nombre } : fallback);
+    setIsPassOpen(true);
   };
 
-  // Confirm Real Anti-Overbooking Reservation
   const handleConfirmReservation = async () => {
     if (cart.length === 0) return;
     if (!currentUser) {
-      Alert.alert('Inicio de sesión requerido', 'Debes iniciar sesión para reservar stock.');
+      setIsCartOpen(false);
       setIsLoginOpen(true);
       return;
     }
     setIsSubmitting(true);
-
     try {
-      const userId = currentUser.id;
-      const itemsPayload = cart.map((i) => ({
-        productoId: i.product.id,
-        cantidad: i.quantity,
-      }));
-
       const reservation = await api.createReservation({
-        usuarioId: userId,
-        items: itemsPayload,
+        usuarioId: currentUser.id,
+        items: cart.map(i => ({ productoId: i.product.id, cantidad: i.quantity })),
       });
-
       const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-
-      setPass({
+      setIsCartOpen(false);
+      await openPassFor(reservation.codigoRetiro, {
         code: reservation.codigoRetiro,
         status: reservation.estado,
         remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
         storeLocation: 'Sucursal Matriz',
-        items: cart.map((i) => ({
-          productName: i.product.name,
-          quantity: i.quantity,
-          price: i.product.price,
-        })),
+        customerName: currentUser.nombre,
+        items: cart.map(i => ({ productName: i.product.name, quantity: i.quantity, price: i.product.price })),
         total,
       });
-      void syncReservations(currentUser.id);
-
       setCart([]);
-      setIsCartOpen(false);
-      setIsPassOpen(true);
+      void syncReservations(currentUser);
+      void loadBackendData();
     } catch (err: any) {
-      Alert.alert(
-        'No se pudo crear la reserva',
-        err.message || 'Comprueba tu sesión y la conexión con la tienda.'
-      );
+      notify('No se pudo crear la reserva', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Reserve single flash offer
   const handleReserveOffer = async (offer: FlashOffer) => {
     if (!currentUser) {
-      Alert.alert('Inicio de sesión requerido', 'Debes iniciar sesión para reservar esta oferta.');
       setIsLoginOpen(true);
       return;
     }
-    try {
-      const userId = currentUser.id;
-      const matchingProduct = products.find((p) => p.id === offer.productId);
-
-      if (matchingProduct) {
-        const reservation = await api.createReservation({
-          usuarioId: userId,
-          items: [{ productoId: matchingProduct.id, cantidad: 1 }],
-        });
-
-        setPass({
-          code: reservation.codigoRetiro,
-          status: reservation.estado,
-          remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
-          storeLocation: 'Sucursal Matriz',
-          items: [{ productName: offer.title, quantity: 1, price: offer.price }],
-          total: offer.price,
-        });
-        void syncReservations(currentUser.id);
-        setIsPassOpen(true);
-        return;
-      }
-    } catch (err: any) {
-      Alert.alert(
-        'No se pudo reservar la oferta',
-        err.message || 'Comprueba tu sesión y la conexión con la tienda.'
-      );
+    const product = products.find(p => p.id === offer.productId);
+    if (!product) {
+      notify('Esta oferta ya no está disponible', 'Actualizamos la lista de ofertas.');
+      void loadBackendData();
       return;
+    }
+    setReservingOfferId(offer.id);
+    try {
+      // promocionId hace que el backend cobre el precio con descuento y use el lote en oferta.
+      const reservation = await api.createReservation({
+        usuarioId: currentUser.id,
+        items: [{ productoId: product.id, cantidad: 1, promocionId: offer.id }],
+      });
+      await openPassFor(reservation.codigoRetiro, {
+        code: reservation.codigoRetiro,
+        status: reservation.estado,
+        remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
+        storeLocation: 'Sucursal Matriz',
+        customerName: currentUser.nombre,
+        items: [{ productName: product.name, quantity: 1, price: offer.price }],
+        total: offer.price,
+      });
+      void syncReservations(currentUser);
+      void loadBackendData();
+    } catch (err: any) {
+      notify('No se pudo reservar la oferta', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+    } finally {
+      setReservingOfferId(null);
     }
   };
 
+  const goTo = (tab: NavTab) => {
+    setActiveTab(tab);
+    if (tab === 'reservas' && currentUser) void syncReservations(currentUser);
+  };
+
+  if (!fontsLoaded && !fontError) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.splash}>
+          <ActivityIndicator size="large" color={colors.white} />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
+  const cartTotal = cart.reduce((sum, i) => sum + i.quantity * i.product.price, 0);
+  const activeCode = pass && pass.remainingSeconds > 0 ? pass.code : undefined;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+        <NavbarMobile
+          cartCount={cartCount}
+          cartTotal={cartTotal}
+          onOpenCart={() => setIsCartOpen(true)}
+          onOpenAccount={() => setIsLoginOpen(true)}
+          userName={currentUser?.nombre}
+          isOnline={isOnline}
+        />
 
-      {/* Navbar Superior con Heartbeat y Consulta de PIN */}
-      <NavbarMobile
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        cartCount={totalCartCount}
-        onOpenCart={() => setIsCartOpen(true)}
-        onOpenLogin={() => setIsLoginOpen(true)}
-        isOnline={isOnline}
-        userName={currentUser?.nombre}
-        onOpenSearchReservation={() => {
-          setIsSearchOpen(true);
-          if (currentUser) void syncReservations(currentUser.id);
-        }}
-      />
-
-      {/* Main Content */}
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        {activeTab === 'inicio' && (
-          <View>
-            <HeroSectionMobile
-              onNavigate={setActiveTab}
-              onOpenPassPreview={() => pass
-                ? setIsPassOpen(true)
-                : Alert.alert('Sin reserva activa', 'Crea una reserva para consultar tu pase de retiro.')}
-            />
-            <CategoriesGridMobile
-              onSelectCategory={handleSelectCategory}
-              categories={categoriesList}
+        <View style={styles.body}>
+          {activeTab === 'inicio' && (
+            <HomeScreen
               products={products}
+              categories={categoriesList}
+              offers={offers}
               state={dataState}
+              refreshing={refreshing}
+              onRefresh={() => void refresh()}
+              onNavigate={goTo}
+              onSelectCategory={category => { setSelectedCategory(category); setActiveTab('productos'); }}
+              onReserveOffer={offer => void handleReserveOffer(offer)}
+              reservingOfferId={reservingOfferId}
+              activePassCode={activeCode}
+              onOpenPass={() => setIsPassOpen(true)}
             />
-            <AntiOverbookingBannerMobile isOnline={isOnline} />
-          </View>
-        )}
-
-        {activeTab === 'productos' && (
-          <ProductCatalogMobile
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            onAddToCart={handleAddToCart}
-            onOpenCart={() => setIsCartOpen(true)}
-            cartCount={totalCartCount}
-            products={products}
-            categories={categoriesList}
-            state={dataState}
-            error={dataError}
-            onRetry={loadBackendData}
-          />
-        )}
-
-        {activeTab === 'ofertas' && (
-          <FlashOffersMobile
-            offers={offers}
-            onReserveOffer={handleReserveOffer}
-            state={dataState === 'ready' && offers.length === 0 ? 'empty' : dataState}
-            error={dataError}
-            onRetry={loadBackendData}
-          />
-        )}
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerBrand}>SK Supermercado Karen</Text>
-          <Text style={styles.footerSubtitle}>
-            Sistema Omnicanal de Reservas Anti-Overbooking
-          </Text>
-          <Text style={[styles.footerStatus, { color: isOnline ? '#16A34A' : '#EF4444' }]}>
-            {isOnline
-              ? '🟢 Servidor Local Tienda: ONLINE (Sincronizado con Caja SIACI)'
-              : '🔴 Servidor Local Tienda: DESCONECTADO (Modo Local Seguro)'}
-          </Text>
-          <Text style={styles.footerCopy}>
-            © 2026 Supermercado Karen. Todos los derechos reservados.
-          </Text>
+          )}
+          {activeTab === 'productos' && (
+            <CatalogScreen
+              products={products}
+              categories={categoriesList}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              cart={cart}
+              onAddToCart={handleAddToCart}
+              state={dataState}
+              error={dataError}
+              refreshing={refreshing}
+              onRefresh={() => void refresh()}
+            />
+          )}
+          {activeTab === 'ofertas' && (
+            <OffersScreen
+              offers={offers}
+              state={dataState}
+              error={dataError}
+              refreshing={refreshing}
+              onRefresh={() => void refresh()}
+              onReserveOffer={offer => void handleReserveOffer(offer)}
+              reservingOfferId={reservingOfferId}
+            />
+          )}
+          {activeTab === 'reservas' && (
+            <ReservationsScreen
+              authenticated={Boolean(currentUser)}
+              reservations={reservations}
+              syncing={syncingReservations}
+              onRefresh={async () => { if (currentUser) await syncReservations(currentUser); }}
+              onCancel={async id => {
+                await api.cancelReservation(id);
+                if (currentUser) await syncReservations(currentUser);
+                await loadBackendData();
+              }}
+              onOpenPass={reservation => {
+                setPass({ ...reservationToPass(reservation), customerName: currentUser?.nombre });
+                setIsPassOpen(true);
+              }}
+              onLogin={() => setIsLoginOpen(true)}
+              onExplore={() => setActiveTab('productos')}
+            />
+          )}
         </View>
-      </ScrollView>
 
-      {/* Modales */}
-      {pass && (
-        <PickupPassModal pass={pass} visible={isPassOpen} onClose={() => setIsPassOpen(false)} />
-      )}
+        <SafeAreaView edges={['bottom']} style={styles.tabs}>
+          <TabBar activeTab={activeTab} onChange={goTo} offersCount={offers.length} hasActivePass={Boolean(activeCode)} />
+        </SafeAreaView>
 
-      <CartDrawerMobile
-        visible={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cart}
-        onUpdateQuantity={handleUpdateQuantity}
-        onConfirmReservation={handleConfirmReservation}
-        isSubmitting={isSubmitting}
-      />
+        {pass && <PickupPassModal pass={pass} visible={isPassOpen} onClose={() => setIsPassOpen(false)} />}
 
-      <LoginModalMobile
-        visible={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
-        currentUser={currentUser}
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          void syncReservations(user.id);
-        }}
-        onLogout={() => {
-          setCurrentUser(null);
-          setPass(null);
-          setReservations([]);
-          setCart([]);
-        }}
-      />
+        <CartDrawerMobile
+          visible={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          items={cart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onConfirmReservation={() => void handleConfirmReservation()}
+          isSubmitting={isSubmitting}
+          isLoggedIn={Boolean(currentUser)}
+          isOnline={isOnline}
+        />
 
-      <MyReservationsModalMobile
-        visible={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        authenticated={Boolean(currentUser)}
-        reservations={reservations}
-        syncing={syncingReservations}
-        onRefresh={async () => { if (currentUser) await syncReservations(currentUser.id); }}
-        onCancel={async id => {
-          await api.cancelReservation(id);
-          if (currentUser) await syncReservations(currentUser.id);
-          await loadBackendData();
-        }}
-        onOpenPass={reservation => {
-          setPass(reservationToPass(reservation));
-          setIsPassOpen(true);
-        }}
-      />
-    </SafeAreaView>
+        <LoginModalMobile
+          visible={isLoginOpen}
+          onClose={() => setIsLoginOpen(false)}
+          currentUser={currentUser}
+          onLoginSuccess={user => {
+            setCurrentUser(user);
+            void syncReservations(user);
+          }}
+          onLogout={() => {
+            setCurrentUser(null);
+            setPass(null);
+            setReservations([]);
+            setCart([]);
+          }}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scroll: {
-    flex: 1,
-  },
-  footer: {
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 20,
-  },
-  footerBrand: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#1D3557',
-  },
-  footerSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  footerStatus: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  footerCopy: {
-    fontSize: 9,
-    color: '#94A3B8',
-    marginTop: 6,
-  },
+  splash: { flex: 1, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  safeArea: { flex: 1, backgroundColor: colors.white },
+  body: { flex: 1, backgroundColor: colors.aisle },
+  tabs: { backgroundColor: colors.white },
 });

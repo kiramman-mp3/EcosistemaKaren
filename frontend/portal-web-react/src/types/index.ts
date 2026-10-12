@@ -13,6 +13,7 @@ export interface Product {
   badge?: string;
   expiryDate?: string;
   unit?: string;
+  description?: string;
   barcode?: string;
   reservationProductId?: string;
   promotionId?: string;
@@ -32,6 +33,8 @@ export interface FlashOffer {
   stockTotal: number;
   stockAvailable: number;
   expiryText: string;    // "⏰ Caduca: Hoy, 20:00"
+  expiresOn?: string;    // AAAA-MM-DD del lote en oferta
+  productName?: string;
   image: string;
   loteId?: string;
   productId?: string;
