@@ -150,9 +150,11 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser) return;
+    // El canal SSE solo avisa de lotes nuevos; el estado "online" de la tienda lo
+    // decide el heartbeat, no la conexión SSE.
     return api.subscribeAlerts(
       () => { void loadData(); },
-      connected => { if (connected) setIsOnline(true); }
+      () => {}
     );
   }, [currentUser, loadData]);
 
@@ -205,6 +207,11 @@ export default function App() {
         onLogout={() => {
           void api.logout();
           setCurrentUser(null);
+          setProducts([]);
+          setLots([]);
+          setAlerts([]);
+          setSelectedPromo(null);
+          setMermaTarget(null);
         }}
       />
 
