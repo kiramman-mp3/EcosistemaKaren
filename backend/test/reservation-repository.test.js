@@ -102,3 +102,27 @@ test('PostgreSQL devuelve el detalle de reserva con nombre de producto y cliente
   assert.ok(listed, 'la reserva debe aparecer en el historial del cliente');
   assert.equal(listed.detalles[0].productoNombre, ctx.productName);
 });
+
+test('PostgreSQL expira reservas vencidas y registra cada liberación con su reserva', async t => {
+  const ctx = await setup(t);
+  if (!ctx) return;
+  const reservation = await ctx.repo.createWithLockedStock(new Reservation({
+    usuarioId: ctx.customer.id,
+    fechaExpiracion: new Date(Date.now() - 1000),
+  }), [{ productoId: ctx.productId, cantidad: 4 }]);
+  ctx.reservationIds.push(reservation.id);
+
+  const result = await ctx.repo.expirePendingWithLockedStock();
+  assert.ok(result.countLiberadas >= 1);
+
+  const expired = await ctx.repo.findById(reservation.id);
+  assert.equal(expired.estado, 'EXPIRADA');
+  const lot = await ctx.lotRepo.findById(ctx.lot.id);
+  assert.equal(lot.cantidadDisponible, 10);
+  assert.equal(lot.cantidadReservada, 0);
+  const [release] = await ctx.lotRepo.findMovements({ loteId: ctx.lot.id });
+  assert.equal(release.tipo, 'LIBERACION');
+  assert.equal(release.reservaId, reservation.id);
+  assert.equal(release.disponibleAntes, 6);
+  assert.equal(release.disponibleDespues, 10);
+});

@@ -697,31 +697,41 @@ class PostgresReservationRepository {
       }
 
       const detailsResult = await client.query(`
-        SELECT lote_id as "loteId", SUM(cantidad)::int as cantidad
+        SELECT reserva_id as "reservaId", lote_id as "loteId", SUM(cantidad)::int as cantidad
         FROM reserva_detalles
         WHERE reserva_id = ANY($1::uuid[])
-        GROUP BY lote_id
-        ORDER BY lote_id ASC
+        GROUP BY reserva_id, lote_id
+        ORDER BY lote_id ASC, reserva_id ASC
       `, [reservationIds]);
-      const grouped = new Map(detailsResult.rows.map(row => [row.loteId, Number(row.cantidad)]));
+      const grouped = new Map();
+      for (const row of detailsResult.rows) {
+        grouped.set(row.loteId, (grouped.get(row.loteId) || 0) + Number(row.cantidad));
+      }
       const lots = await this._lockLots(client, [...grouped.keys()]);
       this._assertReservedQuantities(lots, grouped);
 
-      for (const lot of lots) {
-        const quantity = grouped.get(lot.id);
+      // Un movimiento por reserva y lote: la liberación queda trazable a su reserva.
+      const balances = new Map(lots.map(lot => [lot.id, {
+        disponible: Number(lot.cantidadDisponible), reservada: Number(lot.cantidadReservada)
+      }]));
+      for (const detail of detailsResult.rows) {
+        const quantity = Number(detail.cantidad);
+        const balance = balances.get(detail.loteId);
         await client.query(`
           UPDATE lotes
           SET cantidad_disponible = cantidad_disponible + $1,
               cantidad_reservada = cantidad_reservada - $1,
               updated_at = CURRENT_TIMESTAMP
           WHERE id = $2
-        `, [quantity, lot.id]);
+        `, [quantity, detail.loteId]);
         await this._insertMovement(client, {
-          loteId: lot.id, tipo: 'LIBERACION', cantidad: quantity,
-          disponibleAntes: Number(lot.cantidadDisponible), disponibleDespues: Number(lot.cantidadDisponible) + quantity,
-          reservadaAntes: Number(lot.cantidadReservada), reservadaDespues: Number(lot.cantidadReservada) - quantity,
-          motivo: 'Liberación automática por expiración', metadata: { reservationIds }
+          loteId: detail.loteId, tipo: 'LIBERACION', cantidad: quantity,
+          disponibleAntes: balance.disponible, disponibleDespues: balance.disponible + quantity,
+          reservadaAntes: balance.reservada, reservadaDespues: balance.reservada - quantity,
+          motivo: 'Liberación automática por expiración', reservaId: detail.reservaId
         });
+        balance.disponible += quantity;
+        balance.reservada -= quantity;
       }
 
       await client.query(`
