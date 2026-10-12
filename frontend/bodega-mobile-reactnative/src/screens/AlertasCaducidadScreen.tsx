@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { ExpiryAlertItem, BackendPromotion } from '../types';
 import { api } from '../api/client';
+import { formatDate } from '../utils/dates';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AlertasCaducidadScreenProps {
@@ -197,7 +198,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
                 <View style={styles.metaRow}>
                   <Text style={styles.metaItem}>Lote: <Text style={styles.bold}>{item.numeroLote}</Text></Text>
                   <Text style={styles.metaDot}>•</Text>
-                  <Text style={styles.metaItem}>Expira: <Text style={styles.bold}>{new Date(item.fechaCaducidad).toLocaleDateString()}</Text></Text>
+                  <Text style={styles.metaItem}>Expira: <Text style={styles.bold}>{formatDate(item.fechaCaducidad)}</Text></Text>
                 </View>
 
                 {/* Stock Details */}

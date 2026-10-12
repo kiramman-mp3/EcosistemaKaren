@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { BackendProduct, UbicacionLote, CreateLotPayload } from '../types';
 import { api } from '../api/client';
+import { addDays, daysUntil, parseBusinessDate, toDateOnly } from '../utils/dates';
 import { classifyExpiryDays } from '../config/businessRules';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
@@ -49,16 +50,9 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
 
   // Set default expiration date 20 days ahead
   useEffect(() => {
-    const d = new Date();
-    const productionYear = d.getFullYear();
-    const productionMonth = String(d.getMonth() + 1).padStart(2, '0');
-    const productionDay = String(d.getDate()).padStart(2, '0');
-    setFechaElaboracion(`${productionYear}-${productionMonth}-${productionDay}`);
-    d.setDate(d.getDate() + 20);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    setFechaCaducidad(`${yyyy}-${mm}-${dd}`);
+    const today = new Date();
+    setFechaElaboracion(toDateOnly(today));
+    setFechaCaducidad(toDateOnly(addDays(today, 20)));
     setNumeroLote(`LOT-IN-${Math.floor(1000 + Math.random() * 9000)}`);
   }, []);
 
@@ -106,16 +100,8 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
 
   // Calculate days to expire
   const calculateDaysLeft = (): number | null => {
-    if (!fechaCaducidad || !fechaCaducidad.includes('-')) return null;
-    try {
-      const target = new Date(fechaCaducidad);
-      if (isNaN(target.getTime())) return null;
-      const now = new Date();
-      const diffMs = target.getTime() - now.getTime();
-      return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    } catch {
-      return null;
-    }
+    const days = daysUntil(fechaCaducidad);
+    return Number.isFinite(days) ? days : null;
   };
 
   const daysLeft = calculateDaysLeft();
@@ -161,7 +147,13 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       setError('La fecha de caducidad es requerida (YYYY-MM-DD)');
       return;
     }
-    if (!fechaElaboracion.trim() || new Date(fechaElaboracion) >= new Date(fechaCaducidad)) {
+    const produced = parseBusinessDate(fechaElaboracion);
+    const expires = parseBusinessDate(fechaCaducidad);
+    if (!expires) {
+      setError('La fecha de caducidad no es válida (AAAA-MM-DD)');
+      return;
+    }
+    if (!produced || produced >= expires) {
       setError('La fecha de elaboración es obligatoria y debe ser anterior a la caducidad');
       return;
     }
