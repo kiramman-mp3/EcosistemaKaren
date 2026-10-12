@@ -56,7 +56,9 @@ class PostgresProductRepository {
   }
 
   async findAll({ q = '', categoriaId = null, limit = 30, offset = 0 } = {}) {
-    const search = q.trim() ? `%${q.trim()}%` : null;
+    // Escapa comodines de LIKE para que '%' o '_' se busquen como texto literal.
+    const term = q.trim().replace(/[\\%_]/g, char => `\\${char}`);
+    const search = term ? `%${term}%` : null;
     const [res, countResult] = await Promise.all([
       this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
@@ -65,7 +67,7 @@ class PostgresProductRepository {
              p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
              p.created_at, p.updated_at
       FROM productos p
-      WHERE ($1::text IS NULL OR p.nombre ILIKE $1 OR p.codigo_barras ILIKE $1)
+      WHERE ($1::text IS NULL OR unaccent(p.nombre) ILIKE unaccent($1) OR p.codigo_barras ILIKE $1)
         AND ($2::uuid IS NULL OR p.categoria_id = $2)
       ORDER BY p.nombre ASC
       LIMIT $3 OFFSET $4
@@ -73,7 +75,7 @@ class PostgresProductRepository {
       this.pool.query(`
         SELECT COUNT(*)::integer AS total
         FROM productos p
-        WHERE ($1::text IS NULL OR p.nombre ILIKE $1 OR p.codigo_barras ILIKE $1)
+        WHERE ($1::text IS NULL OR unaccent(p.nombre) ILIKE unaccent($1) OR p.codigo_barras ILIKE $1)
           AND ($2::uuid IS NULL OR p.categoria_id = $2)
       `, [search, categoriaId])
     ]);

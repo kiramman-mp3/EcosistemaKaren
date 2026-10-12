@@ -29,6 +29,10 @@ const MIGRATIONS = [
   {
     version: '008_product_image',
     file: path.resolve(__dirname, '../../../init-db/08-product-image.sql')
+  },
+  {
+    version: '009_product_search',
+    file: path.resolve(__dirname, '../../../init-db/09-product-search.sql')
   }
 ];
 
