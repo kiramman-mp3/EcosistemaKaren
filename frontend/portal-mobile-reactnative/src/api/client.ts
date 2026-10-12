@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 import { clearSession, loadSession, saveSession, StoredUser } from '../auth/secureSession';
 
 const getBaseUrl = (): string => {
-  const configuredUrl = (globalThis as any)?.process?.env?.EXPO_PUBLIC_API_URL;
+  // Expo solo inlinea la variable si se lee literalmente como process.env.EXPO_PUBLIC_API_URL.
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
   if (configuredUrl) return configuredUrl.replace(/\/$/, '');
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:4000/api/v1';
