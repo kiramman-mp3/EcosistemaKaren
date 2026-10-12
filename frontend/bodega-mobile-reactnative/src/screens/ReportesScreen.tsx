@@ -1,12 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { formatDateTime } from '../utils/dates';
 import { InventoryMovement, InventoryWaste } from '../types';
-import { Ionicons } from '@expo/vector-icons';
+import { Button, Notice, ScreenTitle } from '../components/ui';
+import { colors, fonts, radius } from '../theme/tokens';
 
 const money = (value?: number | null) => value == null ? 'No registrado' : `$${Number(value).toFixed(2)}`;
-const dateTime = (value: string) => formatDateTime(value);
+
+const MOVEMENT_LABEL: Record<string, string> = {
+  INGRESO: 'Ingreso', TRASLADO: 'Traslado', MERMA: 'Merma', RESERVA: 'Reserva web',
+  LIBERACION: 'Liberación', VENTA: 'Venta', VENCIMIENTO: 'Vencimiento', AJUSTE: 'Ajuste',
+};
+const LOCATION_LABEL: Record<string, string> = { BODEGA: 'Bodega', PERCHA: 'Percha' };
 
 export const ReportesScreen: React.FC = () => {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
@@ -34,78 +41,146 @@ export const ReportesScreen: React.FC = () => {
   const selectedWaste = selectedMovement ? wastes.find(item => item.movimientoId === selectedMovement.id) : undefined;
 
   return <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} alwaysBounceVertical
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#1D4ED8" colors={['#1D4ED8']} />}>
-      <Text style={styles.title}>Reportes operativos</Text>
-      <Text style={styles.subtitle}>Resumen auditable basado en movimientos reales de inventario.</Text>
-      {loading ? <ActivityIndicator style={styles.loading} /> : error ? <View style={styles.error}><Text>{error}</Text><TouchableOpacity onPress={load}><Text style={styles.link}>Reintentar</Text></TouchableOpacity></View> : <>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.ink} colors={[colors.ink]} />}
+    >
+      <ScreenTitle title="Movimientos y mermas" subtitle={`Últimos ${movements.length} movimientos y ${wastes.length} bajas registradas.`} />
+      {loading && !movements.length ? <ActivityIndicator style={styles.loading} color={colors.ink} /> : error ? <>
+        <Notice tone="error" text={error} />
+        <Button label="Intentar de nuevo" variant="outline" onPress={() => void load()} />
+      </> : <>
         <View style={styles.grid}>
-          <Metric label="Unidades ingresadas" value={totals.ingresos.toString()} />
-          <Metric label="Unidades vendidas" value={totals.ventas.toString()} />
-          <Metric label="Unidades de merma" value={totals.mermas.toString()} />
-          <Metric label="Costo de merma" value={`$${totals.costoMerma.toFixed(2)}`} />
+          <Metric label="Unidades recibidas" value={String(totals.ingresos)} />
+          <Metric label="Unidades vendidas" value={String(totals.ventas)} />
+          <Metric label="Unidades de merma" value={String(totals.mermas)} />
+          <Metric label="Costo de la merma" value={`$${totals.costoMerma.toFixed(2)}`} alert />
         </View>
 
-        <Text style={styles.section}>Productos dados de baja</Text>
-        <Text style={styles.sectionHelp}>Historial de mermas con su impacto económico.</Text>
-        {wastes.slice(0, 20).map(item => <TouchableOpacity key={item.id} style={styles.wasteCard} onPress={() => {
-          const movement = movements.find(entry => entry.id === item.movimientoId);
-          if (movement) setSelectedMovement(movement);
-        }}>
-          <View style={styles.rowMain}><View style={styles.rowText}>
-            <Text style={styles.wasteProduct}>{item.productoNombre || 'Producto no identificado'}</Text>
-            <Text style={styles.meta}>Lote {item.numeroLote || item.loteId.slice(0, 8)} · {dateTime(item.created_at)}</Text>
-            <Text style={styles.wasteReason}>{item.razon}</Text>
-          </View><View style={styles.wasteTotals}>
-            <Text style={styles.wasteQuantity}>{item.cantidad} un.</Text><Text style={styles.wasteCost}>{money(item.costoTotal)}</Text>
-          </View></View>
-        </TouchableOpacity>)}
-        {wastes.length === 0 && <Text style={styles.empty}>No se han registrado productos dados de baja.</Text>}
+        <Text style={styles.section}>Bajas recientes</Text>
+        {wastes.slice(0, 20).map(item => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.row}
+            onPress={() => {
+              const movement = movements.find(entry => entry.id === item.movimientoId);
+              if (movement) setSelectedMovement(movement);
+            }}
+          >
+            <View style={styles.rowText}>
+              <Text style={styles.product} numberOfLines={1}>{item.productoNombre || 'Producto no identificado'}</Text>
+              <Text style={styles.reason} numberOfLines={1}>{item.razon}</Text>
+              <Text style={styles.meta}>Lote {item.numeroLote || item.loteId.slice(0, 8)}, {formatDateTime(item.created_at)}</Text>
+            </View>
+            <View style={styles.amountColumn}>
+              <Text style={styles.qtyAlert}>-{item.cantidad}</Text>
+              <Text style={styles.cost}>{money(item.costoTotal)}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+        {wastes.length === 0 && <Text style={styles.empty}>Sin bajas registradas.</Text>}
 
         <Text style={styles.section}>Últimos movimientos</Text>
-        <Text style={styles.sectionHelp}>Toca una tarjeta para consultar su trazabilidad completa.</Text>
-        {movements.slice(0, 30).map(item => <TouchableOpacity key={item.id} style={styles.row} onPress={() => setSelectedMovement(item)}>
-          <View style={styles.rowText}><Text style={styles.kind}>{item.tipo}</Text>
-            <Text style={styles.productName}>{item.productoNombre || 'Producto no identificado'}</Text>
-            <Text style={styles.meta}>Lote {item.numeroLote || item.loteId.slice(0, 8)} · {dateTime(item.created_at)}</Text>
-          </View><View style={styles.movementValue}><Text style={styles.quantity}>{item.cantidad}</Text><Text style={styles.detailHint}>Ver detalle ›</Text></View>
-        </TouchableOpacity>)}
-        {movements.length === 0 && <Text style={styles.empty}>No existen movimientos para reportar.</Text>}
+        {movements.slice(0, 30).map(item => (
+          <TouchableOpacity key={item.id} style={styles.row} onPress={() => setSelectedMovement(item)}>
+            <View style={styles.rowText}>
+              <Text style={styles.kind}>{MOVEMENT_LABEL[item.tipo] || item.tipo}</Text>
+              <Text style={styles.product} numberOfLines={1}>{item.productoNombre || 'Producto no identificado'}</Text>
+              <Text style={styles.meta}>Lote {item.numeroLote || item.loteId.slice(0, 8)}, {formatDateTime(item.created_at)}</Text>
+            </View>
+            <View style={styles.amountRow}>
+              <Text style={styles.qty}>{item.cantidad}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.inkFaint} />
+            </View>
+          </TouchableOpacity>
+        ))}
+        {movements.length === 0 && <Text style={styles.empty}>Sin movimientos.</Text>}
       </>}
     </ScrollView>
 
     <Modal visible={Boolean(selectedMovement)} transparent animationType="fade" onRequestClose={() => setSelectedMovement(null)}>
-      <View style={styles.modalOverlay}>{selectedMovement && <View style={styles.modalCard}>
-        <View style={styles.modalHeader}><View><Text style={styles.modalType}>{selectedMovement.tipo}</Text><Text style={styles.modalDate}>{dateTime(selectedMovement.created_at)}</Text></View>
-          <TouchableOpacity style={styles.closeBtn} onPress={() => setSelectedMovement(null)}><Ionicons name="close" size={26} color="#64748B" /></TouchableOpacity></View>
+      <View style={styles.backdrop}>{selectedMovement && <View style={styles.card}>
+        <View style={styles.cardHead}>
+          <View style={styles.flex}>
+            <Text style={styles.cardTitle}>{MOVEMENT_LABEL[selectedMovement.tipo] || selectedMovement.tipo}</Text>
+            <Text style={styles.meta}>{formatDateTime(selectedMovement.created_at)}</Text>
+          </View>
+          <TouchableOpacity style={styles.close} onPress={() => setSelectedMovement(null)} accessibilityLabel="Cerrar">
+            <Ionicons name="close" size={26} color={colors.inkMuted} />
+          </TouchableOpacity>
+        </View>
         <ScrollView showsVerticalScrollIndicator={false}>
           <Detail label="Producto" value={selectedMovement.productoNombre || 'No identificado'} />
           <Detail label="Código de barras" value={selectedMovement.codigoBarras || 'No registrado'} />
-          <Detail label="Número de lote" value={selectedMovement.numeroLote || selectedMovement.loteId} />
-          <Detail label="Cantidad involucrada" value={`${selectedMovement.cantidad} unidades`} />
-          <Detail label="Stock disponible" value={`${selectedMovement.disponibleAntes} → ${selectedMovement.disponibleDespues}`} />
-          <Detail label="Stock reservado" value={`${selectedMovement.reservadaAntes} → ${selectedMovement.reservadaDespues}`} />
-          <Detail label="Ubicación" value={selectedMovement.ubicacionOrigen || selectedMovement.ubicacionDestino ? `${selectedMovement.ubicacionOrigen || '—'} → ${selectedMovement.ubicacionDestino || '—'}` : 'Sin cambio de ubicación'} />
+          <Detail label="Lote" value={selectedMovement.numeroLote || selectedMovement.loteId} />
+          <Detail label="Unidades" value={String(selectedMovement.cantidad)} />
+          <Detail label="Libre (antes → después)" value={`${selectedMovement.disponibleAntes} → ${selectedMovement.disponibleDespues}`} />
+          <Detail label="Apartado (antes → después)" value={`${selectedMovement.reservadaAntes} → ${selectedMovement.reservadaDespues}`} />
+          <Detail
+            label="Ubicación"
+            value={selectedMovement.ubicacionOrigen !== selectedMovement.ubicacionDestino
+              ? `${LOCATION_LABEL[selectedMovement.ubicacionOrigen || ''] || '—'} → ${LOCATION_LABEL[selectedMovement.ubicacionDestino || ''] || '—'}`
+              : LOCATION_LABEL[selectedMovement.ubicacionOrigen || ''] || 'Sin cambio'}
+          />
           <Detail label="Costo unitario" value={money(selectedMovement.costoUnitario)} />
-          <Detail label="Precio de venta" value={money(selectedMovement.precioVenta)} />
-          {selectedWaste && <Detail label="Costo total de la merma" value={money(selectedWaste.costoTotal)} emphasis />}
+          <Detail label="PVP" value={money(selectedMovement.precioVenta)} />
+          {selectedWaste && <Detail label="Costo de la merma" value={money(selectedWaste.costoTotal)} emphasis />}
           <Detail label="Motivo" value={selectedMovement.motivo || selectedWaste?.razon || 'No especificado'} />
           <Detail label="Responsable" value={selectedMovement.actorNombre || selectedWaste?.registradaPorNombre || 'Proceso automático'} />
-          <TouchableOpacity style={styles.doneBtn} onPress={() => setSelectedMovement(null)}><Text style={styles.doneText}>Cerrar detalle</Text></TouchableOpacity>
+          <Button label="Cerrar" variant="ghost" onPress={() => setSelectedMovement(null)} style={styles.done} />
         </ScrollView>
       </View>}</View>
     </Modal>
   </>;
 };
 
-const Metric = ({ label, value }: { label: string; value: string }) => <View style={styles.metric}><Text style={styles.value}>{value}</Text><Text style={styles.label}>{label}</Text></View>;
-const Detail = ({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) => <View style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><Text style={[styles.detailValue, emphasis && styles.detailValueEmphasis]}>{value}</Text></View>;
+const Metric = ({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) => (
+  <View style={styles.metric}>
+    <Text style={[styles.metricValue, alert && { color: colors.karen }]}>{value}</Text>
+    <Text style={styles.metricLabel}>{label}</Text>
+  </View>
+);
+
+const Detail = ({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) => (
+  <View style={styles.detail}>
+    <Text style={styles.detailLabel}>{label}</Text>
+    <Text style={[styles.detailValue, emphasis && { color: colors.karen }]}>{value}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
-  container:{flex:1,backgroundColor:'#F8FAFC'},content:{padding:16,paddingBottom:40},title:{fontSize:22,fontWeight:'900',color:'#1E293B'},subtitle:{color:'#64748B',marginBottom:16},loading:{margin:40},
-  grid:{flexDirection:'row',flexWrap:'wrap',gap:10},metric:{width:'48%',backgroundColor:'#FFF',padding:14,borderRadius:14,borderWidth:1,borderColor:'#E2E8F0'},value:{fontSize:22,fontWeight:'900',color:'#1D4ED8'},label:{fontSize:11,color:'#64748B'},
-  section:{fontSize:17,fontWeight:'900',marginTop:22,color:'#0F172A'},sectionHelp:{color:'#64748B',fontSize:10,marginBottom:9},row:{backgroundColor:'#FFF',padding:14,borderRadius:14,marginBottom:9,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},rowMain:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},rowText:{flex:1,paddingRight:8},kind:{fontWeight:'900',color:'#1E293B'},productName:{fontSize:12,fontWeight:'700',color:'#334155',marginTop:2},meta:{fontSize:10,color:'#64748B',marginTop:2},quantity:{fontSize:20,fontWeight:'900',color:'#0F172A',textAlign:'right'},movementValue:{alignItems:'flex-end'},detailHint:{color:'#2563EB',fontSize:9,fontWeight:'700',marginTop:3},
-  wasteCard:{backgroundColor:'#FFF7ED',borderWidth:1,borderColor:'#FED7AA',padding:13,borderRadius:14,marginBottom:9},wasteProduct:{color:'#9A3412',fontSize:13,fontWeight:'900'},wasteReason:{color:'#7C2D12',fontSize:10,marginTop:4},wasteTotals:{alignItems:'flex-end'},wasteQuantity:{color:'#C2410C',fontSize:17,fontWeight:'900'},wasteCost:{color:'#9A3412',fontSize:10,fontWeight:'700',marginTop:2},
-  error:{padding:16,backgroundColor:'#FEE2E2',borderRadius:12},link:{color:'#1D4ED8',fontWeight:'800',marginTop:8},empty:{color:'#64748B',textAlign:'center',padding:20},
-  modalOverlay:{flex:1,backgroundColor:'rgba(15,23,42,0.72)',justifyContent:'center',padding:20},modalCard:{backgroundColor:'#FFFFFF',borderRadius:20,padding:18,maxHeight:'90%'},modalHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:1,borderBottomColor:'#E2E8F0',paddingBottom:12,marginBottom:6},modalType:{color:'#1D4ED8',fontSize:20,fontWeight:'900'},modalDate:{color:'#64748B',fontSize:10,marginTop:2},closeBtn:{width:34,height:34,borderRadius:17,backgroundColor:'#F1F5F9',alignItems:'center',justifyContent:'center'},closeText:{color:'#64748B',fontSize:24,lineHeight:26},detailRow:{flexDirection:'row',justifyContent:'space-between',gap:12,paddingVertical:7,borderBottomWidth:1,borderBottomColor:'#F1F5F9'},detailLabel:{color:'#64748B',fontSize:10,fontWeight:'700',flex:1},detailValue:{color:'#1E293B',fontSize:11,fontWeight:'800',flex:1.6,textAlign:'right'},detailValueEmphasis:{color:'#DC2626',fontSize:13},doneBtn:{backgroundColor:'#1E293B',borderRadius:12,padding:12,alignItems:'center',marginTop:14},doneText:{color:'#FFFFFF',fontWeight:'900'},
+  flex: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.aisle },
+  content: { padding: 16, paddingBottom: 40 },
+  loading: { margin: 40 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  metric: { flexGrow: 1, flexBasis: '45%', backgroundColor: colors.white, padding: 14, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule },
+  metricValue: { fontFamily: fonts.tag, fontSize: 30, lineHeight: 32, color: colors.ink },
+  metricLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted },
+  section: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink, marginTop: 24, marginBottom: 10 },
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: radius.tag,
+    borderWidth: 1, borderColor: colors.rule, padding: 12, marginBottom: 8,
+  },
+  rowText: { flex: 1, minWidth: 0 },
+  kind: { fontFamily: fonts.bold, fontSize: 13, color: colors.karen },
+  product: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
+  reason: { fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft },
+  meta: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted, marginTop: 2 },
+  amountColumn: { alignItems: 'flex-end' },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  qty: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink },
+  qtyAlert: { fontFamily: fonts.tag, fontSize: 22, color: colors.karen },
+  cost: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
+  empty: { fontFamily: fonts.body, color: colors.inkMuted, textAlign: 'center', padding: 20 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.6)', justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.white, borderRadius: radius.tag, padding: 18, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center' },
+  cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderBottomWidth: 1, borderBottomColor: colors.rule, paddingBottom: 12, marginBottom: 4 },
+  cardTitle: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },
+  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  detail: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.aisle },
+  detailLabel: { flex: 1, fontFamily: fonts.medium, fontSize: 13, color: colors.inkMuted },
+  detailValue: { flex: 1.4, fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textAlign: 'right' },
+  done: { marginTop: 14 },
 });
