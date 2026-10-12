@@ -113,11 +113,15 @@ export const api = {
   },
 
   // 2. Catálogo de Productos
+  // El backend pagina de a 100: se recorren las páginas para tener el catálogo completo.
   async getProducts(): Promise<BackendProduct[]> {
-      const res = await axios.get<{ success: boolean; data: BackendProduct[] }>(`${BASE_URL}/products`, {
-        params: { limit: 100, offset: 0 }, timeout: 4000
-      });
-      return res.data.data || [];
+    const pageSize = 100;
+    const all: BackendProduct[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const page = await this.getProductsPage({ limit: pageSize, offset });
+      all.push(...page.items);
+      if (page.items.length < pageSize || all.length >= page.total) return all;
+    }
   },
 
   async getProductsPage(params: { q?: string; categoriaId?: string; limit?: number; offset?: number }): Promise<{ items: BackendProduct[]; total: number }> {
