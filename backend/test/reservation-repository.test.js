@@ -8,6 +8,8 @@ const Reservation = require('../src/domain/entities/Reservation');
 const { getPool } = require('../src/infrastructure/db/postgres');
 const { PostgresLotRepository, PostgresReservationRepository } = require('../src/adapters/repositories/PostgresRepositories');
 
+test.after(() => getPool().end());
+
 async function setup(t) {
   const pool = getPool();
   try {
@@ -21,7 +23,6 @@ async function setup(t) {
   const customer = await pool.query("SELECT id, nombre FROM usuarios WHERE rol = 'CLIENTE' ORDER BY id LIMIT 1");
   if (!category.rowCount || !actor.rowCount || !customer.rowCount) {
     t.skip('Faltan semillas de categoría, bodeguero o cliente');
-    await pool.end();
     return null;
   }
 
@@ -49,7 +50,6 @@ async function setup(t) {
     if (reservationIds.length) await pool.query('DELETE FROM reservas WHERE id = ANY($1::uuid[])', [reservationIds]);
     await pool.query('DELETE FROM lotes WHERE id = $1', [lot.id]);
     await pool.query('DELETE FROM productos WHERE id = $1', [productId]);
-    await pool.end();
   });
 
   return {
@@ -79,4 +79,26 @@ test('PostgreSQL cancela una reserva vigente, libera el stock y registra la libe
   const movements = await ctx.lotRepo.findMovements({ loteId: ctx.lot.id });
   assert.equal(movements[0].tipo, 'LIBERACION');
   assert.equal(movements[0].reservaId, reservation.id);
+});
+
+test('PostgreSQL devuelve el detalle de reserva con nombre de producto y cliente', async t => {
+  const ctx = await setup(t);
+  if (!ctx) return;
+  const reservation = await ctx.repo.createWithLockedStock(new Reservation({
+    usuarioId: ctx.customer.id,
+    fechaExpiracion: new Date(Date.now() + 10 * 60 * 1000),
+  }), [{ productoId: ctx.productId, cantidad: 2 }]);
+  ctx.reservationIds.push(reservation.id);
+
+  const byCode = await ctx.repo.findByCode(reservation.codigoRetiro);
+  assert.equal(byCode.clienteNombre, ctx.customer.nombre);
+  assert.equal(byCode.detalles.length, 1);
+  assert.equal(byCode.detalles[0].productoNombre, ctx.productName);
+  assert.equal(byCode.detalles[0].imagenUrl, '/api/v1/media/productos/test.jpg');
+  assert.equal(byCode.detalles[0].numeroLote, ctx.lot.numeroLote);
+
+  const byUser = await ctx.repo.findByUserId(ctx.customer.id, { limit: 50, offset: 0 });
+  const listed = byUser.find(item => item.id === reservation.id);
+  assert.ok(listed, 'la reserva debe aparecer en el historial del cliente');
+  assert.equal(listed.detalles[0].productoNombre, ctx.productName);
 });
