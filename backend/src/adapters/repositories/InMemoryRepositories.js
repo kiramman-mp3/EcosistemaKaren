@@ -28,6 +28,7 @@ class InMemoryRepositories {
     this.promotions = [];
     this.movements = [];
     this.wastes = [];
+    this.revokedTokens = new Map();
 
     this.seed();
   }
@@ -649,6 +650,31 @@ class InMemoryRepositories {
         const promo = new Promotion({ ...promoData, id: promoData.id || randomUUID() });
         this.promotions.push(promo);
         return promo;
+      }
+    };
+  }
+
+  get tokenBlacklistRepository() {
+    return {
+      revoke: async (jti, usuarioId, expiraEn) => {
+        this.revokedTokens.set(jti, { usuarioId, expiraEn });
+      },
+      isRevoked: async (jti) => {
+        const entry = this.revokedTokens.get(jti);
+        if (!entry) return false;
+        if (entry.expiraEn && new Date(entry.expiraEn).getTime() <= Date.now()) {
+          this.revokedTokens.delete(jti);
+          return false;
+        }
+        return true;
+      },
+      cleanExpired: async () => {
+        const now = Date.now();
+        for (const [jti, entry] of this.revokedTokens.entries()) {
+          if (entry.expiraEn && new Date(entry.expiraEn).getTime() <= now) {
+            this.revokedTokens.delete(jti);
+          }
+        }
       }
     };
   }

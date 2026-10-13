@@ -26,7 +26,8 @@ const {
   PostgresReservationRepository,
   PostgresUserRepository,
   PostgresAlertRepository,
-  PostgresPromotionRepository
+  PostgresPromotionRepository,
+  PostgresTokenBlacklistRepository
 } = require('../../adapters/repositories/PostgresRepositories');
 const InMemoryRepositories = require('../../adapters/repositories/InMemoryRepositories');
 const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
@@ -114,7 +115,7 @@ async function createServer() {
   app.use(httpSecurity.hpp);
   app.use(httpSecurity.rejectDangerousKeys);
 
-  let categoryRepo, productRepo, lotRepo, reservationRepo, userRepo, alertRepo, promotionRepo;
+  let categoryRepo, productRepo, lotRepo, reservationRepo, userRepo, alertRepo, promotionRepo, tokenBlacklistRepo;
 
   if (dbConnected) {
     categoryRepo = new PostgresCategoryRepository(pool);
@@ -124,6 +125,7 @@ async function createServer() {
     userRepo = new PostgresUserRepository(pool);
     alertRepo = new PostgresAlertRepository(pool);
     promotionRepo = new PostgresPromotionRepository(pool);
+    tokenBlacklistRepo = new PostgresTokenBlacklistRepository(pool);
   } else {
     const mem = new InMemoryRepositories();
     categoryRepo = mem.categoryRepository;
@@ -133,6 +135,7 @@ async function createServer() {
     userRepo = mem.userRepository;
     alertRepo = mem.alertRepository;
     promotionRepo = mem.promotionRepository;
+    tokenBlacklistRepo = mem.tokenBlacklistRepository;
   }
 
   // Componentes de Infraestructura
@@ -214,9 +217,9 @@ async function createServer() {
     managePromotionsUC,
     aiMetrics
   );
-  const authController = new AuthController(registerUserUC, loginUserUC);
+  const authController = new AuthController(registerUserUC, loginUserUC, tokenBlacklistRepo, process.env.JWT_SECRET);
   const heartbeatController = new HeartbeatController(heartbeatMonitor);
-  const security = createAuthMiddleware(process.env.JWT_SECRET);
+  const security = createAuthMiddleware(process.env.JWT_SECRET, tokenBlacklistRepo);
 
   // Iniciar Worker Background Sweeper para expiración de reservas TTL
   const sweeperWorker = new ReservationCleanerWorker(cleanExpiredReservationsUC, 60000);

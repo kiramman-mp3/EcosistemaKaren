@@ -1273,6 +1273,33 @@ class PostgresPromotionRepository {
   }
 }
 
+class PostgresTokenBlacklistRepository {
+  constructor(pool) {
+    this.pool = pool;
+  }
+
+  async revoke(jti, usuarioId, expiraEn) {
+    await this.pool.query(
+      `INSERT INTO tokens_revocados (jti, usuario_id, expira_en)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (jti) DO NOTHING`,
+      [jti, usuarioId, expiraEn]
+    );
+  }
+
+  async isRevoked(jti) {
+    const res = await this.pool.query(
+      'SELECT 1 FROM tokens_revocados WHERE jti = $1',
+      [jti]
+    );
+    return res.rowCount > 0;
+  }
+
+  async cleanExpired() {
+    await this.pool.query('DELETE FROM tokens_revocados WHERE expira_en <= CURRENT_TIMESTAMP');
+  }
+}
+
 module.exports = {
   PostgresCategoryRepository,
   PostgresProductRepository,
@@ -1280,5 +1307,6 @@ module.exports = {
   PostgresReservationRepository,
   PostgresUserRepository,
   PostgresAlertRepository,
-  PostgresPromotionRepository
+  PostgresPromotionRepository,
+  PostgresTokenBlacklistRepository
 };

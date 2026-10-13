@@ -37,6 +37,10 @@ const MIGRATIONS = [
   {
     version: '010_heartbeat_and_ratelimit',
     file: path.resolve(__dirname, '../../../init-db/10-heartbeat-and-ratelimit.sql')
+  },
+  {
+    version: '011_token_revocation',
+    file: path.resolve(__dirname, '../../../init-db/11-token-revocation.sql')
   }
 ];
 
