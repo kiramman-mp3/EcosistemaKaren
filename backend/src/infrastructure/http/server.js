@@ -14,6 +14,7 @@ const AlertStreamManager = require('../sse/AlertStreamManager');
 const ReservationCleanerWorker = require('../workers/ReservationCleanerWorker');
 const LotExpiryWorker = require('../workers/LotExpiryWorker');
 const HeartbeatMonitor = require('../heartbeat/HeartbeatMonitor');
+const PostgresHeartbeatStore = require('../heartbeat/PostgresHeartbeatStore');
 const PromotionCache = require('../cache/PromotionCache');
 const aiMetrics = require('../metrics/AiMetricsCollector');
 
@@ -59,7 +60,21 @@ const createApiRouter = require('./routes/router');
 async function createServer() {
   validateProductionSecurity(process.env);
   const app = express();
-  const httpSecurity = createSecurityMiddlewares(process.env);
+
+  // Probar conexión PostgreSQL
+  const dbConnected = await testConnection();
+  let pool = null;
+
+  if (dbConnected) {
+    pool = getPool();
+    await runMigrations(pool);
+  } else {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('PostgreSQL es obligatorio en producción; se rechazó el fallback en memoria.');
+    }
+  }
+
+  const httpSecurity = createSecurityMiddlewares(process.env, { pool });
 
   const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
   if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) app.set('trust proxy', trustProxyHops);
@@ -99,14 +114,9 @@ async function createServer() {
   app.use(httpSecurity.hpp);
   app.use(httpSecurity.rejectDangerousKeys);
 
-  // Probar conexión PostgreSQL
-  const dbConnected = await testConnection();
-
   let categoryRepo, productRepo, lotRepo, reservationRepo, userRepo, alertRepo, promotionRepo;
 
   if (dbConnected) {
-    const pool = getPool();
-    await runMigrations(pool);
     categoryRepo = new PostgresCategoryRepository(pool);
     productRepo = new PostgresProductRepository(pool);
     lotRepo = new PostgresLotRepository(pool);
@@ -115,9 +125,6 @@ async function createServer() {
     alertRepo = new PostgresAlertRepository(pool);
     promotionRepo = new PostgresPromotionRepository(pool);
   } else {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('PostgreSQL es obligatorio en producción; se rechazó el fallback en memoria.');
-    }
     const mem = new InMemoryRepositories();
     categoryRepo = mem.categoryRepository;
     productRepo = mem.productRepository;
@@ -131,7 +138,12 @@ async function createServer() {
   // Componentes de Infraestructura
   const alertStreamManager = new AlertStreamManager();
   const geminiAdapter = new GeminiAdapter(process.env.GEMINI_API_KEY);
-  const heartbeatMonitor = new HeartbeatMonitor(process.env.HEARTBEAT_TIMEOUT_SECONDS || 60);
+  const heartbeatStore = pool ? new PostgresHeartbeatStore(pool) : null;
+  const heartbeatMonitor = new HeartbeatMonitor(
+    process.env.HEARTBEAT_TIMEOUT_SECONDS || 60,
+    () => Date.now(),
+    heartbeatStore
+  );
   const cacheTtlSeconds = process.env.GEMINI_CACHE_TTL_SECONDS === undefined
     ? 900
     : Number(process.env.GEMINI_CACHE_TTL_SECONDS);
