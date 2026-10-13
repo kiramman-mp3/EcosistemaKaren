@@ -19,6 +19,10 @@ interface ProductCatalogProps {
   onReserveOffer?: (offer: FlashOffer) => void | Promise<void>;
   searchQuery?: string;
   onSearch?: (query: string) => void;
+  currentPage?: number;
+  totalProducts?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 type SortKey = 'nombre' | 'precio-asc' | 'precio-desc';
@@ -28,6 +32,7 @@ const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').t
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   products, categories, selectedCategory, onSelectCategory, onAddToCart, loading = false, state,
   errorMessage, onRefresh, offers = [], onReserveOffer, searchQuery = '', onSearch,
+  currentPage = 0, totalProducts, pageSize = 24, onPageChange,
 }) => {
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [sort, setSort] = useState<SortKey>('nombre');
@@ -197,18 +202,46 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-            {visible.map(product => (
-              <ProductTag
-                key={product.id}
-                product={product}
-                offer={offersByProduct.get(product.id)}
-                showCategory={selectedCategory === 'Todos'}
-                onAdd={onAddToCart}
-                onReserveOffer={onReserveOffer}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+              {visible.map(product => (
+                <ProductTag
+                  key={product.id}
+                  product={product}
+                  offer={offersByProduct.get(product.id)}
+                  showCategory={selectedCategory === 'Todos'}
+                  onAdd={onAddToCart}
+                  onReserveOffer={onReserveOffer}
+                />
+              ))}
+            </div>
+
+            {totalProducts !== undefined && onPageChange && Math.ceil(totalProducts / (pageSize || 24)) > 1 && (
+              <nav aria-label="Paginación de catálogo" className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-aisle-rule pt-4 text-sm">
+                <p className="text-ink-soft">
+                  Página <span className="font-semibold text-ink">{(currentPage || 0) + 1}</span> de{' '}
+                  <span className="font-semibold text-ink">{Math.ceil(totalProducts / (pageSize || 24))}</span>{' '}
+                  <span className="text-ink-muted">({totalProducts} productos en total)</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onPageChange((currentPage || 0) - 1)}
+                    disabled={(currentPage || 0) <= 0 || loading}
+                    className="h-9 px-4 rounded-tag border border-aisle-rule bg-white font-medium text-ink hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => onPageChange((currentPage || 0) + 1)}
+                    disabled={(currentPage || 0) >= Math.ceil(totalProducts / (pageSize || 24)) - 1 || loading}
+                    className="h-9 px-4 rounded-tag border border-aisle-rule bg-white font-medium text-ink hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </nav>
+            )}
+          </>
         )}
       </div>
     </section>
