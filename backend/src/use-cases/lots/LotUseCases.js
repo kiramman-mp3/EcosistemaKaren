@@ -191,11 +191,20 @@ function validateAuditFilters(filters = {}, allowType) {
 }
 
 class ObtenerAlertasCaducidad {
-  constructor(lotRepository) {
+  constructor(lotRepository, alertRepository = null) {
     this.lotRepository = lotRepository;
+    this.alertRepository = alertRepository;
   }
 
-  async execute() {
+  async execute(filters = {}) {
+    if (this.alertRepository && typeof this.alertRepository.findAll === 'function') {
+      const persisted = await this.alertRepository.findAll(filters);
+      const hasFilters = filters && Object.keys(filters).length > 0;
+      if ((persisted && persisted.length > 0) || hasFilters) {
+        return persisted;
+      }
+    }
+
     const activeLots = await this.lotRepository.findForExpiryAlerts();
     const alerts = [];
 
@@ -223,6 +232,26 @@ class ObtenerAlertasCaducidad {
   }
 }
 
+class AtenderAlertaCaducidad {
+  constructor(alertRepository) {
+    this.alertRepository = alertRepository;
+  }
+
+  async execute(alertId) {
+    if (!alertId) {
+      throw new ValidationException('El ID de la alerta es requerido.');
+    }
+    if (!this.alertRepository || typeof this.alertRepository.findById !== 'function') {
+      throw new ValidationException('Repositorio de alertas no disponible.');
+    }
+    const alert = await this.alertRepository.findById(alertId);
+    if (!alert) {
+      throw new NotFoundException(`La alerta con ID '${alertId}' no existe.`);
+    }
+    return await this.alertRepository.markAsAttended(alertId);
+  }
+}
+
 class ExpireLots {
   constructor(lotRepository) {
     this.lotRepository = lotRepository;
@@ -242,5 +271,6 @@ module.exports = {
   GetInventoryMovements,
   GetWastes,
   ObtenerAlertasCaducidad,
+  AtenderAlertaCaducidad,
   ExpireLots
 };

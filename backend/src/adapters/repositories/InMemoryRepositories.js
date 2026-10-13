@@ -172,6 +172,29 @@ class InMemoryRepositories {
         estado: 'APROBADA'
       })
     );
+
+    // Alertas de caducidad iniciales para lotes próximos a vencer
+    for (const ld of lotsData) {
+      if (ld.days <= 14) {
+        const nivel = ld.days <= 6 ? 'ROJO' : 'AMARILLO';
+        this.alerts.push(
+          new Alert({
+            id: `alert-seed-${ld.numeroLote.toLowerCase()}`,
+            loteId: ld.id,
+            diasParaVencer: ld.days,
+            nivel,
+            atendida: false,
+            numeroLote: ld.numeroLote,
+            productoNombre: ld.prod.nombre,
+            ubicacion: ld.ubi,
+            codigoBarras: ld.prod.codigoBarras,
+            cantidadDisponible: ld.disp,
+            cantidadReservada: 0,
+            fechaCaducidad: new Date(now.getTime() + ld.days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+          })
+        );
+      }
+    }
   }
 
   // Repository implementations
@@ -527,6 +550,83 @@ class InMemoryRepositories {
         const alert = new Alert({ ...alertData, id: alertData.id || randomUUID() });
         this.alerts.push(alert);
         return alert;
+      },
+      findAll: async ({ atendida, nivel, loteId, limit, offset } = {}) => {
+        let results = [...this.alerts];
+
+        if (atendida !== undefined && atendida !== null && atendida !== '') {
+          const isAtendida = typeof atendida === 'string' ? atendida.toLowerCase() === 'true' : Boolean(atendida);
+          results = results.filter(a => Boolean(a.atendida) === isAtendida);
+        }
+
+        if (nivel) {
+          const nivelUpper = String(nivel).toUpperCase();
+          results = results.filter(a => a.nivel === nivelUpper);
+        }
+
+        if (loteId) {
+          results = results.filter(a => a.loteId === loteId);
+        }
+
+        const enriched = results.map(alert => {
+          const lot = this.lots.find(l => l.id === alert.loteId);
+          const product = lot ? this.products.find(p => p.id === lot.productoId) : null;
+          return new Alert({
+            ...alert,
+            numeroLote: alert.numeroLote || (lot ? lot.numeroLote : null),
+            fechaCaducidad: alert.fechaCaducidad || (lot ? (lot.fechaCaducidad instanceof Date ? lot.fechaCaducidad.toISOString().slice(0, 10) : String(lot.fechaCaducidad).slice(0, 10)) : null),
+            cantidadDisponible: alert.cantidadDisponible !== null ? alert.cantidadDisponible : (lot ? lot.cantidadDisponible : null),
+            cantidadReservada: alert.cantidadReservada !== null ? alert.cantidadReservada : (lot ? lot.cantidadReservada : null),
+            ubicacion: alert.ubicacion || (lot ? lot.ubicacion : null),
+            loteEstado: alert.loteEstado || (lot ? lot.estado : null),
+            productoNombre: alert.productoNombre || (product ? product.nombre : (lot ? lot.productoNombre : null)),
+            codigoBarras: alert.codigoBarras || (product ? product.codigoBarras : (lot ? lot.codigoBarras : null))
+          });
+        });
+
+        enriched.sort((a, b) => {
+          if (a.atendida !== b.atendida) return a.atendida ? 1 : -1;
+          return a.diasParaVencer - b.diasParaVencer;
+        });
+
+        const start = offset ? Math.max(0, Number(offset)) : 0;
+        const end = limit ? start + Number(limit) : undefined;
+        return enriched.slice(start, end);
+      },
+      findById: async (id) => {
+        const alert = this.alerts.find(a => a.id === id);
+        if (!alert) return null;
+        const lot = this.lots.find(l => l.id === alert.loteId);
+        const product = lot ? this.products.find(p => p.id === lot.productoId) : null;
+        return new Alert({
+          ...alert,
+          numeroLote: alert.numeroLote || (lot ? lot.numeroLote : null),
+          fechaCaducidad: alert.fechaCaducidad || (lot ? (lot.fechaCaducidad instanceof Date ? lot.fechaCaducidad.toISOString().slice(0, 10) : String(lot.fechaCaducidad).slice(0, 10)) : null),
+          cantidadDisponible: alert.cantidadDisponible !== null ? alert.cantidadDisponible : (lot ? lot.cantidadDisponible : null),
+          cantidadReservada: alert.cantidadReservada !== null ? alert.cantidadReservada : (lot ? lot.cantidadReservada : null),
+          ubicacion: alert.ubicacion || (lot ? lot.ubicacion : null),
+          loteEstado: alert.loteEstado || (lot ? lot.estado : null),
+          productoNombre: alert.productoNombre || (product ? product.nombre : (lot ? lot.productoNombre : null)),
+          codigoBarras: alert.codigoBarras || (product ? product.codigoBarras : (lot ? lot.codigoBarras : null))
+        });
+      },
+      markAsAttended: async (id) => {
+        const alert = this.alerts.find(a => a.id === id);
+        if (!alert) return null;
+        alert.atendida = true;
+        const lot = this.lots.find(l => l.id === alert.loteId);
+        const product = lot ? this.products.find(p => p.id === lot.productoId) : null;
+        return new Alert({
+          ...alert,
+          numeroLote: alert.numeroLote || (lot ? lot.numeroLote : null),
+          fechaCaducidad: alert.fechaCaducidad || (lot ? (lot.fechaCaducidad instanceof Date ? lot.fechaCaducidad.toISOString().slice(0, 10) : String(lot.fechaCaducidad).slice(0, 10)) : null),
+          cantidadDisponible: alert.cantidadDisponible !== null ? alert.cantidadDisponible : (lot ? lot.cantidadDisponible : null),
+          cantidadReservada: alert.cantidadReservada !== null ? alert.cantidadReservada : (lot ? lot.cantidadReservada : null),
+          ubicacion: alert.ubicacion || (lot ? lot.ubicacion : null),
+          loteEstado: alert.loteEstado || (lot ? lot.estado : null),
+          productoNombre: alert.productoNombre || (product ? product.nombre : (lot ? lot.productoNombre : null)),
+          codigoBarras: alert.codigoBarras || (product ? product.codigoBarras : (lot ? lot.codigoBarras : null))
+        });
       }
     };
   }

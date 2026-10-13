@@ -35,7 +35,7 @@ const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 // Use Cases
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
 const { GetProducts, GetProductByBarcode, CreateProduct } = require('../../use-cases/products/ProductUseCases');
-const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
+const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
 const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const {
   GenerarPromocionesIA,
@@ -170,7 +170,8 @@ async function createServer() {
   const registerMermaUC = new RegisterMerma(lotRepo);
   const getInventoryMovementsUC = new GetInventoryMovements(lotRepo);
   const getWastesUC = new GetWastes(lotRepo);
-  const obtenerAlertasCaducidadUC = new ObtenerAlertasCaducidad(lotRepo);
+  const obtenerAlertasCaducidadUC = new ObtenerAlertasCaducidad(lotRepo, alertRepo);
+  const atenderAlertaCaducidadUC = new AtenderAlertaCaducidad(alertRepo);
   const expireLotsUC = new ExpireLots(lotRepo);
 
   const reservarStockUC = new ReservarStock(reservationRepo, heartbeatMonitor);
@@ -207,7 +208,7 @@ async function createServer() {
     cancelReservationUC,
     getReservationsByUserUC
   );
-  const alertController = new AlertController(obtenerAlertasCaducidadUC, alertStreamManager);
+  const alertController = new AlertController(obtenerAlertasCaducidadUC, alertStreamManager, atenderAlertaCaducidadUC);
   const promotionController = new PromotionController(
     generarPromocionesIAUC,
     getPromotionsUC,
