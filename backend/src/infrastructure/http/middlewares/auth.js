@@ -4,12 +4,12 @@ const {
   ForbiddenException
 } = require('../../../domain/exceptions/DomainExceptions');
 
-function createAuthMiddleware(jwtSecret) {
+function createAuthMiddleware(jwtSecret, tokenBlacklistRepo = null) {
   if (!jwtSecret) {
     throw new Error('JWT_SECRET es obligatorio para iniciar el servidor.');
   }
 
-  function authenticate(req, res, next) {
+  async function authenticate(req, res, next) {
     const authorization = req.get('authorization') || '';
     const [scheme, token] = authorization.split(' ');
     const sessionToken = scheme === 'Bearer' && token ? token : req.cookies?.karen_session;
@@ -24,14 +24,25 @@ function createAuthMiddleware(jwtSecret) {
         throw new Error('Token sin identidad o rol.');
       }
 
+      if (tokenBlacklistRepo && payload.jti) {
+        const isRevoked = await tokenBlacklistRepo.isRevoked(payload.jti);
+        if (isRevoked) {
+          return next(new UnauthorizedException('El token ha sido revocado. Inicie sesión nuevamente.'));
+        }
+      }
+
       req.user = {
         id: payload.id,
         nombre: payload.nombre,
         email: payload.email,
-        rol: String(payload.rol).toUpperCase()
+        rol: String(payload.rol).toUpperCase(),
+        jti: payload.jti
       };
       return next();
-    } catch {
+    } catch (err) {
+      if (err instanceof UnauthorizedException) {
+        return next(err);
+      }
       return next(new UnauthorizedException('El token es inválido o ha expirado.'));
     }
   }

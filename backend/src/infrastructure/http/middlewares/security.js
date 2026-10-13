@@ -73,12 +73,15 @@ function cookieCsrfProtection(allowedOrigins, production) {
   };
 }
 
-function limiter({ windowMs, limit, message }) {
+const PostgresRateLimitStore = require('./PostgresRateLimitStore');
+
+function limiter({ windowMs, limit, message, store }) {
   return rateLimit({
     windowMs,
     limit,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
+    ...(store ? { store } : {}),
     skip: req => req.method === 'OPTIONS',
     handler(req, res) {
       res.status(429).json({
@@ -91,26 +94,32 @@ function limiter({ windowMs, limit, message }) {
   });
 }
 
-function createSecurityMiddlewares(env = process.env) {
+function createSecurityMiddlewares(env = process.env, { pool = null } = {}) {
+  const createStore = pool ? () => new PostgresRateLimitStore(pool) : () => undefined;
+
   const general = limiter({
     windowMs: positiveInteger(env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     limit: positiveInteger(env.RATE_LIMIT_MAX, 300),
     message: 'Demasiadas solicitudes. Intente nuevamente más tarde.',
+    store: createStore(),
   });
   const auth = limiter({
     windowMs: positiveInteger(env.AUTH_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     limit: positiveInteger(env.AUTH_RATE_LIMIT_MAX, 10),
     message: 'Demasiados intentos de autenticación. Espere antes de volver a intentarlo.',
+    store: createStore(),
   });
   const reservations = limiter({
     windowMs: positiveInteger(env.RESERVATION_RATE_LIMIT_WINDOW_MS, 60 * 1000),
     limit: positiveInteger(env.RESERVATION_RATE_LIMIT_MAX, 60),
     message: 'Se alcanzó el límite temporal de operaciones de reserva.',
+    store: createStore(),
   });
   const ai = limiter({
     windowMs: positiveInteger(env.AI_RATE_LIMIT_WINDOW_MS, 5 * 60 * 1000),
     limit: positiveInteger(env.AI_RATE_LIMIT_MAX, 10),
     message: 'Se alcanzó el límite temporal de solicitudes de IA.',
+    store: createStore(),
   });
   return {
     requestId,

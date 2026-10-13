@@ -104,4 +104,31 @@ describe('ProductCatalog sin stock', () => {
     expect(screen.getByRole('heading', { name: 'Café Minerva' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Leche Vita' })).not.toBeInTheDocument();
   });
+
+  it('muestra controles de paginación y permite navegar entre páginas', () => {
+    const onPageChange = vi.fn();
+    render(<ProductCatalog
+      products={[
+        { id: 'p-1', name: 'Arroz Flor', category: 'Granos', price: 1.2, stock: 10, image: '/a.jpg' },
+      ]}
+      categories={['Todos']}
+      selectedCategory="Todos"
+      onSelectCategory={() => {}}
+      onAddToCart={() => {}}
+      onOpenCart={() => {}}
+      cartCount={0}
+      state="ready"
+      currentPage={0}
+      totalProducts={50}
+      pageSize={24}
+      onPageChange={onPageChange}
+    />);
+
+    expect(screen.getByText(/Página/)).toBeInTheDocument();
+    expect(screen.getByText('(50 productos en total)')).toBeInTheDocument();
+    const nextBtn = screen.getByRole('button', { name: 'Siguiente' });
+    expect(nextBtn).toBeEnabled();
+    fireEvent.click(nextBtn);
+    expect(onPageChange).toHaveBeenCalledWith(1);
+  });
 });

@@ -1,7 +1,11 @@
+const jwt = require('jsonwebtoken');
+
 class AuthController {
-  constructor(registerUserUC, loginUserUC) {
+  constructor(registerUserUC, loginUserUC, tokenBlacklistRepo = null, jwtSecret = process.env.JWT_SECRET) {
     this.registerUserUC = registerUserUC;
     this.loginUserUC = loginUserUC;
+    this.tokenBlacklistRepo = tokenBlacklistRepo;
+    this.jwtSecret = jwtSecret;
   }
 
   async register(req, res, next) {
@@ -52,7 +56,25 @@ class AuthController {
     res.json({ success: true, data: { user: req.user } });
   }
 
-  logout(req, res) {
+  async logout(req, res) {
+    const authorization = req.get('authorization') || '';
+    const [scheme, token] = authorization.split(' ');
+    const rawToken = scheme === 'Bearer' && token ? token : req.cookies?.karen_session;
+
+    if (rawToken && this.tokenBlacklistRepo && this.jwtSecret) {
+      try {
+        const payload = jwt.verify(rawToken, this.jwtSecret, { ignoreExpiration: true });
+        if (payload?.jti) {
+          const expDate = payload.exp
+            ? new Date(payload.exp * 1000)
+            : new Date(Date.now() + 24 * 60 * 60 * 1000);
+          await this.tokenBlacklistRepo.revoke(payload.jti, payload.id || null, expDate);
+        }
+      } catch {
+        // Ignora tokens malformados en logout
+      }
+    }
+
     res.clearCookie('karen_session', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

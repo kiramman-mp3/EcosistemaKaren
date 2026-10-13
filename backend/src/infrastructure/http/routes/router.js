@@ -42,7 +42,8 @@ function createApiRouter(controllers, security) {
   router.post('/reservations/:id/cancel', authenticate, authorize('CLIENTE', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => reservationController.cancel(req, res, next));
 
   // Alertas y SSE Stream
-  router.get('/alerts', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), (req, res, next) => alertController.getAlerts(req, res, next));
+  router.get('/alerts', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.alertQuery }), (req, res, next) => alertController.getAlerts(req, res, next));
+  router.patch('/alerts/:id/atender', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ params: schemas.idParams }), (req, res, next) => alertController.markAsAttended(req, res, next));
   router.get('/alerts/stream', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), (req, res) => alertController.subscribeStream(req, res));
 
   // Promociones e IA Gemini

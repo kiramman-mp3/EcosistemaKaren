@@ -78,6 +78,13 @@ const schemas = {
     loteId: z.string().uuid('El filtro loteId debe ser un UUID válido.').optional(),
     limit: z.coerce.number().int().min(1).max(500).default(100)
   }),
+  alertQuery: z.strictObject({
+    atendida: z.enum(['true', 'false']).transform(val => val === 'true').optional(),
+    nivel: z.enum(['AMARILLO', 'ROJO', 'VENCIDO']).optional(),
+    loteId: z.string().uuid('El filtro loteId debe ser un UUID válido.').optional(),
+    limit: z.coerce.number().int().min(1).max(500).default(100),
+    offset: z.coerce.number().int().min(0).max(100_000).default(0)
+  }),
   reservationBody: z.strictObject({
     usuarioId: entityId.optional(),
     items: z.array(z.strictObject({
