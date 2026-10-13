@@ -4,7 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const { testConnection, getPool } = require('../db/postgres');
+const { testConnection, getPool, closePool } = require('../db/postgres');
 const { runMigrations } = require('../db/migrations');
 const setupSwagger = require('../swagger/swaggerDoc');
 const errorHandler = require('./middlewares/errorHandler');
@@ -211,6 +211,13 @@ async function createServer() {
   sweeperWorker.start();
   const lotExpiryWorker = new LotExpiryWorker(expireLotsUC, 60000);
   lotExpiryWorker.start();
+
+  app.locals.shutdown = async () => {
+    sweeperWorker.stop();
+    lotExpiryWorker.stop();
+    alertStreamManager.closeAll();
+    await closePool();
+  };
 
   // Configurar Swagger UI
   const swaggerEnabled = setupSwagger(app, process.env);

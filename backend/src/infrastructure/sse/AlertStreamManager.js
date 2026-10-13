@@ -39,6 +39,17 @@ class AlertStreamManager {
       }
     }
   }
+
+  closeAll() {
+    for (const [response, heartbeat] of this.clients) {
+      clearInterval(heartbeat);
+      if (!response.writableEnded && !response.destroyed) {
+        response.write('event: shutdown\ndata: {"message":"Servidor cerrando"}\n\n');
+        response.end();
+      }
+    }
+    this.clients.clear();
+  }
 }
 
 module.exports = AlertStreamManager;
