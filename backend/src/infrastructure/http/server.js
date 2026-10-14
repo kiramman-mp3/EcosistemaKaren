@@ -219,9 +219,10 @@ async function createServer() {
     managePromotionsUC,
     aiMetrics
   );
-  const authController = new AuthController(registerUserUC, loginUserUC, tokenBlacklistRepo, process.env.JWT_SECRET);
+  const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'dev_jwt_secret_ecosistema_karen_2026_super_secret_32chars');
+  const authController = new AuthController(registerUserUC, loginUserUC, tokenBlacklistRepo, jwtSecret);
   const heartbeatController = new HeartbeatController(heartbeatMonitor);
-  const security = createAuthMiddleware(process.env.JWT_SECRET, tokenBlacklistRepo);
+  const security = createAuthMiddleware(jwtSecret, tokenBlacklistRepo);
 
   // Iniciar Worker Background Sweeper para expiración de reservas TTL
   const sweeperWorker = new ReservationCleanerWorker(cleanExpiredReservationsUC, 60000);
