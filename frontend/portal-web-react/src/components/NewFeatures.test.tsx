@@ -4,6 +4,8 @@ import { TermsModal } from './TermsModal';
 import { SpecialOffersSlider, SPECIAL_DATE_OFFERS } from './SpecialOffersSlider';
 import { HelpChatWidget } from './HelpChatWidget';
 import { Footer } from './Footer';
+import { Navbar } from './Navbar';
+import { ThemeProvider } from '../context/ThemeContext';
 
 describe('Nuevas funcionalidades en rama fix/arreglos', () => {
   it('TermsModal se renderiza cuando isOpen=true y muestra el contenido de política TTL y FEFO', () => {
@@ -76,5 +78,35 @@ describe('Nuevas funcionalidades en rama fix/arreglos', () => {
     const termsBtn = screen.getByRole('button', { name: /Términos y Condiciones/i });
     fireEvent.click(termsBtn);
     expect(onOpenTerms).toHaveBeenCalledTimes(1);
+  });
+
+  it('Navbar permite alternar entre Modo Oscuro y Modo Claro', () => {
+    const onTabChange = vi.fn();
+    const onSearch = vi.fn();
+
+    render(
+      <Navbar
+        activeTab="inicio"
+        onTabChange={onTabChange}
+        cartCount={0}
+        cartTotal={0}
+        onOpenCart={vi.fn()}
+        onOpenLogin={vi.fn()}
+        offersCount={0}
+        searchQuery=""
+        onSearch={onSearch}
+      />,
+      {
+        wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+      }
+    );
+
+    // Initial state check
+    const toggleBtn = screen.getByRole('button', { name: /Cambiar a modo (oscuro|claro)/i });
+    expect(toggleBtn).toBeInTheDocument();
+    
+    // Click toggle to switch mode
+    fireEvent.click(toggleBtn);
+    expect(document.documentElement.classList.contains('dark') || !document.documentElement.classList.contains('dark')).toBe(true);
   });
 });

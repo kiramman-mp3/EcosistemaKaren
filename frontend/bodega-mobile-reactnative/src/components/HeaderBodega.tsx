@@ -3,6 +3,7 @@ import { Modal, Pressable, View, Text, TouchableOpacity, StyleSheet } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { confirmAction } from '../utils/dialogs';
 import { colors, fonts, radius } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 
 interface HeaderBodegaProps {
   isOnline: boolean;
@@ -22,6 +23,7 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
   isOnline, operatorName, operatorRole, onOpenReports, onLogout,
 }) => {
   const [profileOpen, setProfileOpen] = useState(false);
+  const { isDark, toggleTheme, colors: themeColors } = useTheme();
   const role = ROLE_LABEL[operatorRole] || operatorRole;
 
   const confirmLogout = () => {
@@ -32,7 +34,7 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && { backgroundColor: '#0F172A', borderBottomColor: '#1E293B', borderBottomWidth: 1 }]}>
       <View style={styles.brand}>
         <View style={styles.logo}><Text style={styles.logoText}>K</Text></View>
         <View style={styles.brandText}>
@@ -51,6 +53,15 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
 
       <TouchableOpacity
         style={styles.profileBtn}
+        onPress={toggleTheme}
+        accessibilityRole="button"
+        accessibilityLabel={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+      >
+        <Ionicons name={isDark ? "sunny" : "moon-outline"} size={22} color={isDark ? "#FBBF24" : colors.white} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.profileBtn}
         onPress={() => setProfileOpen(true)}
         accessibilityRole="button"
         accessibilityLabel="Abrir perfil"
@@ -60,17 +71,27 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
 
       <Modal visible={profileOpen} transparent animationType="fade" onRequestClose={() => setProfileOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setProfileOpen(false)}>
-          <Pressable style={styles.menu} onPress={event => event.stopPropagation()}>
-            <Text style={styles.menuName}>{operatorName}</Text>
-            <Text style={styles.menuRole}>{role}</Text>
-            <View style={styles.divider} />
+          <Pressable style={[styles.menu, isDark && { backgroundColor: '#1E293B' }]} onPress={event => event.stopPropagation()}>
+            <Text style={[styles.menuName, isDark && { color: '#F8FAFC' }]}>{operatorName}</Text>
+            <Text style={[styles.menuRole, isDark && { color: '#94A3B8' }]}>{role}</Text>
+            <View style={[styles.divider, isDark && { backgroundColor: '#334155' }]} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { toggleTheme(); }}
+              accessibilityRole="button"
+            >
+              <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={isDark ? "#FBBF24" : colors.ink} />
+              <Text style={[styles.menuItemText, isDark && { color: '#F8FAFC' }]}>
+                {isDark ? 'Modo Claro' : 'Modo Oscuro'}
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => { setProfileOpen(false); onOpenReports(); }}
               accessibilityRole="button"
             >
-              <Ionicons name="bar-chart-outline" size={20} color={colors.ink} />
-              <Text style={styles.menuItemText}>Movimientos y mermas</Text>
+              <Ionicons name="bar-chart-outline" size={20} color={isDark ? '#F8FAFC' : colors.ink} />
+              <Text style={[styles.menuItemText, isDark && { color: '#F8FAFC' }]}>Movimientos y mermas</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={confirmLogout} accessibilityRole="button">
               <Ionicons name="log-out-outline" size={20} color={colors.karen} />

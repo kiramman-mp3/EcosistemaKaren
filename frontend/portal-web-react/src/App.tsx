@@ -14,6 +14,7 @@ import { SpecialOffersSlider } from './components/SpecialOffersSlider';
 import { TermsModal } from './components/TermsModal';
 import { HelpChatWidget } from './components/HelpChatWidget';
 import { Footer } from './components/Footer';
+import { ThemeProvider } from './context/ThemeContext';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './types';
 import { AlertTriangle } from 'lucide-react';
 import { api, BackendCategory, BackendReservation } from './api/client';
@@ -412,8 +413,9 @@ export const App: React.FC = () => {
   const activeCode = currentPass && currentPass.remainingSeconds > 0 ? currentPass.code : undefined;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {!isOnline && (
+    <ThemeProvider>
+      <div className="min-h-screen flex flex-col bg-aisle dark:bg-[#0B1120] text-ink dark:text-slate-100 transition-colors duration-200">
+        {!isOnline && (
         <div className="bg-karen text-white text-sm" role="alert">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
             <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -597,6 +599,7 @@ export const App: React.FC = () => {
           showToast(`Hola, ${user.nombre.split(' ')[0]}.`);
         }}
       />
-    </div>
+      </div>
+    </ThemeProvider>
   );
 };

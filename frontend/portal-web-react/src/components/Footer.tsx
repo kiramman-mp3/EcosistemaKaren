@@ -10,164 +10,134 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenTerms, onOpenChat }) => {
   return (
-    <footer className="bg-white border-t border-aisle-rule mt-16 text-ink-soft">
-      {/* Sección principal de contactos y enlaces */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
-          {/* Columna 1: Identidad y Misión */}
-          <div className="space-y-4">
+    <footer className="relative mt-20 bg-[#0F172A] text-slate-300 border-t border-slate-800 shadow-2xl">
+      {/* Barra superior de acento con colores del ecosistema Karen */}
+      <div className="h-1 w-full bg-gradient-to-r from-karen via-sticker to-fresh" />
+
+      {/* Contenido principal compacto y estilizado */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Columna 1: Marca & Garantía */}
+          <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="w-10 h-10 rounded-tag bg-karen text-white font-tag font-bold text-2xl leading-none flex items-center justify-center shadow-soft">
+              <span className="w-9 h-9 rounded-tag bg-karen text-white font-tag font-bold text-2xl leading-none flex items-center justify-center shadow-md">
                 K
               </span>
               <div>
-                <span className="block font-tag font-bold text-lg text-ink">Supermercado Karen</span>
-                <span className="text-xs text-ink-muted">Omnicanalidad & Control FEFO</span>
+                <span className="block font-tag font-bold text-lg text-white tracking-wide">Supermercado Karen</span>
+                <span className="text-xs text-slate-400">Retiro Express & Control FEFO</span>
               </div>
             </div>
-            <p className="text-sm leading-relaxed text-ink-soft">
-              Pioneros en reducción de desperdicio de alimentos y compras digitales con retiro express en caja física sin filas.
-            </p>
-            <div className="pt-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <ShieldCheck className="w-4 h-4" />
-                Garantía de Frescura FEFO
+            <div className="pt-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-950/70 text-emerald-400 border border-emerald-800/60">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Garantía Frescura 10 min TTL
               </span>
             </div>
           </div>
 
-          {/* Columna 2: Canales de Atención Directa */}
-          <div className="space-y-3">
-            <h3 className="font-tag font-bold text-sm text-ink uppercase tracking-wider">
-              Canales de Contacto
+          {/* Columna 2: Contacto Rápido */}
+          <div className="space-y-2.5">
+            <h3 className="font-tag font-bold text-xs uppercase tracking-wider text-slate-400">
+              Atención Directa
             </h3>
-            <ul className="space-y-2.5 text-sm">
-              <li className="flex items-start gap-2.5">
-                <Phone className="w-4 h-4 text-karen shrink-0 mt-0.5" />
-                <div>
-                  <span className="block font-semibold text-ink">PBX Tienda Matriz:</span>
-                  <a href="tel:+59342987654" className="hover:text-karen transition-colors">
-                    (04) 2-987654 / (04) 2-987655
-                  </a>
-                </div>
+            <ul className="space-y-2 text-xs">
+              <li className="flex items-center gap-2">
+                <Phone className="w-3.5 h-3.5 text-sticker shrink-0" />
+                <a href="tel:+59342987654" className="hover:text-white transition-colors">
+                  (04) 2-987654 / 2-987655
+                </a>
               </li>
-              <li className="flex items-start gap-2.5">
-                <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="block font-semibold text-ink">WhatsApp Atención al Cliente:</span>
-                  <a
-                    href="https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-emerald-700 font-semibold hover:underline inline-flex items-center gap-1"
-                  >
-                    +593 99 876 5432
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
+              <li className="flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <a
+                  href="https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 font-semibold hover:text-emerald-300 inline-flex items-center gap-1"
+                >
+                  WhatsApp: +593 99 876 5432
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </li>
-              <li className="flex items-start gap-2.5">
-                <Mail className="w-4 h-4 text-karen shrink-0 mt-0.5" />
-                <div>
-                  <span className="block font-semibold text-ink">Correo Electrónico:</span>
-                  <a href="mailto:atencion@karen.com.ec" className="hover:text-karen transition-colors">
-                    atencion@karen.com.ec
-                  </a>
-                </div>
+              <li className="flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5 text-sticker shrink-0" />
+                <a href="mailto:atencion@karen.com.ec" className="hover:text-white transition-colors">
+                  atencion@karen.com.ec
+                </a>
               </li>
             </ul>
           </div>
 
-          {/* Columna 3: Ubicación y Horarios de Retiro */}
-          <div className="space-y-3">
-            <h3 className="font-tag font-bold text-sm text-ink uppercase tracking-wider">
-              Ubicación y Horarios
+          {/* Columna 3: Sucursal & Horario */}
+          <div className="space-y-2.5">
+            <h3 className="font-tag font-bold text-xs uppercase tracking-wider text-slate-400">
+              Sucursal & Cajas SIACI
             </h3>
-            <ul className="space-y-2.5 text-sm">
-              <li className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-karen shrink-0 mt-0.5" />
-                <div>
-                  <span className="block font-semibold text-ink">Sucursal Matriz:</span>
-                  <span>Av. Principal 1024 y Calle 4ta</span>
-                  <span className="block text-xs text-ink-muted">Guayaquil, Ecuador</span>
-                </div>
+            <ul className="space-y-2 text-xs">
+              <li className="flex items-start gap-2">
+                <MapPin className="w-3.5 h-3.5 text-karen shrink-0 mt-0.5" />
+                <span>Av. Principal 1024 y Calle 4ta, Guayaquil</span>
               </li>
-              <li className="flex items-start gap-2.5">
-                <Clock className="w-4 h-4 text-karen shrink-0 mt-0.5" />
-                <div>
-                  <span className="block font-semibold text-ink">Horario de Cajas SIACI:</span>
-                  <span>Lunes a Sábado: 07:00 – 21:00</span>
-                  <span className="block">Domingos y Feriados: 08:00 – 19:00</span>
-                </div>
+              <li className="flex items-start gap-2">
+                <Clock className="w-3.5 h-3.5 text-sticker shrink-0 mt-0.5" />
+                <span>Lunes a Sábado: 07:00 – 21:00 · Domingos: 08:00 – 19:00</span>
               </li>
             </ul>
           </div>
 
-          {/* Columna 4: Navegación y Soporte */}
-          <div className="space-y-3">
-            <h3 className="font-tag font-bold text-sm text-ink uppercase tracking-wider">
-              Enlaces y Asistencia
+          {/* Columna 4: Accesos Rápidos */}
+          <div className="space-y-2.5">
+            <h3 className="font-tag font-bold text-xs uppercase tracking-wider text-slate-400">
+              Enlaces
             </h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <button
-                  onClick={() => onNavigate('productos')}
-                  className="hover:text-karen transition-colors"
-                >
-                  Catálogo de Productos
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavigate('ofertas')}
-                  className="hover:text-karen transition-colors"
-                >
-                  Ofertas Flash por Vencer
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavigate('reservas')}
-                  className="hover:text-karen transition-colors"
-                >
-                  Mis Reservas y Pases
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={onOpenTerms}
-                  className="inline-flex items-center gap-1.5 text-ink font-semibold hover:text-karen transition-colors"
-                >
-                  <FileText className="w-4 h-4 text-karen" />
-                  <span>Términos y Condiciones</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={onOpenChat}
-                  className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold hover:underline"
-                >
-                  <MessageSquare className="w-4 h-4 text-emerald-600" />
-                  <span>Mesa de Ayuda Virtual</span>
-                </button>
-              </li>
-            </ul>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+              <button
+                onClick={() => onNavigate('productos')}
+                className="hover:text-sticker transition-colors"
+              >
+                Catálogo
+              </button>
+              <button
+                onClick={() => onNavigate('ofertas')}
+                className="hover:text-sticker transition-colors"
+              >
+                Ofertas Flash
+              </button>
+              <button
+                onClick={() => onNavigate('reservas')}
+                className="hover:text-sticker transition-colors"
+              >
+                Mis Reservas
+              </button>
+              <button
+                onClick={onOpenTerms}
+                className="inline-flex items-center gap-1 hover:text-sticker transition-colors"
+              >
+                <FileText className="w-3 h-3 text-sticker" />
+                <span>Términos y Condiciones</span>
+              </button>
+              <button
+                onClick={onOpenChat}
+                className="text-emerald-400 font-semibold hover:text-emerald-300"
+              >
+                Chat KarenBot
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Sub-pie de página con derechos y aviso legal */}
-      <div className="border-t border-aisle-rule bg-aisle py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-muted">
-          <p>© {new Date().getFullYear()} Supermercado Karen S.A. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-4">
-            <button onClick={onOpenTerms} className="hover:text-ink transition-colors underline">
+      {/* Franja de créditos sobria y moderna */}
+      <div className="bg-[#0A0F1D] border-t border-slate-800/80 py-3.5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+          <p>© {new Date().getFullYear()} Supermercado Karen S.A. · RUC 0992345678001</p>
+          <div className="flex items-center gap-3">
+            <button onClick={onOpenTerms} className="hover:text-slate-200 transition-colors underline">
               Política de Reserva (10 min TTL)
             </button>
             <span>·</span>
-            <span>RUC: 0992345678001</span>
-            <span>·</span>
-            <span>Guayaquil, Ecuador</span>
+            <span>Ecuador</span>
           </div>
         </div>
       </div>

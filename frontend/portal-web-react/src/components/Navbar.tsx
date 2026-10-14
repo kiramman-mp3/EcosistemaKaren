@@ -1,6 +1,7 @@
 import React from 'react';
-import { LogOut, Search, ShoppingBasket, Ticket, User, X } from 'lucide-react';
+import { LogOut, Moon, Search, ShoppingBasket, Sun, Ticket, User, X } from 'lucide-react';
 import { NavTab } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 interface NavbarProps {
   activeTab: NavTab;
@@ -29,22 +30,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   user = null, onLogout, offersCount, searchQuery, onSearch,
 }) => {
   const firstName = user?.nombre.split(' ')[0];
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-aisle-rule">
+    <header className="sticky top-0 z-40 bg-white dark:bg-[#0F172A] border-b border-aisle-rule dark:border-slate-800 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-3 sm:gap-5 h-16">
+        <div className="flex items-center gap-2 sm:gap-4 h-16">
           <button
             onClick={() => onTabChange('inicio')}
             className="flex items-center gap-2.5 shrink-0"
             aria-label="Supermercado Karen, ir al inicio"
           >
-            <span className="w-9 h-9 rounded-tag bg-karen text-white font-tag font-bold text-2xl leading-none flex items-center justify-center">
+            <span className="w-9 h-9 rounded-tag bg-karen text-white font-tag font-bold text-2xl leading-none flex items-center justify-center shadow-sm">
               K
             </span>
             <span className="hidden md:flex flex-col items-start leading-none">
-              <span className="text-[11px] font-semibold text-ink-muted">Supermercado</span>
-              <span className="font-tag font-bold text-xl text-ink">Karen</span>
+              <span className="text-[11px] font-semibold text-ink-muted dark:text-slate-400">Supermercado</span>
+              <span className="font-tag font-bold text-xl text-ink dark:text-white">Karen</span>
             </span>
           </button>
 
@@ -53,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="relative flex-1 min-w-0"
             onSubmit={(event) => { event.preventDefault(); onTabChange('productos'); }}
           >
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" aria-hidden="true" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted dark:text-slate-400" aria-hidden="true" />
             <input
               type="search"
               value={searchQuery}
@@ -63,13 +65,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               placeholder="Busca leche, atún, pan…"
               aria-label="Buscar productos"
-              className="w-full h-11 pl-9 pr-9 rounded-tag bg-aisle border border-transparent text-sm text-ink placeholder:text-ink-faint focus:bg-white focus:border-ink focus:outline-none"
+              className="w-full h-11 pl-9 pr-9 rounded-tag bg-aisle dark:bg-slate-800/90 border border-transparent dark:border-slate-700 text-sm text-ink dark:text-slate-100 placeholder:text-ink-faint dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-ink dark:focus:border-slate-500 focus:outline-none transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => onSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-ink-muted hover:text-ink"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-ink-muted hover:text-ink dark:text-slate-400 dark:hover:text-slate-200"
                 aria-label="Borrar búsqueda"
               >
                 <X className="w-4 h-4" />
@@ -77,12 +79,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </form>
 
+          {/* Botón de Modo Oscuro / Modo Claro */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+            className="shrink-0 p-2.5 rounded-tag text-ink-muted hover:text-ink dark:text-slate-300 dark:hover:text-amber-300 hover:bg-aisle dark:hover:bg-slate-800 border border-transparent dark:border-slate-700/60 transition-colors"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5 text-amber-400" />
+            ) : (
+              <Moon className="w-5 h-5 text-ink-soft" />
+            )}
+          </button>
+
           {user ? (
             <div className="hidden sm:flex items-center gap-1 shrink-0">
-              <span className="text-sm text-ink-soft">Hola, <strong className="text-ink">{firstName}</strong></span>
+              <span className="text-sm text-ink-soft dark:text-slate-300">Hola, <strong className="text-ink dark:text-white">{firstName}</strong></span>
               <button
                 onClick={onLogout}
-                className="p-2 text-ink-muted hover:text-karen rounded-tag"
+                className="p-2 text-ink-muted hover:text-karen dark:text-slate-400 dark:hover:text-karen rounded-tag"
                 aria-label="Cerrar sesión"
                 title="Cerrar sesión"
               >
@@ -92,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <button
               onClick={onOpenLogin}
-              className="shrink-0 h-11 px-3 sm:px-4 rounded-tag text-sm font-semibold text-ink hover:bg-aisle flex items-center gap-2"
+              className="shrink-0 h-11 px-3 sm:px-4 rounded-tag text-sm font-semibold text-ink dark:text-slate-200 hover:bg-aisle dark:hover:bg-slate-800 flex items-center gap-2 border border-transparent dark:border-slate-700/60"
             >
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Ingresar</span>
@@ -101,7 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={onOpenCart}
-            className="shrink-0 h-11 pl-3 pr-3.5 rounded-tag bg-ink text-white flex items-center gap-2.5 hover:bg-ink-soft"
+            className="shrink-0 h-11 pl-3 pr-3.5 rounded-tag bg-ink dark:bg-slate-800 text-white dark:text-slate-100 flex items-center gap-2.5 hover:bg-ink-soft dark:hover:bg-slate-700 border border-transparent dark:border-slate-700 shadow-sm"
             aria-label={`Abrir mi lista, ${cartCount} productos`}
           >
             <ShoppingBasket className="w-5 h-5" />
@@ -123,8 +140,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   key={tab.id}
                   onClick={() => onTabChange(tab.id)}
                   aria-current={active ? 'page' : undefined}
-                  className={`shrink-0 h-11 px-3 text-sm font-semibold border-b-[3px] flex items-center gap-1.5 ${
-                    active ? 'border-karen text-ink' : 'border-transparent text-ink-muted hover:text-ink'
+                  className={`shrink-0 h-11 px-3 text-sm font-semibold border-b-[3px] flex items-center gap-1.5 transition-colors ${
+                    active
+                      ? 'border-karen text-ink dark:text-white font-bold'
+                      : 'border-transparent text-ink-muted dark:text-slate-400 hover:text-ink dark:hover:text-slate-200'
                   }`}
                 >
                   {tab.id === 'reservas' && <Ticket className="w-4 h-4" />}
@@ -138,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
           </nav>
-          <p className="hidden md:flex items-center gap-2 text-xs text-ink-muted shrink-0" role="status">
+          <p className="hidden md:flex items-center gap-2 text-xs text-ink-muted dark:text-slate-400 shrink-0" role="status">
             <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-fresh' : 'bg-karen'}`} aria-hidden="true" />
             {isOnline ? 'Reservas en línea disponibles' : 'Reservas en pausa: la tienda no responde'}
           </p>
