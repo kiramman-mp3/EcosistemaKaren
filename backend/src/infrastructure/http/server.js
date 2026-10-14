@@ -13,6 +13,7 @@ const { createSecurityMiddlewares, validateProductionSecurity, cookieCsrfProtect
 const AlertStreamManager = require('../sse/AlertStreamManager');
 const ReservationCleanerWorker = require('../workers/ReservationCleanerWorker');
 const LotExpiryWorker = require('../workers/LotExpiryWorker');
+const HeartbeatSimulatorWorker = require('../workers/HeartbeatSimulatorWorker');
 const HeartbeatMonitor = require('../heartbeat/HeartbeatMonitor');
 const PostgresHeartbeatStore = require('../heartbeat/PostgresHeartbeatStore');
 const PromotionCache = require('../cache/PromotionCache');
@@ -218,9 +219,10 @@ async function createServer() {
     managePromotionsUC,
     aiMetrics
   );
-  const authController = new AuthController(registerUserUC, loginUserUC, tokenBlacklistRepo, process.env.JWT_SECRET);
+  const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'dev_jwt_secret_ecosistema_karen_2026_super_secret_32chars');
+  const authController = new AuthController(registerUserUC, loginUserUC, tokenBlacklistRepo, jwtSecret);
   const heartbeatController = new HeartbeatController(heartbeatMonitor);
-  const security = createAuthMiddleware(process.env.JWT_SECRET, tokenBlacklistRepo);
+  const security = createAuthMiddleware(jwtSecret, tokenBlacklistRepo);
 
   // Iniciar Worker Background Sweeper para expiración de reservas TTL
   const sweeperWorker = new ReservationCleanerWorker(cleanExpiredReservationsUC, 60000);
@@ -228,9 +230,20 @@ async function createServer() {
   const lotExpiryWorker = new LotExpiryWorker(expireLotsUC, 60000);
   lotExpiryWorker.start();
 
+  const autoPingEnabled = process.env.HEARTBEAT_AUTO_PING === 'true' ||
+    (process.env.HEARTBEAT_AUTO_PING !== 'false' && process.env.NODE_ENV === 'development');
+  let heartbeatSimulator = null;
+  if (autoPingEnabled) {
+    const timeoutSec = Number(process.env.HEARTBEAT_TIMEOUT_SECONDS) || 60;
+    const intervalMs = Math.min(25000, Math.max(5000, Math.floor((timeoutSec * 1000) / 2)));
+    heartbeatSimulator = new HeartbeatSimulatorWorker(heartbeatMonitor, intervalMs);
+    heartbeatSimulator.start();
+  }
+
   app.locals.shutdown = async () => {
     sweeperWorker.stop();
     lotExpiryWorker.stop();
+    if (heartbeatSimulator) heartbeatSimulator.stop();
     alertStreamManager.closeAll();
     await closePool();
   };

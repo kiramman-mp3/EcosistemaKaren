@@ -2,6 +2,7 @@ require('dotenv').config();
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const HeartbeatMonitor = require('../src/infrastructure/heartbeat/HeartbeatMonitor');
+const HeartbeatSimulatorWorker = require('../src/infrastructure/workers/HeartbeatSimulatorWorker');
 const PostgresRateLimitStore = require('../src/infrastructure/http/middlewares/PostgresRateLimitStore');
 const { getPool, testConnection, closePool } = require('../src/infrastructure/db/postgres');
 const PostgresHeartbeatStore = require('../src/infrastructure/heartbeat/PostgresHeartbeatStore');
@@ -70,4 +71,28 @@ test('PostgresRateLimitStore y PostgresHeartbeatStore sincronizan en PostgreSQL'
 
   await rateLimitStore.decrement(testKey);
   await rateLimitStore.resetKey(testKey);
+});
+
+test('HeartbeatSimulatorWorker emite pings periódicos y mantiene el monitor ONLINE', async () => {
+  let recorded = 0;
+  const mockMonitor = {
+    recordHeartbeat: async () => {
+      recorded++;
+      return { status: 'ONLINE', reservationsBlocked: false };
+    }
+  };
+
+  const worker = new HeartbeatSimulatorWorker(mockMonitor, 50);
+  worker.start();
+  // Primer ping inmediato al iniciar
+  assert.equal(recorded, 1);
+
+  // Esperar un ciclo del timer
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.ok(recorded >= 2);
+
+  worker.stop();
+  const countAtStop = recorded;
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.equal(recorded, countAtStop);
 });

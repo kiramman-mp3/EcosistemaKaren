@@ -1,7 +1,8 @@
 class PostgresRateLimitStore {
-  constructor(pool, prefix = '') {
+  constructor(pool, prefix = 'rl:') {
     this.pool = pool;
     this.prefix = prefix;
+    this.localKeys = true;
     this.windowMs = 60 * 1000;
   }
 
@@ -12,11 +13,11 @@ class PostgresRateLimitStore {
   }
 
   _getKey(key) {
-    return this.prefix ? `${this.prefix}:${key}` : key;
+    return `${this.prefix}${key}`;
   }
 
   async increment(key) {
-    const finalKey = this._getKey(key);
+    const dbKey = this._getKey(key);
     const res = await this.pool.query(
       `INSERT INTO rate_limit_hits (key, hits, reset_at)
        VALUES ($1, 1, CURRENT_TIMESTAMP + ($2 || ' milliseconds')::interval)
@@ -30,7 +31,7 @@ class PostgresRateLimitStore {
          ELSE rate_limit_hits.reset_at
        END
        RETURNING hits, reset_at as "resetAt"`,
-      [finalKey, this.windowMs]
+      [dbKey, this.windowMs]
     );
 
     const row = res.rows[0];
@@ -41,26 +42,22 @@ class PostgresRateLimitStore {
   }
 
   async decrement(key) {
-    const finalKey = this._getKey(key);
+    const dbKey = this._getKey(key);
     await this.pool.query(
       `UPDATE rate_limit_hits
        SET hits = GREATEST(0, hits - 1)
        WHERE key = $1 AND reset_at > CURRENT_TIMESTAMP`,
-      [finalKey]
+      [dbKey]
     );
   }
 
   async resetKey(key) {
-    const finalKey = this._getKey(key);
-    await this.pool.query('DELETE FROM rate_limit_hits WHERE key = $1', [finalKey]);
+    const dbKey = this._getKey(key);
+    await this.pool.query('DELETE FROM rate_limit_hits WHERE key = $1', [dbKey]);
   }
 
   async resetAll() {
-    if (this.prefix) {
-      await this.pool.query('DELETE FROM rate_limit_hits WHERE key LIKE $1', [`${this.prefix}:%`]);
-    } else {
-      await this.pool.query('TRUNCATE TABLE rate_limit_hits');
-    }
+    await this.pool.query('DELETE FROM rate_limit_hits WHERE key LIKE $1', [`${this.prefix}%`]);
   }
 }
 

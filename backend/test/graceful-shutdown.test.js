@@ -1,3 +1,4 @@
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret_ecosistema_karen_2026_super_secret_32chars';
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const createServer = require('../src/infrastructure/http/server');
