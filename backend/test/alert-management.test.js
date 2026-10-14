@@ -87,7 +87,33 @@ test('PostgresAlertRepository consulta y gestiona estado en la tabla alertas_cad
   const pool = getPool();
   const repo = new PostgresAlertRepository(pool);
 
-  const todas = await repo.findAll({ limit: 10 });
+  let todas = await repo.findAll({ limit: 10 });
+  let createdAlertId = null;
+
+  if (todas.length === 0) {
+    const lotRes = await pool.query('SELECT id FROM lotes LIMIT 1');
+    if (!lotRes.rowCount) {
+      t.skip('Faltan semillas de lotes en la base de datos.');
+      return;
+    }
+    const alertId = require('node:crypto').randomUUID();
+    await repo.save({
+      id: alertId,
+      loteId: lotRes.rows[0].id,
+      diasParaVencer: 3,
+      nivel: 'ROJO',
+      atendida: false
+    });
+    createdAlertId = alertId;
+    todas = await repo.findAll({ limit: 10 });
+  }
+
+  t.after(async () => {
+    if (createdAlertId) {
+      await pool.query('DELETE FROM alertas_caducidad WHERE id = $1', [createdAlertId]).catch(() => {});
+    }
+  });
+
   assert.ok(todas.length > 0, 'debe leer alertas de la base de datos');
   const [primera] = todas;
   assert.ok(primera.id);

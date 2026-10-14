@@ -3,6 +3,7 @@ import { RefreshCw, WifiOff } from 'lucide-react';
 import { DataLoadState, FlashOffer } from '../types';
 import { OfferTag } from './ProductTag';
 import { daysUntil } from '../utils/dates';
+import { SPECIAL_DATE_OFFERS } from './SpecialOffersSlider';
 
 interface FlashOffersSectionProps {
   offers: FlashOffer[];
@@ -60,6 +61,54 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
           {sorted.map(offer => <OfferTag key={offer.id} offer={offer} onReserve={onReserveOffer} />)}
         </div>
       )}
+
+      {/* Ofertas en Fechas Especiales y Temporadas */}
+      <div className="mt-16 pt-12 border-t border-aisle-rule">
+        <div className="mb-6">
+          <span className="text-xs font-tag font-bold text-karen uppercase tracking-wider">
+            Campañas Oficiales de Ahorro
+          </span>
+          <h2 className="font-tag font-bold text-3xl sm:text-4xl text-ink mt-1">
+            Ofertas en Fechas Especiales y Feriados
+          </h2>
+          <p className="mt-2 text-ink-soft max-w-2xl">
+            Promociones programadas para temporadas festivas, fines de semana y días de cosecha nacional.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {SPECIAL_DATE_OFFERS.map(event => (
+            <div
+              key={event.id}
+              className="rounded-xl border border-aisle-rule bg-white p-5 shadow-soft flex flex-col justify-between hover:border-karen/40 transition-colors"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-[11px] font-tag font-bold uppercase tracking-wider text-karen bg-karen-tint px-2.5 py-0.5 rounded-full">
+                    {event.badge}
+                  </span>
+                  <span className="text-xs text-ink-muted">{event.dateRange}</span>
+                </div>
+                <h3 className="font-tag font-bold text-lg text-ink leading-snug">
+                  {event.eventName}
+                </h3>
+                <p className="mt-2 text-xs text-ink-soft leading-relaxed">
+                  {event.description}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-aisle-rule">
+                <span className="block text-[11px] font-semibold text-ink-muted mb-1.5">
+                  Categoría destacada:
+                </span>
+                <span className="inline-block text-xs font-semibold text-ink bg-aisle px-2.5 py-1 rounded-tag">
+                  {event.category}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 };
