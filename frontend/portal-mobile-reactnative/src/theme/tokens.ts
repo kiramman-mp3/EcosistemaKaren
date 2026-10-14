@@ -2,7 +2,7 @@
 // la etiqueta de precio de percha es la señal fuerte de cada producto.
 type NivelAlerta = 'VENCIDO' | 'ROJO' | 'AMARILLO' | 'NORMAL';
 
-export const colors = {
+export const lightColors = {
   karen: '#D52B1E',
   karenDeep: '#A81E14',
   karenTint: '#FBE9E7',
@@ -19,7 +19,38 @@ export const colors = {
   fresh: '#12805C',
   freshTint: '#E3F3EC',
   white: '#FFFFFF',
+  card: '#FFFFFF',
+  cardBorder: '#D9DDE3',
 } as const;
+
+export const darkColors = {
+  karen: '#EF4444',
+  karenDeep: '#DC2626',
+  karenTint: '#3B1515',
+  ink: '#F8FAFC',
+  inkSoft: '#CBD5E1',
+  inkMuted: '#94A3B8',
+  inkFaint: '#64748B',
+  sticker: '#FBBF24',
+  stickerDeep: '#D97706',
+  stickerTint: '#452A05',
+  aisle: '#0B1120',
+  rule: '#1E293B',
+  ruleStrong: '#334155',
+  fresh: '#10B981',
+  freshTint: '#063928',
+  white: '#1E293B',
+  card: '#1E293B',
+  cardBorder: '#334155',
+} as const;
+
+export type ThemeMode = 'light' | 'dark';
+
+export const colors = lightColors;
+
+export function getThemeColors(mode: ThemeMode) {
+  return mode === 'dark' ? darkColors : lightColors;
+}
 
 export const fonts = {
   body: 'Archivo_400Regular',
@@ -34,15 +65,16 @@ export const fonts = {
 export const radius = { tag: 6, pill: 999 } as const;
 
 /** Color del nivel FEFO: la banda lateral de cada lote. */
-export function levelColors(nivel: NivelAlerta | string) {
+export function levelColors(nivel: NivelAlerta | string, mode: ThemeMode = 'light') {
+  const c = getThemeColors(mode);
   switch (nivel) {
     case 'VENCIDO':
-      return { band: colors.ink, tint: colors.aisle, text: colors.ink, label: 'Vencido' };
+      return { band: mode === 'dark' ? '#94A3B8' : c.ink, tint: c.aisle, text: c.ink, label: 'Vencido' };
     case 'ROJO':
-      return { band: colors.karen, tint: colors.karenTint, text: colors.karenDeep, label: 'Crítico' };
+      return { band: c.karen, tint: c.karenTint, text: mode === 'dark' ? '#FCA5A5' : c.karenDeep, label: 'Crítico' };
     case 'AMARILLO':
-      return { band: colors.sticker, tint: colors.stickerTint, text: colors.ink, label: 'Preventivo' };
+      return { band: c.sticker, tint: c.stickerTint, text: mode === 'dark' ? '#FDE68A' : c.ink, label: 'Preventivo' };
     default:
-      return { band: colors.fresh, tint: colors.freshTint, text: colors.fresh, label: 'En fecha' };
+      return { band: c.fresh, tint: c.freshTint, text: mode === 'dark' ? '#6EE7B7' : c.fresh, label: 'En fecha' };
   }
 }
