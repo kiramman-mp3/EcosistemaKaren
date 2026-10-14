@@ -95,31 +95,31 @@ function limiter({ windowMs, limit, message, store }) {
 }
 
 function createSecurityMiddlewares(env = process.env, { pool = null } = {}) {
-  const createStore = pool ? () => new PostgresRateLimitStore(pool) : () => undefined;
+  const createStore = pool ? (prefix) => new PostgresRateLimitStore(pool, prefix) : () => undefined;
 
   const general = limiter({
     windowMs: positiveInteger(env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     limit: positiveInteger(env.RATE_LIMIT_MAX, 300),
     message: 'Demasiadas solicitudes. Intente nuevamente más tarde.',
-    store: createStore(),
+    store: createStore('general'),
   });
   const auth = limiter({
     windowMs: positiveInteger(env.AUTH_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     limit: positiveInteger(env.AUTH_RATE_LIMIT_MAX, 10),
     message: 'Demasiados intentos de autenticación. Espere antes de volver a intentarlo.',
-    store: createStore(),
+    store: createStore('auth'),
   });
   const reservations = limiter({
     windowMs: positiveInteger(env.RESERVATION_RATE_LIMIT_WINDOW_MS, 60 * 1000),
     limit: positiveInteger(env.RESERVATION_RATE_LIMIT_MAX, 60),
     message: 'Se alcanzó el límite temporal de operaciones de reserva.',
-    store: createStore(),
+    store: createStore('reservations'),
   });
   const ai = limiter({
     windowMs: positiveInteger(env.AI_RATE_LIMIT_WINDOW_MS, 5 * 60 * 1000),
     limit: positiveInteger(env.AI_RATE_LIMIT_MAX, 10),
     message: 'Se alcanzó el límite temporal de solicitudes de IA.',
-    store: createStore(),
+    store: createStore('ai'),
   });
   return {
     requestId,
