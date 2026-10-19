@@ -38,16 +38,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-2 sm:gap-4 h-16">
           <button
             onClick={() => onTabChange('inicio')}
-            className="flex items-center gap-2.5 shrink-0"
+            className="flex items-center gap-2.5 shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-karen rounded-lg"
             aria-label="Supermercado Karen, ir al inicio"
           >
-            <span className="w-9 h-9 rounded-tag bg-karen text-white font-tag font-bold text-2xl leading-none flex items-center justify-center shadow-sm">
-              K
-            </span>
-            <span className="hidden md:flex flex-col items-start leading-none">
-              <span className="text-[11px] font-semibold text-ink-muted dark:text-slate-400">Supermercado</span>
-              <span className="font-tag font-bold text-xl text-ink dark:text-white">Karen</span>
-            </span>
+            <div className="bg-white rounded-lg p-1 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-transform group-hover:scale-105">
+              <img
+                src="/supermercado_karen.jpeg"
+                alt="Supermercado Karen"
+                className="h-9 sm:h-10 w-auto object-contain"
+              />
+            </div>
           </button>
 
           <form
