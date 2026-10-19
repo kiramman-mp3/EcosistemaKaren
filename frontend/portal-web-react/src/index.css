@@ -23,6 +23,23 @@
     background: #0B1120;
   }
 
+  /* Ajuste global de legibilidad en modo oscuro para textos del tema Fleje */
+  html.dark .text-ink:not(.bg-sticker *):not(.bg-white *) {
+    color: #F8FAFC;
+  }
+
+  html.dark .text-ink-soft:not(.bg-sticker *):not(.bg-white *) {
+    color: #CBD5E1;
+  }
+
+  html.dark .text-ink-muted:not(.bg-sticker *):not(.bg-white *) {
+    color: #94A3B8;
+  }
+
+  html.dark .text-ink-faint:not(.bg-sticker *):not(.bg-white *) {
+    color: #64748B;
+  }
+
   :focus-visible {
     outline: 3px solid #FFD400;
     outline-offset: 2px;

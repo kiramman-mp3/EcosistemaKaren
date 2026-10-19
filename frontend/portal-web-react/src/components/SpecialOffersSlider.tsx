@@ -156,31 +156,31 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="relative rounded-2xl border border-aisle-rule bg-white shadow-soft overflow-hidden">
+      <div className="relative rounded-2xl border border-aisle-rule dark:border-slate-800 bg-white dark:bg-slate-900 shadow-soft overflow-hidden">
         {/* Encabezado superior del slider */}
-        <div className="bg-aisle px-6 py-2.5 border-b border-aisle-rule flex items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-2 text-ink-soft">
+        <div className="bg-aisle dark:bg-slate-800/80 px-6 py-2.5 border-b border-aisle-rule dark:border-slate-700 flex items-center justify-between gap-4 text-xs">
+          <div className="flex items-center gap-2 text-ink-soft dark:text-slate-300">
             <Sparkles className="w-4 h-4 text-karen" />
-            <span className="font-semibold text-ink uppercase tracking-wider">Temporada de Ahorro Supermercados Karen</span>
-            <span className="hidden sm:inline text-ink-muted">·</span>
-            <span className="hidden sm:inline text-ink-muted">Ofertas programadas y por caducidad controlada</span>
+            <span className="font-semibold text-ink dark:text-white uppercase tracking-wider">Temporada de Ahorro Supermercados Karen</span>
+            <span className="hidden sm:inline text-ink-muted dark:text-slate-400">·</span>
+            <span className="hidden sm:inline text-ink-muted dark:text-slate-400">Ofertas programadas y por caducidad controlada</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-ink-muted font-tag font-bold">
+            <span className="text-ink-muted dark:text-slate-400 font-tag font-bold">
               0{currentIndex + 1} / 0{totalSlides}
             </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={handlePrev}
                 aria-label="Oferta anterior"
-                className="w-7 h-7 rounded-full bg-white border border-aisle-rule flex items-center justify-center text-ink hover:bg-ink hover:text-white transition-colors"
+                className="w-7 h-7 rounded-full bg-white dark:bg-slate-700 border border-aisle-rule dark:border-slate-600 flex items-center justify-center text-ink dark:text-white hover:bg-ink hover:text-white transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={handleNext}
                 aria-label="Siguiente oferta"
-                className="w-7 h-7 rounded-full bg-white border border-aisle-rule flex items-center justify-center text-ink hover:bg-ink hover:text-white transition-colors"
+                className="w-7 h-7 rounded-full bg-white dark:bg-slate-700 border border-aisle-rule dark:border-slate-600 flex items-center justify-center text-ink dark:text-white hover:bg-ink hover:text-white transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -197,29 +197,29 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
                   <Flame className="w-3.5 h-3.5" />
                   {currentSlide.badge}
                 </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-white/90 text-ink-soft border border-aisle-rule">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-white/90 dark:bg-slate-800/90 text-ink-soft dark:text-slate-200 border border-aisle-rule dark:border-slate-700">
                   <Calendar className="w-3.5 h-3.5 text-karen" />
                   {currentSlide.dateRange}
                 </span>
               </div>
 
-              <h2 className="font-tag font-bold text-ink text-3xl sm:text-4xl lg:text-5xl leading-tight tracking-tight">
+              <h2 className="font-tag font-bold text-ink dark:text-white text-3xl sm:text-4xl lg:text-5xl leading-tight tracking-tight">
                 {currentSlide.eventName}
               </h2>
-              <p className="mt-3 text-base sm:text-lg text-ink-soft leading-relaxed max-w-[55ch]">
+              <p className="mt-3 text-base sm:text-lg text-ink-soft dark:text-slate-200 leading-relaxed max-w-[55ch]">
                 {currentSlide.tagline}. {currentSlide.description}
               </p>
 
               {/* Lista de productos destacados del evento */}
               <div className="mt-6">
-                <span className="block text-xs font-tag font-bold text-ink uppercase tracking-wider mb-2">
+                <span className="block text-xs font-tag font-bold text-ink dark:text-slate-200 uppercase tracking-wider mb-2">
                   Destacados en esta fecha:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {currentSlide.featuredProducts.map((prod, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-1.5 bg-white/80 backdrop-blur-sm border border-aisle-rule px-3 py-1.5 rounded-tag text-xs font-semibold text-ink"
+                      className="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-800/90 backdrop-blur-sm border border-aisle-rule dark:border-slate-700 px-3 py-1.5 rounded-tag text-xs font-semibold text-ink dark:text-white"
                     >
                       <Tag className="w-3 h-3 text-karen" />
                       {prod}
@@ -239,7 +239,7 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
                 </button>
                 <button
                   onClick={onExploreProducts}
-                  className="h-11 px-5 rounded-tag border border-ink/20 bg-white/80 text-ink font-semibold hover:bg-white transition-colors"
+                  className="h-11 px-5 rounded-tag border border-ink/20 dark:border-slate-600 bg-white/80 dark:bg-slate-800 text-ink dark:text-white font-semibold hover:bg-white dark:hover:bg-slate-700 transition-colors"
                 >
                   Explorar catálogo completo
                 </button>
@@ -248,15 +248,15 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
 
             {/* Columna derecha: Tarjeta visual de producto / Garantía FEFO */}
             <div className="relative">
-              <div className="bg-white rounded-xl p-6 border border-aisle-rule shadow-lift relative overflow-hidden">
+              <div className="bg-white dark:bg-slate-800/95 rounded-xl p-6 border border-aisle-rule dark:border-slate-700 shadow-lift relative overflow-hidden">
                 <div className="absolute top-3 right-3">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-karen bg-karen-tint px-2.5 py-0.5 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-karen bg-karen-tint dark:bg-red-950/60 dark:text-red-300 px-2.5 py-0.5 rounded-full">
                     Garantía FEFO
                   </span>
                 </div>
 
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-xl bg-aisle flex items-center justify-center p-2 border border-aisle-rule shrink-0">
+                  <div className="w-16 h-16 rounded-xl bg-aisle dark:bg-slate-700 flex items-center justify-center p-2 border border-aisle-rule dark:border-slate-600 shrink-0">
                     <img
                       src={currentSlide.imageUrl}
                       alt={currentSlide.eventName}
@@ -267,15 +267,15 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
                     />
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-ink-muted">{currentSlide.category}</span>
-                    <h3 className="font-tag font-bold text-ink text-base leading-snug">
+                    <span className="text-xs font-medium text-ink-muted dark:text-slate-400">{currentSlide.category}</span>
+                    <h3 className="font-tag font-bold text-ink dark:text-white text-base leading-snug">
                       Reserva web y retira en caja
                     </h3>
-                    <span className="text-xs text-ink-soft">10 minutos de stock reservado</span>
+                    <span className="text-xs text-ink-soft dark:text-slate-300">10 minutos de stock reservado</span>
                   </div>
                 </div>
 
-                <div className="space-y-2 border-t border-aisle-rule pt-4 text-xs text-ink-soft">
+                <div className="space-y-2 border-t border-aisle-rule dark:border-slate-700 pt-4 text-xs text-ink-soft dark:text-slate-300">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>Lotes auditados con fecha de vencimiento real</span>
@@ -287,8 +287,8 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
                 </div>
 
                 {realOffers.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-aisle-rule flex items-center justify-between">
-                    <span className="text-xs font-semibold text-ink">
+                  <div className="mt-4 pt-3 border-t border-aisle-rule dark:border-slate-700 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-ink dark:text-white">
                       ⚡ {realOffers.length} ofertas flash vivas hoy
                     </span>
                     <button
@@ -312,7 +312,7 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
         </div>
 
         {/* Indicadores inferiores (Dots) */}
-        <div className="bg-white px-6 py-3 border-t border-aisle-rule flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 px-6 py-3 border-t border-aisle-rule dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {slides.map((_, idx) => (
               <button
@@ -326,7 +326,7 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
             ))}
           </div>
 
-          <span className="text-xs text-ink-muted hidden sm:inline">
+          <span className="text-xs text-ink-muted dark:text-slate-400 hidden sm:inline">
             Avanza automáticamente cada 6 segundos · Pausa al pasar el cursor
           </span>
         </div>
