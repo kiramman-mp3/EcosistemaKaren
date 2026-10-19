@@ -464,10 +464,10 @@ export const App: React.FC = () => {
               <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12" aria-labelledby="por-vencer">
                 <div className="flex items-end justify-between gap-4 mb-6">
                   <div>
-                    <h2 id="por-vencer" className="font-tag font-bold text-3xl sm:text-4xl text-ink">Por vencer, con descuento</h2>
-                    <p className="mt-1 text-ink-soft">Lo que vence primero, primero.</p>
+                    <h2 id="por-vencer" className="font-tag font-bold text-3xl sm:text-4xl text-ink dark:text-white">Por vencer, con descuento</h2>
+                    <p className="mt-1 text-ink-soft dark:text-slate-300">Lo que vence primero, primero.</p>
                   </div>
-                  <button onClick={() => goTo('ofertas')} className="shrink-0 text-sm font-semibold text-ink underline underline-offset-4">
+                  <button onClick={() => goTo('ofertas')} className="shrink-0 text-sm font-semibold text-ink dark:text-slate-200 hover:text-karen dark:hover:text-sticker underline underline-offset-4">
                     Ver las {offers.length} ofertas
                   </button>
                 </div>

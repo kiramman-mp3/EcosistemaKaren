@@ -35,17 +35,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-[#0F172A] border-b border-aisle-rule dark:border-slate-800 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-2 sm:gap-4 h-16 sm:h-20">
+        <div className="flex items-center gap-2.5 sm:gap-5 h-20 sm:h-24">
           <button
             onClick={() => onTabChange('inicio')}
-            className="flex items-center gap-2.5 shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-karen rounded-xl"
+            className="flex items-center gap-2.5 shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-karen rounded-2xl"
             aria-label="Supermercado Karen, ir al inicio"
           >
-            <div className="bg-white rounded-xl p-1.5 sm:p-2 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-transform group-hover:scale-105">
+            <div className="bg-white rounded-2xl p-2 sm:p-2.5 shadow-md border border-slate-200 dark:border-slate-700/80 flex items-center justify-center transition-transform group-hover:scale-105">
               <img
                 src="/supermercado_karen.jpeg"
                 alt="Supermercado Karen"
-                className="h-11 sm:h-14 w-auto max-w-[180px] sm:max-w-[240px] object-contain"
+                className="h-13 sm:h-16 md:h-18 w-auto max-w-[210px] sm:max-w-[290px] object-contain"
               />
             </div>
           </button>

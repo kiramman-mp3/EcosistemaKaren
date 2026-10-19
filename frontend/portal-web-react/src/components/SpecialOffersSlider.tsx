@@ -112,36 +112,36 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
       case 'karen':
         return {
           badgeBg: 'bg-karen text-white',
-          borderAccent: 'border-karen/20',
-          gradientBg: 'from-karen-tint/40 via-white to-sticker/30',
+          borderAccent: 'border-karen/20 dark:border-red-900/40',
+          gradientBg: 'from-karen-tint/40 via-white to-sticker/30 dark:from-red-950/30 dark:via-slate-900 dark:to-slate-900',
           buttonBg: 'bg-karen hover:bg-karen-deep text-white',
         };
       case 'emerald':
         return {
           badgeBg: 'bg-emerald-600 text-white',
-          borderAccent: 'border-emerald-200',
-          gradientBg: 'from-emerald-50 via-white to-emerald-100/40',
+          borderAccent: 'border-emerald-200 dark:border-emerald-900/40',
+          gradientBg: 'from-emerald-50 via-white to-emerald-100/40 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900',
           buttonBg: 'bg-emerald-600 hover:bg-emerald-700 text-white',
         };
       case 'amber':
         return {
-          badgeBg: 'bg-amber-500 text-ink font-bold',
-          borderAccent: 'border-amber-200',
-          gradientBg: 'from-amber-50 via-white to-amber-100/40',
+          badgeBg: 'bg-amber-500 text-ink dark:text-slate-950 font-bold',
+          borderAccent: 'border-amber-200 dark:border-amber-900/40',
+          gradientBg: 'from-amber-50 via-white to-amber-100/40 dark:from-amber-950/30 dark:via-slate-900 dark:to-slate-900',
           buttonBg: 'bg-amber-600 hover:bg-amber-700 text-white',
         };
       case 'indigo':
         return {
           badgeBg: 'bg-indigo-600 text-white',
-          borderAccent: 'border-indigo-200',
-          gradientBg: 'from-indigo-50 via-white to-indigo-100/40',
+          borderAccent: 'border-indigo-200 dark:border-indigo-900/40',
+          gradientBg: 'from-indigo-50 via-white to-indigo-100/40 dark:from-indigo-950/30 dark:via-slate-900 dark:to-slate-900',
           buttonBg: 'bg-indigo-600 hover:bg-indigo-700 text-white',
         };
       default:
         return {
           badgeBg: 'bg-ink text-white',
-          borderAccent: 'border-aisle-rule',
-          gradientBg: 'from-aisle via-white to-aisle',
+          borderAccent: 'border-aisle-rule dark:border-slate-800',
+          gradientBg: 'from-aisle via-white to-aisle dark:from-slate-900 dark:via-slate-900 dark:to-slate-800',
           buttonBg: 'bg-ink hover:bg-ink-soft text-white',
         };
     }
