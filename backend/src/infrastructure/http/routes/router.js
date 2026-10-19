@@ -16,6 +16,16 @@ function createApiRouter(controllers, security) {
     heartbeatController
   } = controllers;
 
+  // Raíz de la API (/api/v1)
+  router.get('/', (req, res) => {
+    res.json({
+      name: 'Ecosistema Karen - Backend Server API v1',
+      version: '1.0.0',
+      status: 'ONLINE',
+      docs: '/api-docs',
+    });
+  });
+
   // Categorías
   router.get('/categories', (req, res, next) => categoryController.getCategories(req, res, next));
   router.post('/categories', authenticate, authorize('ADMIN'), validate({ body: schemas.categoryBody }), (req, res, next) => categoryController.createCategory(req, res, next));

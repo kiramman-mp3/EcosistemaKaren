@@ -84,3 +84,21 @@ test('operaciones por cookie rechazan CSRF desde otro origen en producción', as
   assert.equal((await request(app).post('/action').set('Origin', 'https://evil.example')).status, 403);
   assert.equal((await request(app).post('/action').set('Origin', 'https://portal.example')).status, 204);
 });
+
+test('múltiples limitadores en cascada no arrojan error de conteo doble', async () => {
+  const app = express();
+  const security = createSecurityMiddlewares({
+    RATE_LIMIT_WINDOW_MS: '60000',
+    RATE_LIMIT_MAX: '10',
+    AUTH_RATE_LIMIT_WINDOW_MS: '60000',
+    AUTH_RATE_LIMIT_MAX: '5',
+  });
+  app.use('/api', security.general);
+  app.use('/api/auth', security.auth);
+  app.post('/api/auth/login', (req, res) => res.json({ ok: true }));
+  app.use(errorHandler);
+
+  const res = await request(app).post('/api/auth/login');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+});
