@@ -5,7 +5,7 @@ import { api } from '../api/client';
 import { formatDateTime } from '../utils/dates';
 import { InventoryMovement, InventoryWaste } from '../types';
 import { Button, Notice, ScreenTitle } from '../components/ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 const money = (value?: number | null) => value == null ? 'No registrado' : `$${Number(value).toFixed(2)}`;
 
@@ -137,7 +137,7 @@ export const ReportesScreen: React.FC = () => {
 
 const Metric = ({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) => (
   <View style={styles.metric}>
-    <Text style={[styles.metricValue, alert && { color: colors.karen }]}>{value}</Text>
+    <Text style={[styles.metricValue, alert && { color: colors.karenText }]}>{value}</Text>
     <Text style={styles.metricLabel}>{label}</Text>
   </View>
 );
@@ -145,37 +145,37 @@ const Metric = ({ label, value, alert = false }: { label: string; value: string;
 const Detail = ({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) => (
   <View style={styles.detail}>
     <Text style={styles.detailLabel}>{label}</Text>
-    <Text style={[styles.detailValue, emphasis && { color: colors.karen }]}>{value}</Text>
+    <Text style={[styles.detailValue, emphasis && { color: colors.karenText }]}>{value}</Text>
   </View>
 );
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 40 },
   loading: { margin: 40 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  metric: { flexGrow: 1, flexBasis: '45%', backgroundColor: colors.white, padding: 14, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule },
+  metric: { flexGrow: 1, flexBasis: '45%', backgroundColor: colors.card, padding: 14, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule },
   metricValue: { fontFamily: fonts.tag, fontSize: 30, lineHeight: 32, color: colors.ink },
   metricLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted },
   section: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink, marginTop: 24, marginBottom: 10 },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderRadius: radius.tag,
+    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.card, borderRadius: radius.tag,
     borderWidth: 1, borderColor: colors.rule, padding: 12, marginBottom: 8,
   },
   rowText: { flex: 1, minWidth: 0 },
-  kind: { fontFamily: fonts.bold, fontSize: 13, color: colors.karen },
+  kind: { fontFamily: fonts.bold, fontSize: 13, color: colors.karenText },
   product: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
   reason: { fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft },
   meta: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted, marginTop: 2 },
   amountColumn: { alignItems: 'flex-end' },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   qty: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink },
-  qtyAlert: { fontFamily: fonts.tag, fontSize: 22, color: colors.karen },
+  qtyAlert: { fontFamily: fonts.tag, fontSize: 22, color: colors.karenText },
   cost: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
   empty: { fontFamily: fonts.body, color: colors.inkMuted, textAlign: 'center', padding: 20 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.6)', justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: colors.white, borderRadius: radius.tag, padding: 18, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.6)', justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.card, borderRadius: radius.tag, padding: 18, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center' },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderBottomWidth: 1, borderBottomColor: colors.rule, paddingBottom: 12, marginBottom: 4 },
   cardTitle: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -183,4 +183,4 @@ const styles = StyleSheet.create({
   detailLabel: { flex: 1, fontFamily: fonts.medium, fontSize: 13, color: colors.inkMuted },
   detailValue: { flex: 1.4, fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textAlign: 'right' },
   done: { marginTop: 14 },
-});
+}));
