@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Check, Plus } from 'lucide-react';
 import { FlashOffer, Product } from '../types';
 import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui/Tag';
+import { Button } from './ui/Button';
+import { categoryTone } from '../lib/categoryTone';
+import { flyToCart } from '../lib/flyToCart';
 
 const LOW_STOCK = 5;
 
 function StockNote({ stock }: { stock: number }) {
-  if (stock <= 0) return <span className="text-sm font-semibold text-karen">Agotado</span>;
-  if (stock <= LOW_STOCK) return <span className="text-sm font-semibold text-karen tabular">Quedan {stock}</span>;
-  return <span className="text-sm text-fresh tabular">{stock} disponibles</span>;
+  if (stock <= 0) return <span className="text-sm font-bold text-karen-text">Agotado</span>;
+  if (stock <= LOW_STOCK) return <span className="text-sm font-bold text-karen-text tabular">Quedan {stock}</span>;
+  return <span className="text-sm font-semibold text-fresh tabular">{stock} disponibles</span>;
 }
 
 interface ProductTagProps {
@@ -19,9 +22,10 @@ interface ProductTagProps {
   onReserveOffer?: (offer: FlashOffer) => void | Promise<void>;
 }
 
-/** Producto en percha: foto arriba y la etiqueta de precio (fleje) en el borde. */
+/** Producto en percha: foto sobre el color de su pasillo y el precio en una etiqueta. */
 export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCategory = false, onAdd, onReserveOffer }) => {
   const [added, setAdded] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
   const soldOut = product.stock <= 0;
 
   const add = () => {
@@ -29,27 +33,36 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
       void onReserveOffer(offer);
       return;
     }
+    flyToCart(imageRef.current);
     onAdd(product);
     setAdded(true);
-    window.setTimeout(() => setAdded(false), 1200);
+    window.setTimeout(() => setAdded(false), 1400);
   };
 
   return (
-    <article className={`flex flex-col rounded-tag bg-white dark:bg-slate-800/90 border ${offer ? 'border-sticker-deep' : 'border-aisle-rule dark:border-slate-700'} overflow-hidden`}>
+    <article className="group flex flex-col rounded-block bg-surface p-3 shadow-pop border-2 border-mora/90 transition-transform hover:-translate-y-0.5">
       <div className="relative">
-        <ProductImage src={product.image} alt={product.name} className={`aspect-square p-4 ${soldOut ? 'opacity-40' : ''}`} />
+        <ProductImage
+          ref={imageRef}
+          src={product.image}
+          alt={product.name}
+          tone={categoryTone(product.category)}
+          className={`aspect-square rounded-photo p-4 ${soldOut ? 'opacity-40' : ''}`}
+        />
         {offer && (
-          <span className="absolute left-0 top-3 bg-karen text-white font-tag font-bold text-lg leading-none px-2.5 py-1.5 rounded-r-tag">
+          <span
+            className="absolute -left-1 top-3 -rotate-3 rounded-tag border-2 border-mora bg-karen px-2.5 py-1 font-display text-lg font-extrabold leading-none text-white shadow-pop-sm animate-pop"
+          >
             {offer.discountBadge}
           </span>
         )}
       </div>
 
-      <div className={`flex flex-1 flex-col border-t-4 ${offer ? 'border-sticker bg-sticker-tint dark:bg-amber-950/40' : 'border-ink dark:border-slate-600'} px-3.5 pt-3 pb-3.5`}>
-        {showCategory && <p className="text-xs text-ink-muted dark:text-slate-400 mb-1">{product.category}</p>}
-        <h3 className="font-semibold text-ink dark:text-white leading-snug line-clamp-2 min-h-[2.75em]">{product.name}</h3>
+      <div className="flex flex-1 flex-col px-1.5 pt-3 pb-1">
+        {showCategory && <p className="text-xs font-semibold text-ink-muted mb-1">{product.category}</p>}
+        <h3 className="font-display text-base font-extrabold leading-snug text-ink line-clamp-2 min-h-[2.6em]">{product.name}</h3>
         {product.description && (
-          <p className="mt-0.5 text-xs text-ink-muted dark:text-slate-400 truncate">{product.description}</p>
+          <p className="mt-0.5 text-xs text-ink-muted truncate">{product.description}</p>
         )}
 
         <div className="mt-3 flex items-end justify-between gap-2">
@@ -63,21 +76,16 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
         {offer && <ExpiryStamp date={offer.expiresOn} className="mt-2" />}
 
         <div className="mt-auto" />
-        <button
+        <Button
           onClick={add}
           disabled={soldOut}
+          variant={added ? 'limon' : offer ? 'primary' : 'surface'}
           aria-label={offer ? 'Añadir oferta al carrito' : `Agregar ${product.name} a mi lista`}
-          className={`mt-3.5 h-11 rounded-tag text-sm font-semibold flex items-center justify-center gap-2 disabled:bg-aisle disabled:text-ink-faint ${
-            added
-              ? 'bg-fresh text-white'
-              : offer
-                ? 'bg-karen text-white hover:bg-karen-deep'
-                : 'bg-ink text-white hover:bg-ink-soft'
-          }`}
+          className="mt-3.5 w-full"
         >
-          {added ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {soldOut ? 'Agotado' : added ? 'En tu lista' : offer ? 'Agregar oferta' : 'Agregar'}
-        </button>
+          {added ? <Check className="w-4 h-4 animate-pop" /> : <Plus className="w-4 h-4" />}
+          {soldOut ? 'Agotado' : added ? 'En tu lista' : offer ? 'Apartar oferta' : 'Agregar'}
+        </Button>
       </div>
     </article>
   );
@@ -88,48 +96,62 @@ interface OfferTagProps {
   onReserve: (offer: FlashOffer) => void | Promise<void>;
 }
 
-/** Oferta por vencer: etiqueta amarilla con el precio rebajado y la fecha impresa. */
+/** Oferta por vencer: pegatina limón con el precio rebajado y la nota de la tienda a mano. */
 export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
+  const imageRef = useRef<HTMLImageElement>(null);
   const sold = Math.max(0, offer.stockTotal - offer.stockAvailable);
   const soldPercent = offer.stockTotal > 0 ? Math.round((sold / offer.stockTotal) * 100) : 0;
   return (
-    <article className="flex flex-col rounded-tag bg-white border border-sticker-deep overflow-hidden">
+    <article className="flex flex-col rounded-block border-2 border-mora bg-limon p-3 shadow-pop text-mora">
       <div className="relative">
-        <ProductImage src={offer.image} alt={offer.productName || offer.title} className="aspect-[4/3] p-4" />
-        <span className="absolute left-0 top-3 bg-karen text-white font-tag font-bold text-xl leading-none px-3 py-1.5 rounded-r-tag">
+        <ProductImage
+          ref={imageRef}
+          src={offer.image}
+          alt={offer.productName || offer.title}
+          tone={categoryTone(offer.category)}
+          className="aspect-[4/3] rounded-photo p-4"
+        />
+        <span className="absolute -left-1 top-3 -rotate-3 rounded-tag border-2 border-mora bg-karen px-3 py-1 font-display text-xl font-extrabold leading-none text-white shadow-pop-sm animate-pop">
           {offer.discountBadge}
         </span>
       </div>
-      <div className="flex flex-1 flex-col bg-sticker px-4 pt-3.5 pb-4">
-        <h3 className="font-semibold text-ink leading-snug line-clamp-2">{offer.productName || offer.title}</h3>
-        <p className="mt-1 text-sm text-ink-soft line-clamp-2">{offer.title}</p>
+      <div className="flex flex-1 flex-col px-1.5 pt-3.5 pb-1">
+        <h3 className="font-display text-lg font-extrabold leading-snug line-clamp-2">{offer.productName || offer.title}</h3>
+        <p className="mt-1 font-hand text-xl leading-tight -rotate-1 line-clamp-2">{offer.title}</p>
         <div className="mt-3 flex items-end gap-3">
-          <Price value={offer.price} tone="karen" />
-          <span className="pb-1"><OldPrice value={offer.originalPrice} /></span>
+          <Price value={offer.price} tone="mora" />
+          <span className="pb-1 text-sm line-through tabular opacity-75" aria-label={`Antes $${offer.originalPrice.toFixed(2)}`}>
+            ${offer.originalPrice.toFixed(2)}
+          </span>
         </div>
         <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
-          <ExpiryStamp date={offer.expiresOn} />
-          <span className="text-sm text-ink tabular">Quedan {offer.stockAvailable}</span>
+          <ExpiryStamp date={offer.expiresOn} onColor />
+          <span className="text-sm font-bold tabular">Quedan {offer.stockAvailable}</span>
         </div>
         <div
-          className="mt-2 h-1.5 rounded-full bg-white/70 overflow-hidden"
+          className="mt-2 h-2 rounded-full bg-mora/15 overflow-hidden"
           role="meter"
           aria-label="Unidades vendidas del lote en oferta"
           aria-valuenow={soldPercent}
           aria-valuemin={0}
           aria-valuemax={100}
         >
-          <div className="h-full bg-karen" style={{ width: `${soldPercent}%` }} />
+          <div className="h-full rounded-full bg-karen transition-[width] duration-700" style={{ width: `${soldPercent}%` }} />
         </div>
-        <button
-          onClick={() => void onReserve(offer)}
+        <Button
+          onClick={() => {
+            flyToCart(imageRef.current);
+            void onReserve(offer);
+          }}
           aria-label="Añadir oferta al carrito"
-          className="mt-4 h-11 rounded-tag bg-ink text-white text-sm font-semibold hover:bg-ink-soft flex items-center justify-center gap-2"
+          variant="primary"
+          className="mt-4 w-full"
         >
           <Plus className="w-4 h-4" />
-          Agregar oferta
-        </button>
+          Apartar por ${offer.price.toFixed(2)}
+        </Button>
       </div>
     </article>
   );
 };
+
