@@ -86,3 +86,50 @@ test('el login responde igual para correo inexistente y contraseña incorrecta',
   }
   assert.equal(messages[0], messages[1]);
 });
+
+test('el login por cookie (portal web) rechaza al personal de la tienda y no emite cookie', async () => {
+  const AuthController = require('../src/adapters/controllers/AuthController');
+  const memory = new InMemoryRepositories();
+  const controller = new AuthController(
+    new RegisterUser(memory.userRepository, SECRET),
+    new LoginUser(memory.userRepository, SECRET),
+    null,
+    SECRET
+  );
+  const attempt = async (email, mode) => {
+    let cookieSet = false;
+    let body = null;
+    let error = null;
+    const req = { body: { email, password: 'demo123' }, get: name => (name === 'x-session-mode' ? mode : undefined) };
+    const res = { cookie: () => { cookieSet = true; }, json: payload => { body = payload; } };
+    await controller.login(req, res, err => { error = err; });
+    return { cookieSet, body, error };
+  };
+
+  for (const email of ['bodega@karen.com', 'admin@karen.com']) {
+    const web = await attempt(email, 'cookie');
+    assert.equal(web.error.statusCode, 403);
+    assert.equal(web.cookieSet, false);
+    assert.equal(web.body, null);
+  }
+  // La app de bodega usa Bearer (sin modo cookie) y sigue pudiendo ingresar.
+  assert.equal((await attempt('bodega@karen.com', undefined)).body.success, true);
+  // Los clientes entran por la web con normalidad.
+  const client = await attempt('cliente@karen.com', 'cookie');
+  assert.equal(client.cookieSet, true);
+  assert.equal(client.error, null);
+});
+
+test('authenticate rechaza una sesión por cookie de personal de la tienda pero acepta su Bearer', async () => {
+  const { authenticate } = createAuthMiddleware(SECRET);
+  const token = jwt.sign(
+    { id: 'staff-1', nombre: 'Bodega', email: 'bodega@example.com', rol: 'BODEGUERO' },
+    SECRET,
+    { algorithm: 'HS256', expiresIn: '5m' }
+  );
+  const viaCookie = await executeMiddleware(authenticate, { get: () => undefined, cookies: { karen_session: token } });
+  assert.equal(viaCookie.statusCode, 403);
+  const viaBearer = { get: () => `Bearer ${token}`, cookies: {} };
+  assert.equal(await executeMiddleware(authenticate, viaBearer), undefined);
+  assert.equal(viaBearer.user.rol, 'BODEGUERO');
+});

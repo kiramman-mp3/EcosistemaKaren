@@ -1,4 +1,7 @@
 const jwt = require('jsonwebtoken');
+const { ForbiddenException } = require('../../domain/exceptions/DomainExceptions');
+
+const STAFF_ON_WEB_MESSAGE = 'Las cuentas del personal de la tienda no pueden ingresar al portal web. Usa la app de bodega.';
 
 class AuthController {
   constructor(registerUserUC, loginUserUC, tokenBlacklistRepo = null, jwtSecret = process.env.JWT_SECRET) {
@@ -25,6 +28,10 @@ class AuthController {
   async login(req, res, next) {
     try {
       const result = await this.loginUserUC.execute(req.body);
+      // El modo cookie es el del portal web, que es solo para clientes.
+      if (req.get('x-session-mode') === 'cookie' && result.user?.rol !== 'CLIENTE') {
+        throw new ForbiddenException(STAFF_ON_WEB_MESSAGE);
+      }
       if (req.get('x-session-mode') === 'cookie') this.setSessionCookie(res, result.token);
       res.json({
         success: true,
