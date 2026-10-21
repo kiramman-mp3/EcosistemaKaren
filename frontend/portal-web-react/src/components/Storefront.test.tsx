@@ -40,7 +40,7 @@ describe('HeroSection', () => {
     expect(screen.getByRole('list', { name: 'Ofertas que vencen primero' }).children).toHaveLength(3);
     expect(screen.queryByText('Atún')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Apartar Yogur' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar Yogur' }));
     expect(onReserve).toHaveBeenCalledWith(offers[0]);
   });
 
