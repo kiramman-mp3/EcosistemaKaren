@@ -80,7 +80,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {stickers.length > 0 && (
           <View style={styles.stickers}>
-            <Text style={styles.handNote} accessibilityElementsHidden>¡se va hoy!</Text>
+            <Text style={styles.handNote} aria-hidden>¡se va hoy!</Text>
             {stickers.map((offer, index) => {
               const style = STICKERS[index];
               const busy = reservingOfferId === offer.id;
