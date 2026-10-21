@@ -128,7 +128,7 @@ export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
 
 const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.7)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.7)' },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
   card: { backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, overflow: 'hidden', width: '100%', maxWidth: 420, alignSelf: 'center' },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: colors.sticker, borderBottomWidth: 2, borderBottomColor: colors.mora, padding: 18 },

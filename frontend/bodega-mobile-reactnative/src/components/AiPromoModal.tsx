@@ -64,7 +64,7 @@ export const AiPromoModal: React.FC<AiPromoModalProps> = ({ visible, promotion, 
 };
 
 const styles = themed(() => StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.6)', justifyContent: 'center', padding: 20 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.6)', justifyContent: 'center', padding: 20 },
   card: { backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, padding: 20, maxHeight: '90%', width: '100%', maxWidth: 460, alignSelf: 'center' },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   title: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },

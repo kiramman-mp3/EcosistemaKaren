@@ -109,7 +109,7 @@ export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
 };
 
 const styles = themed(() => StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.6)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.6)', justifyContent: 'flex-end' },
   sheet: { maxHeight: '90%', backgroundColor: colors.aisle, borderTopLeftRadius: radius.block, borderTopRightRadius: radius.block, borderWidth: 2, borderBottomWidth: 0, borderColor: colors.mora, overflow: 'hidden' },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.sticker, borderBottomWidth: 2, borderBottomColor: colors.mora, paddingLeft: 20, paddingRight: 8, paddingVertical: 10 },
   title: { fontFamily: fonts.tag, fontSize: 28, color: colors.mora },

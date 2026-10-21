@@ -118,7 +118,7 @@ const styles = themed(() => StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4 },
   statusText: { fontFamily: fonts.bold, fontSize: 12, color: '#FFFFFF' },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.5)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.5)' },
   menu: {
     position: 'absolute', top: 64, right: 12, width: 260, backgroundColor: colors.card,
     borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, padding: 18,

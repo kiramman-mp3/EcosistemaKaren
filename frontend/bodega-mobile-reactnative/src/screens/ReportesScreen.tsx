@@ -174,7 +174,7 @@ const styles = themed(() => StyleSheet.create({
   qtyAlert: { fontFamily: fonts.tag, fontSize: 22, color: colors.karenText },
   cost: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
   empty: { fontFamily: fonts.body, color: colors.inkMuted, textAlign: 'center', padding: 20 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.6)', justifyContent: 'center', padding: 20 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.6)', justifyContent: 'center', padding: 20 },
   card: { backgroundColor: colors.card, borderRadius: radius.tag, padding: 18, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center' },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderBottomWidth: 1, borderBottomColor: colors.rule, paddingBottom: 12, marginBottom: 4 },
   cardTitle: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },

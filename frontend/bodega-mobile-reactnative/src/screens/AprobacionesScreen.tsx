@@ -232,7 +232,7 @@ const styles = themed(() => StyleSheet.create({
   cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4, flexWrap: 'wrap' },
   status: { borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 3 },
   statusText: { fontFamily: fonts.bold, fontSize: 12 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.55)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.55)', justifyContent: 'flex-end' },
   sheet: { maxHeight: '92%', backgroundColor: colors.card, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
   sheetHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
   sheetTitle: { fontFamily: fonts.tag, fontSize: 24, lineHeight: 26, color: colors.ink },
