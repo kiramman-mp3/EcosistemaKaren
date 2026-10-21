@@ -1,6 +1,7 @@
 import React from 'react';
 import { Phone, Mail, MapPin, Clock, MessageSquare, ShieldCheck, FileText, ExternalLink } from 'lucide-react';
 import { NavTab } from '../types';
+import { Logo } from './ui/Logo';
 
 interface FooterProps {
   onNavigate: (tab: NavTab) => void;
@@ -29,8 +30,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="bg-logo-plate rounded-tag shrink-0 p-1.5 w-40">
-                <img src="/supermercado_karen.png" alt="Supermercado Karen Logo" className="block w-full h-auto" />
+              <div className="shrink-0 w-40">
+                <Logo alt="Supermercado Karen Logo" className="w-full" />
               </div>
               <div>
                 <span className="block font-display font-extrabold text-xl leading-tight">Supermercado Karen</span>

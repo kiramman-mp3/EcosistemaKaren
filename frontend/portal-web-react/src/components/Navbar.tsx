@@ -3,6 +3,7 @@ import { LogOut, Moon, Search, ShoppingBasket, Sun, Ticket, User, X } from 'luci
 import { NavTab } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { RollingNumber } from './ui/RollingNumber';
+import { Logo } from './ui/Logo';
 
 interface NavbarProps {
   activeTab: NavTab;
@@ -42,13 +43,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center shrink-0 group rounded-tag"
             aria-label="Supermercado Karen, ir al inicio"
           >
-            {/* Logo transparente: en modo oscuro va sobre una placa blanca para no perder el texto carbón. */}
-            <div className="bg-logo-plate rounded-tag p-1.5 w-40 sm:w-56 transition-transform group-hover:-rotate-2 group-hover:scale-105">
-              <img
-                src="/supermercado_karen.png"
-                alt="Supermercado Karen"
-                className="block w-full h-auto"
-              />
+            <div className="p-1.5 w-40 sm:w-56 transition-transform group-hover:-rotate-2 group-hover:scale-105">
+              <Logo alt="Supermercado Karen" className="w-full" />
             </div>
           </button>
 

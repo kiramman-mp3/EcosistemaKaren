@@ -39,10 +39,10 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.brand}>
-        {/* Logo transparente: en modo oscuro va sobre una placa blanca para no perder el texto carbón. */}
-        <View style={styles.logoPlate} accessible accessibilityLabel="Supermercado Karen">
+        {/* Logo transparente; en modo oscuro se usa la versión con el texto en crema. */}
+        <View style={styles.logoBox} accessible accessibilityLabel="Supermercado Karen">
           <Image
-            source={require('../../assets/supermercado_karen.png')}
+            source={isDark ? require('../../assets/supermercado_karen_dark.png') : require('../../assets/supermercado_karen.png')}
             style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
@@ -110,7 +110,7 @@ const styles = themed(() => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
   },
   brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
-  logoPlate: { width: LOGO_WIDTH, height: LOGO_HEIGHT, borderRadius: radius.tag, backgroundColor: colors.logoPlate, padding: 3 },
+  logoBox: { width: LOGO_WIDTH, height: LOGO_HEIGHT, borderRadius: radius.tag, padding: 3 },
   brandText: { flex: 1, minWidth: 0 },
   title: { fontFamily: fonts.tag, fontSize: 16, color: colors.karenText, lineHeight: 18 },
   operator: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkSoft },

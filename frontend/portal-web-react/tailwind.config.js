@@ -15,8 +15,6 @@ export default {
       colors: {
         page: v('page'),
         surface: v('surface'),
-        // Placa del logo: transparente en modo claro, blanca en oscuro para que se lea el texto carbón.
-        'logo-plate': v('logo-plate'),
         // Mora fija: texto sobre limón, naranjilla y guayaba, que no cambia en modo oscuro.
         mora: v('mora'),
         // DEFAULT es el rojo de marca fijo (fondos); text cambia en modo oscuro para tener contraste.
