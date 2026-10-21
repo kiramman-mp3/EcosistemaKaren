@@ -235,12 +235,16 @@ export const HelpChatWidget: React.FC = () => {
           </div>
 
           {/* Preguntas frecuentes rápidas (chips) */}
-          <div className="px-3 py-2.5 bg-surface border-t-2 border-aisle-rule overflow-x-auto no-scrollbar flex gap-2 shrink-0">
+          <div
+            role="group"
+            aria-label="Preguntas frecuentes"
+            className="px-3 py-2.5 bg-surface border-t-2 border-aisle-rule overflow-y-auto flex flex-wrap gap-2 max-h-28 shrink-0"
+          >
             {FAQ_CHIPS.map((chip, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(chip.label)}
-                className="whitespace-nowrap rounded-full bg-surface hover:bg-limon hover:text-mora hover:border-mora border-2 border-aisle-rule px-3.5 py-1.5 text-xs font-bold text-ink transition-colors shrink-0"
+                className="rounded-full bg-surface hover:bg-limon hover:text-mora hover:border-mora border-2 border-aisle-rule px-3.5 py-1.5 text-left text-xs font-bold text-ink transition-colors"
               >
                 {chip.label}
               </button>
