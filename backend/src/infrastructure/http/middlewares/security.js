@@ -35,7 +35,8 @@ function rejectDangerousKeys(req, res, next) {
 }
 
 function normalizeJsonBody(req, res, next) {
-  const hasBody = req.headers['content-length'] !== undefined || req.headers['transfer-encoding'] !== undefined;
+  // Un POST sin datos (cerrar sesión, cancelar) llega con Content-Length: 0 y sin Content-Type: no es un cuerpo.
+  const hasBody = Number(req.headers['content-length']) > 0 || req.headers['transfer-encoding'] !== undefined;
   if (hasBody && ['POST', 'PUT', 'PATCH'].includes(req.method) && !req.is('application/json')) {
     const error = new Error('El cuerpo de la solicitud debe usar Content-Type application/json.');
     error.statusCode = 415;
