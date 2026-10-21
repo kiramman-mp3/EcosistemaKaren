@@ -106,6 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <button
               onClick={onOpenLogin}
+              aria-label="Ingresar"
               className="shrink-0 h-11 px-3 sm:px-4 rounded-full text-sm font-bold text-ink hover:bg-limon hover:text-mora flex items-center gap-2 transition-colors"
             >
               <User className="w-4 h-4" />
