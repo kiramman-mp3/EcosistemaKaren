@@ -21,7 +21,7 @@ const swaggerDocument = {
   tags: [
     { name: 'Productos', description: 'Catálogo de productos y lectura de código de barras' },
     { name: 'Lotes e Inventario', description: 'Control de lotes, fechas de caducidad, ubicaciones y merma' },
-    { name: 'Reservaciones', description: 'Reservas Anti-Overbooking con temporizador TTL (10 min) y algoritmo FEFO' },
+    { name: 'Reservaciones', description: 'Reservas Anti-Overbooking con temporizador TTL (30 min) y algoritmo FEFO' },
     { name: 'Alertas y SSE', description: 'Monitoreo de caducidad (VENCIDO/ROJO/AMARILLO) y stream en vivo SSE' },
     { name: 'Promociones e IA', description: 'Sugerencias promocionales dinámicas generadas con Google Gemini AI' },
     { name: 'Categorías', description: 'Gestión de categorías de catálogo' },
@@ -265,7 +265,7 @@ const swaggerDocument = {
     '/reservations': {
       post: {
         tags: ['Reservaciones'],
-        summary: 'Crear reserva de stock temporal Anti-Overbooking (FEFO + TTL 10 min)',
+        summary: 'Crear reserva de stock temporal Anti-Overbooking (FEFO + TTL 30 min)',
         description: 'La identidad del cliente se obtiene del JWT. Requiere un heartbeat vigente de la tienda; si no existe responde 503 sin modificar stock. La reserva usa una transacción con bloqueo de filas.',
         security: [{ bearerAuth: [] }],
         requestBody: {
