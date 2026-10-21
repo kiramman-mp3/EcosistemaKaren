@@ -2,6 +2,10 @@ import React, { useEffect } from 'react';
 import { AlertTriangle, Minus, Plus, Trash2, X } from 'lucide-react';
 import { CartItem } from '../types';
 import { Price, ProductImage } from './ui/Tag';
+import { Button } from './ui/Button';
+import { CountUp } from './ui/CountUp';
+import { Illustration } from './ui/Illustration';
+import { categoryTone } from '../lib/categoryTone';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -30,99 +34,109 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   const units = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const savings = items.reduce((sum, item) => {
+    const original = item.product.originalPrice;
+    return original && original > item.product.price ? sum + (original - item.product.price) * item.quantity : sum;
+  }, 0);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <button className="absolute inset-0 bg-ink/50" onClick={onClose} aria-label="Cerrar mi lista" tabIndex={-1} />
+      <button className="absolute inset-0 bg-mora/60" onClick={onClose} aria-label="Cerrar mi lista" tabIndex={-1} />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="mi-lista"
-        className="relative w-full max-w-md h-full bg-aisle flex flex-col animate-drawer-in"
+        className="relative w-full max-w-md h-full bg-page flex flex-col animate-drawer-in border-l-2 border-mora"
       >
-        <header className="flex items-center justify-between gap-3 bg-surface px-5 h-16 border-b border-aisle-rule">
-          <h2 id="mi-lista" className="font-display font-extrabold text-2xl text-ink">
-            Mi lista <span className="text-ink-muted text-lg tabular">({units})</span>
+        <header className="flex items-center justify-between gap-3 bg-limon text-mora px-5 h-20 border-b-2 border-mora">
+          <h2 id="mi-lista" className="text-3xl">
+            Mi lista <span className="text-xl tabular">({units})</span>
           </h2>
-          <button onClick={onClose} className="p-2 -mr-2 text-ink-muted hover:text-ink" aria-label="Cerrar lista">
+          <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-mora/10" aria-label="Cerrar lista">
             <X className="w-5 h-5" />
           </button>
         </header>
 
         {items.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-            <p className="font-display font-extrabold text-2xl text-ink">Tu lista está vacía</p>
-            <p className="mt-2 text-ink-soft">Agrega productos desde los pasillos y reserva todo de una vez.</p>
-            <button onClick={onClose} className="mt-6 h-11 px-5 rounded-tag bg-mora text-white font-semibold">
-              Seguir comprando
-            </button>
+            <Illustration name="basket" className="w-40 h-40" />
+            <p className="mt-4 font-display font-extrabold text-2xl text-ink">Tu lista está vacía</p>
+            <p className="mt-2 text-ink-soft max-w-[30ch]">Mira qué se va hoy y agrega lo que necesites.</p>
+            <Button onClick={onClose} className="mt-6">Seguir comprando</Button>
           </div>
         ) : (
           <>
             <div className="flex-1 overflow-y-auto px-4 pt-4">
-            <ul className="bg-surface rounded-tag border border-aisle-rule divide-y divide-aisle-rule">
-              {items.map(({ product, quantity }) => (
-                <li key={product.id} className="flex gap-3 p-3">
-                  <ProductImage src={product.image} alt="" className="w-16 h-16 shrink-0 rounded-tag border border-aisle-rule" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-ink leading-snug line-clamp-2">{product.name}</p>
-                    {product.isOffer && <p className="text-xs font-semibold text-karen-text">Precio de oferta</p>}
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center rounded-tag border border-aisle-strong">
-                        <button
-                          onClick={() => onUpdateQuantity(product.id, -1)}
-                          className="w-9 h-9 flex items-center justify-center text-ink"
-                          aria-label={`Quitar una unidad de ${product.name}`}
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-8 text-center text-sm font-semibold tabular" aria-live="polite">{quantity}</span>
-                        <button
-                          onClick={() => onUpdateQuantity(product.id, 1)}
-                          disabled={quantity >= product.stock}
-                          className="w-9 h-9 flex items-center justify-center text-ink disabled:text-ink-faint"
-                          aria-label={`Agregar una unidad de ${product.name}`}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
+              <ul className="space-y-3">
+                {items.map(({ product, quantity }) => (
+                  <li key={product.id} className="flex gap-3 p-3 rounded-block bg-surface border-2 border-aisle-rule animate-fly-in">
+                    <ProductImage
+                      src={product.image}
+                      alt=""
+                      tone={categoryTone(product.category)}
+                      className="w-16 h-16 shrink-0 rounded-photo"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-extrabold font-display text-ink leading-snug line-clamp-2">{product.name}</p>
+                      {product.isOffer && <p className="text-xs font-bold text-karen-text">Precio de oferta</p>}
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <div className="flex items-center rounded-full border-2 border-mora">
+                          <button
+                            onClick={() => onUpdateQuantity(product.id, -1)}
+                            className="w-9 h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora"
+                            aria-label={`Quitar una unidad de ${product.name}`}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="w-8 text-center text-sm font-extrabold tabular" aria-live="polite">{quantity}</span>
+                          <button
+                            onClick={() => onUpdateQuantity(product.id, 1)}
+                            disabled={quantity >= product.stock}
+                            className="w-9 h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora disabled:text-ink-faint disabled:hover:bg-transparent"
+                            aria-label={`Agregar una unidad de ${product.name}`}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <span className="font-display font-extrabold text-ink tabular">${(product.price * quantity).toFixed(2)}</span>
                       </div>
-                      <span className="font-semibold text-ink tabular">${(product.price * quantity).toFixed(2)}</span>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => onRemoveItem(product.id)}
-                    className="self-start p-1.5 text-ink-faint hover:text-karen-text"
-                    aria-label={`Eliminar ${product.name}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <button
+                      onClick={() => onRemoveItem(product.id)}
+                      className="self-start p-1.5 text-ink-faint hover:text-karen-text"
+                      aria-label={`Eliminar ${product.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <footer className="bg-surface border-t border-aisle-rule p-5 mt-4 space-y-4">
+            <footer className="bg-surface border-t-2 border-mora p-5 mt-4 space-y-4">
+              {savings > 0 && (
+                <p className="flex items-center justify-between rounded-tag bg-aguacate-tint px-4 py-2.5 text-fresh font-extrabold">
+                  <span>Con las ofertas ahorras</span>
+                  <CountUp value={savings} className="font-display text-xl" />
+                </p>
+              )}
               <div className="flex items-end justify-between">
-                <span className="text-ink-soft">Total a pagar en caja</span>
+                <span className="text-ink-soft font-semibold">Total a pagar en caja</span>
                 <Price value={total} size="md" />
               </div>
               <p className="text-sm text-ink-muted leading-relaxed">
-                Al reservar te apartamos estas unidades por 10 minutos. Pagas al retirar en la Sucursal Matriz.
+                Al apartar, te guardamos estas unidades 10 minutos. Pagas al retirar en la Sucursal Matriz.
               </p>
               {error && (
-                <p role="alert" className="flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm p-3">
+                <p role="alert" className="flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm font-semibold p-3">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   {error}
                 </p>
               )}
-              <button
-                onClick={onConfirmReservation}
-                disabled={isSubmitting}
-                className="w-full h-12 rounded-tag bg-karen text-white font-semibold hover:bg-karen-deep disabled:opacity-60 flex items-center justify-center gap-2"
-              >
+              <Button onClick={onConfirmReservation} disabled={isSubmitting} size="lg" className="w-full">
                 {isSubmitting && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                {isSubmitting ? 'Reservando…' : isLoggedIn ? 'Reservar y obtener código' : 'Ingresa para reservar'}
-              </button>
+                {isSubmitting ? 'Apartando…' : isLoggedIn ? 'Apartar y obtener mi código' : 'Ingresa para apartar'}
+              </Button>
             </footer>
           </>
         )}
