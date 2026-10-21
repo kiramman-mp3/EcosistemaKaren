@@ -46,6 +46,12 @@ test('rechaza JSON excesivo, content-type incorrecto y claves peligrosas', async
   assert.equal(dangerous.status, 400);
 });
 
+test('acepta un POST sin cuerpo ni Content-Type (p. ej. cerrar sesión)', async () => {
+  const response = await request(securityApp()).post('/api/test').set('Content-Length', '0');
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.body, {});
+});
+
 test('limita solicitudes y devuelve metadatos RateLimit estándar', async () => {
   const app = securityApp();
   assert.equal((await request(app).post('/api/test').send({ n: 1 })).status, 200);
