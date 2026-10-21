@@ -42,12 +42,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center shrink-0 group rounded-tag"
             aria-label="Supermercado Karen, ir al inicio"
           >
-            {/* El logo siempre va sobre blanco: así conserva su rojo y su texto carbón. */}
-            <div className="relative bg-white rounded-tag border-2 border-mora shadow-pop-sm overflow-hidden w-40 sm:w-56 aspect-[2.7/1] transition-transform group-hover:-rotate-2 group-hover:scale-105">
+            {/* Logo transparente: en modo oscuro va sobre una placa blanca para no perder el texto carbón. */}
+            <div className="bg-logo-plate rounded-tag p-1.5 w-40 sm:w-56 transition-transform group-hover:-rotate-2 group-hover:scale-105">
               <img
-                src="/supermercado_karen.jpeg"
+                src="/supermercado_karen.png"
                 alt="Supermercado Karen"
-                className="absolute left-1/2 top-1/2 w-[102%] max-w-none -translate-x-1/2 -translate-y-1/2"
+                className="block w-full h-auto"
               />
             </div>
           </button>

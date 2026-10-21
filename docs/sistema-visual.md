@@ -24,7 +24,7 @@ Reglas:
 - **Los neutros son cálidos (crema y café), nunca morados.** La marca la llevan el rojo Karen y el limón; fondo, texto y sombras solo los acompañan.
 - **Blanco sobre Naranjilla no pasa contraste (2.61).** Con Naranjilla siempre texto Mora.
 - Los colores del semáforo de caducidad (vencido, rojo, amarillo, normal) son regla de negocio. No se usan como decoración.
-- El logo va siempre sobre una placa blanca, también en modo oscuro.
+- El logo es un PNG transparente (`supermercado_karen.png`) y va directo sobre la superficie. En modo oscuro se apoya en una placa blanca (`logo-plate` en la web, `logoPlate` en móvil) para que el texto carbón siga leyéndose.
 - El papel del pase de retiro es siempre blanco con tinta Mora, para que se imprima y se escanee igual en ambos modos.
 
 Contrastes verificados (WCAG, mínimo 4.5): texto Mora sobre Limón 11.53, blanco sobre Rojo Karen 5.01, blanco sobre Aguacate 5.41, Mora sobre Naranjilla 6.33, Mora sobre Guayaba 8.50, y los pares del modo oscuro entre 5.91 y 9.96.
