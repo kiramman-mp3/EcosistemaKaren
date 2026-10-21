@@ -67,7 +67,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
                 href="https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="WhatsApp oficial Supermercado Karen"
                 className={channel}
               >
                 <span className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0">
@@ -83,7 +82,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
                 href="https://www.facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Facebook oficial Supermercado Karen"
                 className={channel}
               >
                 <span className="w-8 h-8 rounded-full bg-[#1877F2] text-white flex items-center justify-center shrink-0">

@@ -9,7 +9,9 @@
     <title>Supermercado Karen · Reserva y retira en caja</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600;12..96,75..100,800&family=Nunito:wght@400;600;700&family=Caveat:wght@700&family=Doto:wght@700;900&display=swap" rel="stylesheet">
+    <!-- Las fuentes no bloquean el primer render: se piden como estilo y se activan al cargar. -->
+    <link rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600;12..96,75..100,800&family=Nunito:wght@400;600;700&family=Caveat:wght@700&family=Doto:wght@700;900&display=swap">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600;12..96,75..100,800&family=Nunito:wght@400;600;700&family=Caveat:wght@700&family=Doto:wght@700;900&display=swap"></noscript>
   </head>
   <body class="min-h-screen antialiased">
     <div id="root"></div>

@@ -211,3 +211,28 @@ export const Skeleton: React.FC<{ style?: StyleProp<ViewStyle> }> = ({ style }) 
 
   return <Animated.View style={[{ backgroundColor: colors.rule, borderRadius: radius.block, opacity }, style]} />;
 };
+
+/** Aparece con un pequeño rebote; confirma que algo salió bien. */
+export const PopIn: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({ children, style }) => {
+  const progress = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
+
+  useEffect(() => {
+    if (reduced) { progress.setValue(1); return; }
+    Animated.spring(progress, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
+  }, [reduced, progress]);
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: progress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1], extrapolate: 'clamp' }),
+          transform: [{ scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+};

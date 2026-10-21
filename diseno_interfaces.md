@@ -2,6 +2,8 @@
 
 Este documento define la arquitectura de separación del canal de usuario entre la **Aplicación Local de Tienda (Back-Office & Caja)** y el **Portal Web Público de Clientes (Canal Omnicanal)**, detallando la distribución de funcionalidades, la experiencia de usuario (UX) y los wireframes/mockups de pantalla para cada sistema.
 
+> **Aspecto visual vigente:** los colores, la tipografía y el movimiento de las tres interfaces están descritos en [docs/sistema-visual.md](docs/sistema-visual.md). Los wireframes de este documento describen estructura y funcionalidad, no el estilo final.
+
 ---
 
 ## 1. Arquitectura de Separación de Canales

@@ -235,8 +235,12 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
               onClick={() => setCurrentIndex(idx)}
               aria-label={`Ir a la diapositiva ${idx + 1}`}
               aria-current={idx === currentIndex}
-              className={`h-3 rounded-full border-2 border-mora transition-all duration-300 ${idx === currentIndex ? 'w-10 bg-karen' : 'w-3 bg-surface hover:bg-limon'}`}
-            />
+              className="group flex h-6 min-w-6 items-center justify-center"
+            >
+              <span
+                className={`block h-3 rounded-full border-2 border-mora transition-all duration-300 ${idx === currentIndex ? 'w-10 bg-karen' : 'w-3 bg-surface group-hover:bg-limon'}`}
+              />
+            </button>
           ))}
         </div>
       </div>
