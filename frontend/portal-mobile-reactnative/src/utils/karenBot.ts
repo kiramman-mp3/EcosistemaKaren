@@ -19,12 +19,12 @@ export const FAQ_CHIPS: FaqChip[] = [
   {
     label: '¿Cómo retiro con mi código KR?',
     query: 'como retiro con el codigo',
-    text: '¡Es muy fácil! Cuando confirmas tu reserva generas un Pase de Retiro con un código como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en la Sucursal Matriz, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 10 minutos.',
+    text: '¡Es muy fácil! Cuando confirmas tu reserva generas un Pase de Retiro con un código como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en la Sucursal Matriz, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 30 minutos.',
   },
   {
-    label: '¿Qué pasa si pasan los 10 minutos?',
-    query: 'que pasa si pasan los 10 minutos',
-    text: 'Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta exactamente por 10 minutos. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!',
+    label: '¿Qué pasa si pasan los 30 minutos?',
+    query: 'que pasa si pasan los 30 minutos',
+    text: 'Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta exactamente por 30 minutos. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!',
   },
   {
     label: '¿Qué formas de pago aceptan?',
@@ -55,7 +55,7 @@ export function replyTo(message: string): BotReply {
   if (faq) return { text: faq.text, actionUrl: faq.actionUrl, actionLabel: faq.actionLabel };
 
   if (['reserva', 'tiempo', 'minuto', 'ttl'].some(word => lower.includes(word))) {
-    return { text: 'Las reservas tienen una duración de 10 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.' };
+    return { text: 'Las reservas tienen una duración de 30 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.' };
   }
   if (['oferta', 'descuento', 'fefo', 'caducidad'].some(word => lower.includes(word))) {
     return { text: 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 20% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.' };

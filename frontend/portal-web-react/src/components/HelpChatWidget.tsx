@@ -23,12 +23,12 @@ const FAQ_CHIPS = [
   {
     label: '¿Cómo retiro con mi código KR?',
     query: 'como retiro con el codigo',
-    response: '¡Es muy fácil! Cuando confirmas tu reserva en la web, generas un Pase de Retiro con un PIN como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en la Sucursal Matriz, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 10 minutos.',
+    response: '¡Es muy fácil! Cuando confirmas tu reserva en la web, generas un Pase de Retiro con un PIN como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en la Sucursal Matriz, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 30 minutos.',
   },
   {
-    label: '¿Qué pasa si pasan los 10 minutos?',
-    query: 'que pasa si pasan los 10 minutos',
-    response: 'Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta exactamente por 10 minutos. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!',
+    label: '¿Qué pasa si pasan los 30 minutos?',
+    query: 'que pasa si pasan los 30 minutos',
+    response: 'Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta exactamente por 30 minutos. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!',
   },
   {
     label: '¿Qué formas de pago aceptan?',
@@ -97,7 +97,7 @@ export const HelpChatWidget: React.FC = () => {
         actionUrl = matchedFaq.actionUrl;
         actionLabel = matchedFaq.actionLabel;
       } else if (lower.includes('reserva') || lower.includes('tiempo') || lower.includes('minuto') || lower.includes('ttl')) {
-        replyText = 'Las reservas web tienen una duración de 10 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.';
+        replyText = 'Las reservas web tienen una duración de 30 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.';
       } else if (lower.includes('oferta') || lower.includes('descuento') || lower.includes('fefo') || lower.includes('caducidad')) {
         replyText = 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 20% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.';
       } else if (lower.includes('pago') || lower.includes('tarjeta') || lower.includes('efectivo') || lower.includes('precio')) {

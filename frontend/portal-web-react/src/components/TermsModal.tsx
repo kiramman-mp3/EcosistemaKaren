@@ -96,7 +96,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
             }`}
           >
             <Clock className="w-3 h-3" />
-            Reservas & TTL (10 min)
+            Reservas & TTL (30 min)
           </button>
           <button
             onClick={() => setActiveCategory('fefo')}
@@ -132,19 +132,19 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
             </p>
           </div>
 
-          {/* 1. Política de Reserva y TTL 10 Minutos */}
+          {/* 1. Política de Reserva y TTL 30 Minutos */}
           {(activeCategory === 'todos' || activeCategory === 'reservas') && (
             <section className="space-y-2.5 p-4 rounded-xl bg-aisle/40 border border-aisle-rule">
               <h3 className="font-display font-extrabold text-base text-ink flex items-center gap-2">
                 <Clock className="w-4 h-4 text-karen-text shrink-0" />
-                1. Política de Reserva y Tiempo de Tolerancia (TTL de 10 Minutos)
+                1. Política de Reserva y Tiempo de Tolerancia (TTL de 30 Minutos)
               </h3>
               <p>
-                Para garantizar la disponibilidad real y evitar la sobreventa cruzada entre compras digitales y clientes presenciales en percha, cada reserva confirmada aparta el stock físico por un <strong>plazo improrrogable de diez (10) minutos reloj</strong> contados a partir de su emisión en el servidor (ADR-001).
+                Para garantizar la disponibilidad real y evitar la sobreventa cruzada entre compras digitales y clientes presenciales en percha, cada reserva confirmada aparta el stock físico por un <strong>plazo improrrogable de treinta (30) minutos reloj</strong> contados a partir de su emisión en el servidor (ADR-001).
               </p>
               <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-ink-soft">
                 <li>El temporizador regresivo se visualiza en tiempo real en su <em>Pase de Retiro Digital</em>.</li>
-                <li>Si el cliente no se presenta en caja antes del vencimiento del tiempo de tolerancia (10 minutos), el sistema informático sweeper liberará automáticamente el stock reservado, retornándolo de inmediato a la percha física.</li>
+                <li>Si el cliente no se presenta en caja antes del vencimiento del tiempo de tolerancia (30 minutos), el sistema informático sweeper liberará automáticamente el stock reservado, retornándolo de inmediato a la percha física.</li>
                 <li><strong>Cero penalizaciones:</strong> La expiración de una reserva no genera multas, penalizaciones ni cobros al usuario. Podrá realizar una nueva reserva en cualquier momento según disponibilidad.</li>
               </ul>
             </section>

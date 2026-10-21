@@ -27,7 +27,7 @@ const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><rect width='120' height='120' fill='#EFF1F4'/><text x='60' y='68' font-family='Arial' font-size='14' fill='#8C96A8' text-anchor='middle'>Sin foto</text></svg>"
 );
 
-const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
+const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
 function secondsUntilExpiration(expiration: string | undefined): number {
   if (!expiration) return APPROVED_RESERVATION_TTL_SECONDS;

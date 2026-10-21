@@ -33,7 +33,7 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
 
   const expired = seconds <= 0;
   const urgent = !expired && seconds <= 120;
-  const initial = pass.initialSeconds || 600;
+  const initial = pass.initialSeconds || 1800;
   const percent = Math.max(0, Math.min(100, (seconds / initial) * 100));
 
   return (

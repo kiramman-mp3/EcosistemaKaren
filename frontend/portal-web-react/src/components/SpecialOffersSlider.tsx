@@ -194,7 +194,7 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
                 <div>
                   <span className="text-xs font-semibold text-ink-muted">{currentSlide.category}</span>
                   <h3 className="font-display text-base font-extrabold leading-snug">Aparta y retira en caja</h3>
-                  <span className="text-xs text-ink-soft">10 minutos de stock guardado</span>
+                  <span className="text-xs text-ink-soft">30 minutos de stock guardado</span>
                 </div>
               </div>
 

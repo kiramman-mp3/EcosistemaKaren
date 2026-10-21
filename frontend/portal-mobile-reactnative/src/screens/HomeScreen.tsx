@@ -28,7 +28,7 @@ interface HomeScreenProps {
 
 const STEPS = [
   { title: 'Elige en línea', text: 'Ves el stock real de la tienda.' },
-  { title: 'Te lo apartamos 10 minutos', text: 'Recibes un código y nadie más se lleva esas unidades.' },
+  { title: 'Te lo apartamos 30 minutos', text: 'Recibes un código y nadie más se lleva esas unidades.' },
   { title: 'Pagas y retiras en caja', text: 'Muestra el código en la Sucursal Matriz.' },
 ];
 
@@ -73,7 +73,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
         <Text style={styles.greeting}>{greeting}</Text>
         <Text style={styles.headline} accessibilityRole="header">Apártalo desde tu casa. Lo pagas cuando llegues.</Text>
-        <Text style={styles.lead}>Armas tu lista, te guardamos todo 10 minutos y pagas en caja al retirar. Sin fila.</Text>
+        <Text style={styles.lead}>Armas tu lista, te guardamos todo 30 minutos y pagas en caja al retirar. Sin fila.</Text>
         <View style={styles.cta}>
           <Button label="Armar mi lista" icon="basket-outline" onPress={() => onNavigate('productos')} style={styles.ctaButton} />
           <Button label="Ofertas por vencer" variant="outline" onPress={() => onNavigate('ofertas')} style={styles.ctaButton} />
