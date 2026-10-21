@@ -3,8 +3,9 @@ import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, Touc
 import { Ionicons } from '@expo/vector-icons';
 import { CartItem, DataLoadState, Product } from '../types';
 import { Button, Chip, EmptyState } from '../components/ui';
+import { Skeleton } from '../components/motion';
 import { ProductTag } from '../components/ProductTag';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 interface CatalogScreenProps {
   products: Product[];
@@ -65,7 +66,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder="Busca leche, atún, pan…"
+              placeholder="¿Qué buscas hoy? Leche, atún, pan…"
               placeholderTextColor={colors.inkFaint}
               accessibilityLabel="Buscar productos"
               autoCorrect={false}
@@ -104,10 +105,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         </View>
       }
       ListEmptyComponent={
-        state === 'loading' ? <EmptyState icon="hourglass-outline" title="Cargando productos…" />
+        state === 'loading' ? <View style={styles.skeletons}>{[0, 1, 2, 3].map(i => <Skeleton key={i} style={styles.skeleton} />)}</View>
           : state === 'offline' || state === 'error'
-            ? <EmptyState icon="cloud-offline-outline" title="No pudimos cargar los productos" text={error || 'La tienda no respondió.'} action={<Button label="Intentar de nuevo" compact onPress={onRefresh} />} />
-            : <EmptyState icon="search-outline" title="No encontramos ese producto" text="Prueba con otra palabra o revisa todos los pasillos."
+            ? <EmptyState illustration="offline" title="No pudimos cargar los productos" text={error || 'La tienda no respondió.'} action={<Button label="Intentar de nuevo" compact onPress={onRefresh} />} />
+            : <EmptyState illustration="search" title="No encontramos ese producto" text="Prueba con otra palabra o date una vuelta por todos los pasillos."
                 action={<Button label="Ver todos" variant="outline" compact onPress={() => { setQuery(''); setOnlyInStock(false); onSelectCategory('Todos'); }} />} />
       }
       renderItem={({ item }) => (
@@ -119,21 +120,23 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 24 },
   columns: { gap: 10 },
   cell: { flex: 1, maxWidth: '50%', marginBottom: 10 },
   search: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 50, paddingLeft: 12,
-    backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
+    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 52, paddingLeft: 16,
+    backgroundColor: colors.card, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.mora,
   },
   searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.ink, paddingVertical: 10 },
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   chips: { gap: 8, paddingVertical: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  title: { flex: 1, fontFamily: fonts.tag, fontSize: 26, lineHeight: 28, color: colors.ink },
+  title: { flex: 1, fontFamily: fonts.tag, fontSize: 30, lineHeight: 32, color: colors.ink },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   toggleText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
   count: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted, marginBottom: 10 },
-});
+  skeletons: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  skeleton: { width: '48%', aspectRatio: 0.72 },
+}));

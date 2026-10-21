@@ -1,9 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavTab } from '../types';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
+import { Bump, PopPressable } from './motion';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -16,50 +17,58 @@ interface HeaderProps {
   isOnline: boolean;
 }
 
-/** Cabecera: marca, cuenta y lista con el total en curso. */
+const LOGO_WIDTH = 124;
+const LOGO_HEIGHT = 46;
+
+/** Cabecera: logo, tema, cuenta y la canasta con el total en curso. */
 export const NavbarMobile: React.FC<HeaderProps> = ({ cartCount, cartTotal, onOpenCart, onOpenAccount, userName, isOnline }) => {
   const { isDark, toggleTheme } = useTheme();
 
   return (
     <View>
-      <View style={[styles.header, isDark && { backgroundColor: '#0F172A', borderBottomColor: '#1E293B' }]}>
+      <View style={styles.header}>
         <View style={styles.brand}>
-          <View style={styles.logo}><Text style={styles.logoText}>K</Text></View>
-          <View>
-            <Text style={[styles.brandSmall, isDark && { color: '#94A3B8' }]}>Supermercado</Text>
-            <Text style={[styles.brandName, isDark && { color: '#F8FAFC' }]}>Karen</Text>
+          {/* El logo siempre va sobre blanco para conservar su rojo y su texto carbón. */}
+          <View style={styles.logoPlate} accessible accessibilityLabel="Supermercado Karen">
+            <Image
+              source={require('../../assets/supermercado_karen.jpeg')}
+              style={{ position: 'absolute', width: LOGO_WIDTH - 6, height: LOGO_WIDTH - 6, left: 1, top: (LOGO_HEIGHT - 4 - (LOGO_WIDTH - 6)) / 2 }}
+              resizeMode="contain"
+            />
           </View>
         </View>
 
-        {/* Toggle Modo Oscuro / Modo Claro */}
         <TouchableOpacity
-          style={styles.themeToggle}
+          style={styles.iconButton}
           onPress={toggleTheme}
           accessibilityRole="button"
-          accessibilityLabel={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          accessibilityLabel={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
         >
-          <Ionicons name={isDark ? "sunny" : "moon-outline"} size={22} color={isDark ? "#FBBF24" : colors.ink} />
+          <Ionicons name={isDark ? 'sunny' : 'moon-outline'} size={22} color={colors.ink} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.account} onPress={onOpenAccount} accessibilityRole="button" accessibilityLabel={userName ? `Tu cuenta, ${userName}` : 'Ingresar'}>
-          <Ionicons name={userName ? 'person-circle' : 'person-circle-outline'} size={26} color={isDark ? '#F8FAFC' : colors.ink} />
-          <Text style={[styles.accountText, isDark && { color: '#F8FAFC' }]} numberOfLines={1}>{userName ? userName.split(' ')[0] : 'Ingresar'}</Text>
+          <Ionicons name={userName ? 'person-circle' : 'person-circle-outline'} size={26} color={colors.ink} />
+          <Text style={styles.accountText} numberOfLines={1}>{userName ? userName.split(' ')[0] : 'Ingresar'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.cart, isDark && { backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155' }]}
-          onPress={onOpenCart}
-          accessibilityRole="button"
-          accessibilityLabel={`Mi lista, ${cartCount} productos`}
-        >
-          <Ionicons name="basket-outline" size={22} color={colors.white} />
-          <Text style={styles.cartCount}>{cartCount}</Text>
-          {cartCount > 0 && <Text style={styles.cartTotal}>${cartTotal.toFixed(2)}</Text>}
-        </TouchableOpacity>
+
+        <Bump trigger={cartCount}>
+          <PopPressable
+            onPress={onOpenCart}
+            backgroundColor={colors.karen}
+            accessibilityLabel={`Mi lista, ${cartCount} productos`}
+            bodyStyle={styles.cart}
+          >
+            <Ionicons name="basket-outline" size={22} color="#FFFFFF" />
+            <Text style={styles.cartCount}>{cartCount}</Text>
+            {cartCount > 0 && <Text style={styles.cartTotal}>${cartTotal.toFixed(2)}</Text>}
+          </PopPressable>
+        </Bump>
       </View>
       {!isOnline && (
         <View style={styles.offline} accessibilityRole="alert">
-          <Ionicons name="cloud-offline-outline" size={16} color={colors.white} />
-          <Text style={styles.offlineText}>La tienda no responde. Puedes ver productos, pero las reservas están en pausa.</Text>
+          <Ionicons name="cloud-offline-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.offlineText}>Por ahora no podemos apartar productos. Puedes seguir mirando el catálogo.</Text>
         </View>
       )}
     </View>
@@ -75,70 +84,61 @@ const TABS: { id: NavTab; label: string; icon: IconName; activeIcon: IconName }[
 
 export const TabBar: React.FC<{ activeTab: NavTab; onChange: (tab: NavTab) => void; offersCount: number; hasActivePass: boolean }> = ({
   activeTab, onChange, offersCount, hasActivePass,
-}) => {
-  const { isDark } = useTheme();
+}) => (
+  <View style={styles.tabs} accessibilityRole="tablist">
+    {TABS.map(tab => {
+      const active = activeTab === tab.id;
+      const badge = tab.id === 'ofertas' && offersCount > 0 ? String(offersCount) : tab.id === 'reservas' && hasActivePass ? '1' : null;
+      return (
+        <TouchableOpacity
+          key={tab.id}
+          style={styles.tab}
+          onPress={() => onChange(tab.id)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: active }}
+          accessibilityLabel={tab.label}
+        >
+          <View style={[styles.iconPill, active && styles.iconPillActive]}>
+            <Ionicons name={active ? tab.activeIcon : tab.icon} size={22} color={active ? colors.mora : colors.inkMuted} />
+            {badge && (
+              <View style={[styles.badge, tab.id === 'ofertas' ? styles.badgeOffers : styles.badgeKaren]}>
+                <Text style={[styles.badgeText, tab.id === 'ofertas' && { color: colors.mora }]}>{Number(badge) > 99 ? '99+' : badge}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.tabText, active && styles.tabTextActive]} numberOfLines={1}>{tab.label}</Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
 
-  return (
-    <View style={[styles.tabs, isDark && { backgroundColor: '#0F172A', borderTopColor: '#1E293B' }]} accessibilityRole="tablist">
-      {TABS.map(tab => {
-        const active = activeTab === tab.id;
-        const badge = tab.id === 'ofertas' && offersCount > 0 ? String(offersCount) : tab.id === 'reservas' && hasActivePass ? '1' : null;
-        return (
-          <TouchableOpacity
-            key={tab.id}
-            style={styles.tab}
-            onPress={() => onChange(tab.id)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={tab.label}
-          >
-            <View style={[styles.indicator, active && styles.indicatorActive]} />
-            <View>
-              <Ionicons
-                name={active ? tab.activeIcon : tab.icon}
-                size={23}
-                color={active ? (isDark ? '#F8FAFC' : colors.ink) : (isDark ? '#94A3B8' : colors.inkMuted)}
-              />
-              {badge && (
-                <View style={[styles.badge, tab.id === 'ofertas' ? styles.badgeSticker : styles.badgeKaren, isDark && { borderColor: '#0F172A' }]}>
-                  <Text style={[styles.badgeText, tab.id === 'ofertas' && { color: colors.ink }]}>{Number(badge) > 99 ? '99+' : badge}</Text>
-                </View>
-              )}
-            </View>
-            <Text style={[styles.tabText, isDark && { color: '#94A3B8' }, active && (isDark ? { color: '#F8FAFC', fontFamily: fonts.bold } : styles.tabTextActive)]} numberOfLines={1}>{tab.label}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10,
-    backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.rule,
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: colors.card, borderBottomWidth: 2, borderBottomColor: colors.mora,
   },
-  brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logo: { width: 36, height: 36, borderRadius: radius.tag, backgroundColor: colors.karen, alignItems: 'center', justifyContent: 'center' },
-  logoText: { fontFamily: fonts.tag, fontSize: 24, lineHeight: 28, color: colors.white },
-  brandSmall: { fontFamily: fonts.medium, fontSize: 10, color: colors.inkMuted, lineHeight: 12 },
-  brandName: { fontFamily: fonts.tag, fontSize: 20, color: colors.ink, lineHeight: 22 },
-  themeToggle: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
-  account: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 6, maxWidth: 120 },
+  brand: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  logoPlate: {
+    width: LOGO_WIDTH, height: LOGO_HEIGHT, borderRadius: radius.tag, backgroundColor: '#FFFFFF',
+    borderWidth: 2, borderColor: colors.mora, overflow: 'hidden',
+  },
+  iconButton: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  account: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 4, maxWidth: 96 },
   accountText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, flexShrink: 1 },
-  cart: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12, borderRadius: radius.tag, backgroundColor: colors.ink },
-  cartCount: { fontFamily: fonts.tag, fontSize: 18, color: colors.white },
-  cartTotal: { fontFamily: fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+  cart: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14 },
+  cartCount: { fontFamily: fonts.tag, fontSize: 18, color: '#FFFFFF' },
+  cartTotal: { fontFamily: fonts.semibold, fontSize: 13, color: 'rgba(255,255,255,0.9)' },
   offline: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.karen, paddingHorizontal: 16, paddingVertical: 8 },
-  offlineText: { flex: 1, fontFamily: fonts.medium, fontSize: 13, color: colors.white },
-  tabs: { flexDirection: 'row', backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.rule },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 60, gap: 2, paddingBottom: 4 },
-  indicator: { position: 'absolute', top: 0, left: '20%', right: '20%', height: 3, borderRadius: 2 },
-  indicatorActive: { backgroundColor: colors.karen },
+  offlineText: { flex: 1, fontFamily: fonts.semibold, fontSize: 13, color: '#FFFFFF' },
+  tabs: { flexDirection: 'row', backgroundColor: colors.card, borderTopWidth: 2, borderTopColor: colors.mora },
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 64, gap: 2, paddingVertical: 6 },
+  iconPill: { minWidth: 52, height: 32, borderRadius: radius.pill, borderWidth: 2, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  iconPillActive: { backgroundColor: colors.sticker, borderColor: colors.mora },
   tabText: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
   tabTextActive: { fontFamily: fonts.bold, color: colors.ink },
-  badge: { position: 'absolute', top: -5, right: -14, minWidth: 20, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
-  badgeSticker: { backgroundColor: colors.sticker },
+  badge: { position: 'absolute', top: -6, right: -4, minWidth: 20, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.card },
+  badgeOffers: { backgroundColor: colors.naranja },
   badgeKaren: { backgroundColor: colors.karen },
-  badgeText: { fontFamily: fonts.bold, fontSize: 10, color: colors.white },
-});
+  badgeText: { fontFamily: fonts.bold, fontSize: 10, color: '#FFFFFF' },
+}));

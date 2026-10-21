@@ -4,7 +4,7 @@ import { DataLoadState, FlashOffer } from '../types';
 import { EmptyState, SectionTitle } from '../components/ui';
 import { OfferTag } from '../components/ProductTag';
 import { daysUntil } from '../utils/dates';
-import { colors } from '../theme/tokens';
+import { colors, themed } from '../theme/tokens';
 
 interface OffersScreenProps {
   offers: FlashOffer[];
@@ -30,22 +30,22 @@ export const OffersScreen: React.FC<OffersScreenProps> = ({ offers, state, error
       ListHeaderComponent={
         <SectionTitle
           title="Ofertas por vencer"
-          subtitle="Productos en buen estado que vencen pronto. Mientras más cerca la fecha, mayor el descuento."
+          subtitle="Productos en buen estado que vencen pronto. Mientras más cerca la fecha, más grande el descuento."
         />
       }
       ItemSeparatorComponent={() => <View style={styles.gap} />}
       ListEmptyComponent={
         state === 'offline' || state === 'error'
-          ? <EmptyState icon="cloud-offline-outline" title="No pudimos cargar las ofertas" text={error || 'La tienda no respondió.'} />
-          : <EmptyState icon="pricetag-outline" title="Hoy no hay ofertas por vencer" text="Cuando un lote se acerque a su fecha aparecerá aquí con descuento." />
+          ? <EmptyState illustration="offline" title="No pudimos cargar las ofertas" text={error || 'La tienda no respondió.'} />
+          : <EmptyState illustration="search" title="Hoy no hay ofertas por vencer" text="Cuando un lote se acerque a su fecha, aparece aquí con descuento." />
       }
       renderItem={({ item }) => <OfferTag offer={item} onReserve={onReserveOffer} busy={reservingOfferId === item.id} />}
     />
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 24 },
-  gap: { height: 12 },
-});
+  gap: { height: 16 },
+}));
