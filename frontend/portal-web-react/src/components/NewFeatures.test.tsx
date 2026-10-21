@@ -71,7 +71,7 @@ describe('Nuevas funcionalidades en rama fix/arreglos', () => {
     );
 
     expect(screen.getByText(/\(04\) 2-987654/i)).toBeInTheDocument();
-    expect(screen.getByText(/\+593 99 876 5432/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+593 98 355 3724/i)).toBeInTheDocument();
     expect(screen.getByText(/atencion@karen\.com\.ec/i)).toBeInTheDocument();
     expect(screen.getByText(/Lunes a Sábado: 07:00 – 21:00/i)).toBeInTheDocument();
 

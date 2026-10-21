@@ -43,9 +43,9 @@ const FAQ_CHIPS = [
   {
     label: '📲 Hablar con un asesor en WhatsApp',
     query: 'whatsapp asesor humano',
-    response: 'Si necesitas asistencia personalizada de un cajero o bodeguero, puedes escribir directamente a nuestra línea oficial de WhatsApp:',
-    actionUrl: 'https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva',
-    actionLabel: 'Abrir WhatsApp (+593 99 876 5432)',
+    response: 'Si necesitas asistencia personalizada, puedes escribir directamente a nuestra línea oficial de WhatsApp:',
+    actionUrl: 'https://wa.me/593983553724?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva',
+    actionLabel: 'Abrir WhatsApp (+593 98 355 3724)',
   },
 ];
 
@@ -106,7 +106,7 @@ export const HelpChatWidget: React.FC = () => {
         replyText = '¡Hola! Un gusto saludarte. ¿En qué podemos orientarte sobre tu compra o reserva en Supermercados Karen?';
       } else if (lower.includes('humano') || lower.includes('asesor') || lower.includes('whatsapp') || lower.includes('telefono')) {
         replyText = 'Con gusto te comunicamos con nuestro equipo de atención humana en WhatsApp:';
-        actionUrl = 'https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20asistencia%20personalizada';
+        actionUrl = 'https://wa.me/593983553724?text=Hola%20Supermercado%20Karen,%20necesito%20asistencia%20personalizada';
         actionLabel = 'Contactar a Asesor por WhatsApp';
       }
 

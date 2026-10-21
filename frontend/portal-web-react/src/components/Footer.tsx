@@ -65,7 +65,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
             </button>
             <div className="flex flex-col gap-2 pt-1">
               <a
-                href="https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva"
+                href="https://wa.me/593983553724?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={channel}
@@ -75,12 +75,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
                 </span>
                 <span className="flex flex-col text-left">
                   <span className="text-sm font-extrabold leading-none">WhatsApp Oficial</span>
-                  <span className="text-xs leading-none mt-1 tabular">+593 99 876 5432</span>
+                  <span className="text-xs leading-none mt-1 tabular">+593 98 355 3724</span>
                 </span>
                 <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-60 group-hover:opacity-100" />
               </a>
               <a
-                href="https://www.facebook.com"
+                href="https://www.facebook.com/profile.php?id=100063795716014"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={channel}
@@ -90,7 +90,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
                 </span>
                 <span className="flex flex-col text-left">
                   <span className="text-sm font-extrabold leading-none">Facebook</span>
-                  <span className="text-xs leading-none mt-1">@SupermercadoKaren</span>
+                  <span className="text-xs leading-none mt-1">Síguenos en Facebook</span>
                 </span>
                 <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-60 group-hover:opacity-100" />
               </a>
