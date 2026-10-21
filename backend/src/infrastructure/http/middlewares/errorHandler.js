@@ -1,6 +1,22 @@
 const { DomainException } = require('../../../domain/exceptions/DomainExceptions');
 
+// El cliente cerró la conexión (recarga, navegación o timeout) antes de que se leyera el cuerpo.
+const CLIENT_GONE = new Set(['stream.not.readable', 'request.aborted']);
+
 function errorHandler(err, req, res, next) {
+  if (CLIENT_GONE.has(err?.type) || err?.code === 'ECONNABORTED') {
+    // No hay a quién responder ni nada que corregir en el servidor: no es un error 500.
+    if (!res.headersSent && !res.destroyed && !req.destroyed) {
+      return res.status(400).json({
+        success: false,
+        error: 'RequestAborted',
+        message: 'La solicitud se interrumpió antes de completarse.',
+        requestId: req.id
+      });
+    }
+    return undefined;
+  }
+
   if (err?.type === 'entity.too.large') {
     return res.status(413).json({
       success: false,

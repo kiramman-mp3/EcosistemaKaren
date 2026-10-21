@@ -128,3 +128,38 @@ test('múltiples limitadores en cascada no arrojan error de conteo doble', async
   assert.equal(res.status, 200);
   assert.equal(res.body.ok, true);
 });
+
+test('un cliente que cierra la conexión no se registra como error 500 del servidor', () => {
+  for (const err of [
+    Object.assign(new Error('stream is not readable'), { type: 'stream.not.readable', status: 500, statusCode: 500 }),
+    Object.assign(new Error('request aborted'), { type: 'request.aborted', status: 400, statusCode: 400 }),
+  ]) {
+    const logged = [];
+    const originalError = console.error;
+    console.error = (...args) => logged.push(args);
+    let responded = null;
+    const res = { destroyed: true, headersSent: false, status() { return this; }, json(body) { responded = body; } };
+    try {
+      errorHandler(err, { id: 'req-1', destroyed: true }, res, () => {});
+    } finally {
+      console.error = originalError;
+    }
+    assert.deepEqual(logged, [], `no debe registrar ${err.type} como error`);
+    assert.equal(responded, null, 'no hay a quién responder');
+  }
+});
+
+test('un fallo real sigue registrándose y respondiendo 500', () => {
+  const logged = [];
+  const originalError = console.error;
+  console.error = (...args) => logged.push(args);
+  let status = null;
+  const res = { destroyed: false, headersSent: false, status(code) { status = code; return this; }, json() {} };
+  try {
+    errorHandler(new Error('fallo inesperado'), { id: 'req-2', destroyed: false }, res, () => {});
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(status, 500);
+  assert.equal(logged.length, 1);
+});
