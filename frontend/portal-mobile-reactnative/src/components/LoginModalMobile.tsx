@@ -11,10 +11,11 @@ interface LoginModalMobileProps {
   currentUser?: { id: string; nombre: string; email: string; rol?: string } | null;
   onLoginSuccess?: (user: any) => void;
   onLogout?: () => void;
+  onOpenPrivacy?: () => void;
 }
 
 export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
-  visible, onClose, currentUser = null, onLoginSuccess, onLogout,
+  visible, onClose, currentUser = null, onLoginSuccess, onLogout, onOpenPrivacy,
 }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -118,6 +119,11 @@ export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
                   </TouchableOpacity>
                 </>
               )}
+              {onOpenPrivacy && (
+                <TouchableOpacity style={styles.privacy} onPress={onOpenPrivacy} accessibilityRole="link">
+                  <Text style={styles.privacyText}>Política de privacidad</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -138,6 +144,8 @@ const styles = themed(() => StyleSheet.create({
   body: { padding: 18 },
   hello: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, marginBottom: 14 },
   switch: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  privacy: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  privacyText: { fontFamily: fonts.medium, fontSize: 13, color: colors.inkMuted, textDecorationLine: 'underline' },
   switchText: { fontFamily: fonts.body, fontSize: 14, color: colors.inkSoft },
   switchLink: { fontFamily: fonts.tag, color: colors.ink, textDecorationLine: 'underline' },
 }));
