@@ -43,7 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     const nav = tabsRef.current;
     const tab = nav?.querySelector<HTMLElement>('[aria-current="page"]');
     if (!nav || !tab) return;
-    nav.scrollTo({ left: tab.offsetLeft - (nav.clientWidth - tab.offsetWidth) / 2, behavior: 'smooth' });
+    nav.scrollTo?.({ left: tab.offsetLeft - (nav.clientWidth - tab.offsetWidth) / 2, behavior: 'smooth' });
   }, [activeTab]);
   useEffect(() => {
     let last = window.scrollY;
