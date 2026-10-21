@@ -14,7 +14,7 @@ describe('replyTo', () => {
   });
 
   it('reconoce palabras clave en mensajes libres', () => {
-    expect(replyTo('cuanto dura mi reserva').text).toContain('10 minutos');
+    expect(replyTo('cuanto dura mi reserva').text).toContain('30 minutos');
     expect(replyTo('hay descuentos?').text).toContain('FEFO');
     expect(replyTo('aceptan tarjeta').text).toContain('caja');
     expect(replyTo('quiero hablar con un humano').actionUrl).toContain('wa.me');

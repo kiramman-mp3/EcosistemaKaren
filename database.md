@@ -178,7 +178,7 @@ Gestión de cuentas para clientes finales y personal operativo del supermercado.
 | `created_at` | `TIMESTAMPTZ` | **NO** | Timestamp de registro |
 
 ### 3.5. Tabla `reservas`
-Cabecera de reservas de stock para la App de Clientes con temporizador Anti-Overbooking (TTL de 10 minutos por defecto).
+Cabecera de reservas de stock para la App de Clientes con temporizador Anti-Overbooking (TTL de 30 minutos por defecto).
 
 | Columna | Tipo de Dato | Nulo | Descripción / Constraints |
 | :--- | :--- | :---: | :--- |
@@ -186,7 +186,7 @@ Cabecera de reservas de stock para la App de Clientes con temporizador Anti-Over
 | `usuario_id` | `UUID` | **NO** | FK a `usuarios(id)` ON DELETE RESTRICT |
 | `codigo_retiro` | `VARCHAR(10)` | **NO** | Código Pin/QR para caja SIACI (`UNIQUE`) |
 | `estado` | `estado_reserva` | **NO** | `PENDIENTE`, `CONFIRMADA`, `EXPIRADA`, `CANCELADA` |
-| `fecha_expiracion` | `TIMESTAMPTZ` | **NO** | Límite TTL de la reserva (ej. `NOW() + 10 mins`) |
+| `fecha_expiracion` | `TIMESTAMPTZ` | **NO** | Límite TTL de la reserva (ej. `NOW() + 30 mins`) |
 | `created_at` | `TIMESTAMPTZ` | **NO** | Timestamp de creación |
 | `updated_at` | `TIMESTAMPTZ` | **NO** | Timestamp de modificación |
 

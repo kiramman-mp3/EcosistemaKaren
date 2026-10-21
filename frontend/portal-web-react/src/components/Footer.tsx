@@ -39,11 +39,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
               </div>
             </div>
             <p className="text-sm text-ink-soft leading-relaxed max-w-[34ch]">
-              Aparta tus productos desde casa y retíralos en caja en 10 minutos, sin hacer fila.
+              Aparta tus productos desde casa y retíralos en caja en 30 minutos, sin hacer fila.
             </p>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-aguacate-bright px-3 py-1.5 text-xs font-extrabold text-mora">
               <ShieldCheck className="w-4 h-4 shrink-0" />
-              Te guardamos tu pedido 10 minutos
+              Te guardamos tu pedido 30 minutos
             </span>
           </div>
 
@@ -134,7 +134,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
           <p>© {new Date().getFullYear()} Supermercado Karen S.A. · RUC 0992345678001</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <button onClick={onOpenTerms} className="hover:text-karen-text transition-colors underline underline-offset-2">
-              Política de Reserva (10 min TTL)
+              Política de Reserva (30 min TTL)
             </button>
             <button onClick={onOpenTerms} className="hover:text-karen-text transition-colors underline underline-offset-2">
               Protección de Datos LOPDP

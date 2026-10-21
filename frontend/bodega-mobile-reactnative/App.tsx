@@ -159,7 +159,8 @@ function BodegaAppContent() {
     const heartbeatAction = currentUser.rol === 'PERCHERO' ? checkHeartbeat : sendHeartbeat;
     void heartbeatAction();
     loadData();
-    const interval = setInterval(heartbeatAction, 30000);
+    // Debe ser bastante menor que HEARTBEAT_TIMEOUT_SECONDS (30 s) del backend, o la tienda parpadearía a "Sin conexión".
+    const interval = setInterval(heartbeatAction, 10000);
     return () => clearInterval(interval);
   }, [loadData, checkHeartbeat, sendHeartbeat, currentUser]);
 

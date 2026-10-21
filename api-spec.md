@@ -149,7 +149,7 @@ costo total y vínculo al movimiento que modificó el inventario.
 ## 3. Reservaciones de Stock Anti-Overbooking (`/reservations`)
 
 ### `POST /reservations`
-Crea una reserva de stock temporal con temporizador TTL (10 minutos) usando asignación FEFO.
+Crea una reserva de stock temporal con temporizador TTL (30 minutos) usando asignación FEFO.
 La identidad se obtiene del JWT: el cliente no puede indicar `usuarioId` ni reservar a
 nombre de otra persona.
 * **Body Payload**:

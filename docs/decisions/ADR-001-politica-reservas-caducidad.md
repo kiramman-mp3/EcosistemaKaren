@@ -1,6 +1,6 @@
 # ADR-001: TTL de reservas y semáforo de caducidad
 
-- Estado: Aceptada
+- Estado: Aceptada (el TTL de reserva fue reemplazado por [ADR-002](ADR-002-ttl-reservas-30-minutos.md))
 - Fecha: 2026-10-09
 - Alcance: Fase 1 del Ecosistema Karen
 

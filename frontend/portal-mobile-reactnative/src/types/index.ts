@@ -45,7 +45,7 @@ export interface CategoryItem {
 export interface ReservationPass {
   code: string;
   status: string;
-  /** Duración total de la reserva; si falta se asume la de 10 minutos. */
+  /** Duración total de la reserva; si falta se asume la de 30 minutos. */
   initialSeconds?: number;
   remainingSeconds: number;
   storeLocation: string;

@@ -125,7 +125,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <Price value={total} size="md" />
               </div>
               <p className="text-sm text-ink-muted leading-relaxed">
-                Al apartar, te guardamos estas unidades 10 minutos. Pagas al retirar en la Sucursal Matriz.
+                Al apartar, te guardamos estas unidades 30 minutos. Pagas al retirar en la Sucursal Matriz.
               </p>
               {error && (
                 <p role="alert" className="flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm font-semibold p-3">

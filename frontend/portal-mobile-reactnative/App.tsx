@@ -26,7 +26,7 @@ import { notify } from './src/utils/dialogs';
 import { colors, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
-const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
+const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
 function secondsUntilExpiration(expiration: string | undefined): number {
   if (!expiration) return APPROVED_RESERVATION_TTL_SECONDS;

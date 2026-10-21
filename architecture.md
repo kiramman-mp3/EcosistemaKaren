@@ -53,7 +53,7 @@ graph TD
 * **Componentes**:
   * `Producto.js`: Entidad con reglas de validación de código de barras y precios.
   * `Lote.js`: Entidad núcleo que calcula días para caducar y aplica la política única: `VENCIDO` ≤ 0d, `ROJO` 1–6d, `AMARILLO` 7–14d y `NORMAL` ≥ 15d; además gestiona stock disponible, reservado y mermas.
-  * `Reserva.js`: Entidad que administra el ciclo de vida de la reserva temporal, generación de PIN de cobro en caja SIACI y temporizador TTL (10 minutos).
+  * `Reserva.js`: Entidad que administra el ciclo de vida de la reserva temporal, generación de PIN de cobro en caja SIACI y temporizador TTL (30 minutos).
   * `DomainException.js`: Excepción base de negocio.
 * **Regla**: No importa ninguna librería externa ni cliente de base de datos.
 
@@ -77,12 +77,12 @@ graph TD
 * **Componentes**:
   * `http/`: Servidor Express, enrutador `/api/v1` y middleware centralizado de manejo de errores.
   * `sse/AlertStreamManager.js`: Canal de Server-Sent Events que empuja alertas en tiempo real hacia las aplicaciones frontend conectadas.
-  * `workers/ReservationCleanerWorker.js`: Sweeper background que se ejecuta periódicamente liberando stock de reservas cuyos 10 minutos de TTL hayan expirado.
+  * `workers/ReservationCleanerWorker.js`: Sweeper background que se ejecuta periódicamente liberando stock de reservas cuyos 30 minutos de TTL hayan expirado.
 
 ---
 
 ## 3. Patrones de Diseño Aplicados
 
 1. **FEFO (First Expired, First Out)**: Las reservas asignan preferentemente el stock de lotes cuya fecha de caducidad sea más próxima, reduciendo el desperdicio por merma.
-2. **Anti-Overbooking con TTL**: El inventario disponible se descuenta al instante en el carrito y se transfiere a stock reservado durante 10 minutos. Si la compra no se confirma en caja SIACI, un proceso background sweeper restaura automáticamente las unidades a stock libre.
+2. **Anti-Overbooking con TTL**: El inventario disponible se descuenta al instante en el carrito y se transfiere a stock reservado durante 30 minutos. Si la compra no se confirma en caja SIACI, un proceso background sweeper restaura automáticamente las unidades a stock libre.
 3. **Event-Driven real-time (SSE)**: En lugar de polling pesado desde el frontend, el backend notifica al cliente movil de bodegueros al instante mediante conexiones `text/event-stream`.

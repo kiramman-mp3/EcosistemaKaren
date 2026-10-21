@@ -9,7 +9,7 @@ const STEPS = [
   },
   {
     icon: ShoppingBasket,
-    title: 'Te lo apartamos 10 minutos',
+    title: 'Te lo apartamos 30 minutos',
     text: 'Al apartar recibes un código. Nadie más puede llevarse esas unidades mientras esté vigente.',
   },
   {

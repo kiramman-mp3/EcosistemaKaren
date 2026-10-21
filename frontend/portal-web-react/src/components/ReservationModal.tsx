@@ -43,7 +43,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
 
   const expired = secondsLeft <= 0;
   const urgent = !expired && secondsLeft <= 120;
-  const initial = pass.initialSeconds || 600;
+  const initial = pass.initialSeconds || 1800;
   const remainingPercent = Math.max(0, Math.min(100, (secondsLeft / initial) * 100));
 
   const handleCopyCode = () => {

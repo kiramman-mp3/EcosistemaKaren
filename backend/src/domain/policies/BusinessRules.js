@@ -1,4 +1,4 @@
-const RESERVATION_TTL_MINUTES = 10;
+const RESERVATION_TTL_MINUTES = 30;
 
 const EXPIRY_THRESHOLDS_DAYS = Object.freeze({
   RED: 7,
