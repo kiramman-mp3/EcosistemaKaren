@@ -284,14 +284,14 @@ export const App: React.FC = () => {
 
   const handleRetryConnection = async () => {
     await loadBackendData();
-    showToast('Volvimos a consultar la tienda.');
+    showToast('Listo, volvimos a consultar la tienda.');
   };
 
   const handleAddToCart = (product: Product, { silent = false } = {}) => {
     if (product.stock <= 0) return;
     const existing = cart.find(item => item.product.id === product.id);
     if (existing && existing.quantity >= product.stock) {
-      showToast(`Solo quedan ${product.stock} de ${product.name}.`);
+      showToast(`Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
       return;
     }
     setCart(prev => existing
@@ -328,7 +328,7 @@ export const App: React.FC = () => {
       return;
     }
     if (!isOnline) {
-      setCartError('La tienda no está respondiendo y no podemos apartar productos ahora. Inténtalo en unos minutos.');
+      setCartError('Por ahora no podemos apartar productos porque la tienda no responde. Intenta de nuevo en unos minutos.');
       return;
     }
 
@@ -366,7 +366,7 @@ export const App: React.FC = () => {
       setIsPassModalOpen(true);
       void loadBackendData();
     } catch (err: any) {
-      setCartError(err.message || 'No pudimos crear la reserva. Inténtalo de nuevo.');
+      setCartError(err.message || 'No pudimos apartar tus productos. Intenta de nuevo.');
     } finally {
       setIsSubmittingReservation(false);
     }
@@ -400,7 +400,7 @@ export const App: React.FC = () => {
     setCurrentPass(null);
     setReservations([]);
     setCart([]);
-    showToast('Cerraste sesión.');
+    showToast('Cerraste sesión. ¡Vuelve pronto!');
   };
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -538,7 +538,7 @@ export const App: React.FC = () => {
               await api.cancelReservation(id);
               if (currentUser) await syncReservations(currentUser);
               await loadBackendData();
-              showToast('Reserva cancelada. Las unidades volvieron a la percha.');
+              showToast('Cancelaste tu reserva. Los productos volvieron a la percha.');
             }}
             onOpenPass={reservation => {
               if (!currentUser) return;
