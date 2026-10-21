@@ -43,11 +43,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             aria-label="Supermercado Karen, ir al inicio"
           >
             {/* El logo siempre va sobre blanco: así conserva su rojo y su texto carbón. */}
-            <div className="bg-white rounded-tag p-1.5 sm:p-2 border-2 border-mora shadow-pop-sm flex items-center justify-center transition-transform group-hover:-rotate-2 group-hover:scale-105">
+            <div className="relative bg-white rounded-tag border-2 border-mora shadow-pop-sm overflow-hidden w-40 sm:w-56 aspect-[2.7/1] transition-transform group-hover:-rotate-2 group-hover:scale-105">
               <img
                 src="/supermercado_karen.jpeg"
                 alt="Supermercado Karen"
-                className="h-11 sm:h-14 w-auto max-w-[190px] sm:max-w-[260px] object-contain"
+                className="absolute left-1/2 top-1/2 w-[102%] max-w-none -translate-x-1/2 -translate-y-1/2"
               />
             </div>
           </button>

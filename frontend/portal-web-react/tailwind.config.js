@@ -24,7 +24,7 @@ export default {
         sticker: { DEFAULT: v('limon'), deep: v('limon-deep'), tint: v('limon-tint') },
         aisle: { DEFAULT: v('page'), rule: v('rule'), strong: v('rule-strong') },
         fresh: { DEFAULT: v('aguacate'), tint: v('aguacate-tint') },
-        aguacate: { DEFAULT: v('aguacate'), tint: v('aguacate-tint'), bright: v('aguacate-bright') },
+        aguacate: { DEFAULT: v('aguacate'), tint: v('aguacate-tint'), bright: v('aguacate-bright'), solid: v('aguacate-solid') },
         naranja: { DEFAULT: v('naranja'), tint: v('naranja-tint') },
         guayaba: { DEFAULT: v('guayaba'), tint: v('guayaba-tint') },
       },
@@ -112,6 +112,10 @@ export default {
           '0%, 60%, 100%': { transform: 'translateY(0)', opacity: '.4' },
           '30%': { transform: 'translateY(-4px)', opacity: '1' },
         },
+        fade: {
+          from: { opacity: '.35' },
+          to: { opacity: '1' },
+        },
         'fly-in': {
           '0%': { transform: 'translateY(-10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
@@ -133,6 +137,7 @@ export default {
         'print-down': 'print-down 900ms steps(18, end) both',
         'typing-dot': 'typing-dot 1.1s ease-in-out infinite',
         'fly-in': 'fly-in 300ms ease-out both',
+        fade: 'fade 350ms ease-out both',
       },
     },
   },

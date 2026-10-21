@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
+import { OffersMarquee } from './components/OffersMarquee';
 import { CategoriesGrid } from './components/CategoriesGrid';
 import { AntiOverbookingBanner } from './components/AntiOverbookingBanner';
 import { ProductCatalog } from './components/ProductCatalog';
@@ -283,14 +284,14 @@ export const App: React.FC = () => {
 
   const handleRetryConnection = async () => {
     await loadBackendData();
-    showToast('Volvimos a consultar la tienda.');
+    showToast('Listo, volvimos a consultar la tienda.');
   };
 
   const handleAddToCart = (product: Product, { silent = false } = {}) => {
     if (product.stock <= 0) return;
     const existing = cart.find(item => item.product.id === product.id);
     if (existing && existing.quantity >= product.stock) {
-      showToast(`Solo quedan ${product.stock} de ${product.name}.`);
+      showToast(`Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
       return;
     }
     setCart(prev => existing
@@ -327,7 +328,7 @@ export const App: React.FC = () => {
       return;
     }
     if (!isOnline) {
-      setCartError('La tienda no está respondiendo y no podemos apartar productos ahora. Inténtalo en unos minutos.');
+      setCartError('Por ahora no podemos apartar productos porque la tienda no responde. Intenta de nuevo en unos minutos.');
       return;
     }
 
@@ -365,7 +366,7 @@ export const App: React.FC = () => {
       setIsPassModalOpen(true);
       void loadBackendData();
     } catch (err: any) {
-      setCartError(err.message || 'No pudimos crear la reserva. Inténtalo de nuevo.');
+      setCartError(err.message || 'No pudimos apartar tus productos. Intenta de nuevo.');
     } finally {
       setIsSubmittingReservation(false);
     }
@@ -399,7 +400,7 @@ export const App: React.FC = () => {
     setCurrentPass(null);
     setReservations([]);
     setCart([]);
-    showToast('Cerraste sesión.');
+    showToast('Cerraste sesión. ¡Vuelve pronto!');
   };
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -407,19 +408,17 @@ export const App: React.FC = () => {
 
   const offersByExpiry = useMemo(() => [...offers].sort((a, b) =>
     (daysUntil(a.expiresOn) || 0) - (daysUntil(b.expiresOn) || 0)), [offers]);
-  const featuredOffer = useMemo(() => offers.reduce<FlashOffer | undefined>((best, offer) =>
-    !best || offer.originalPrice - offer.price > best.originalPrice - best.price ? offer : best, undefined), [offers]);
 
   const activeCode = currentPass && currentPass.remainingSeconds > 0 ? currentPass.code : undefined;
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen flex flex-col bg-aisle dark:bg-[#0B1120] text-ink dark:text-slate-100 transition-colors duration-200">
+      <div className="min-h-screen flex flex-col bg-page text-ink">
         {!isOnline && (
-        <div className="bg-karen text-white text-sm" role="alert">
+        <div className="bg-karen text-white text-sm font-semibold border-b-2 border-mora" role="alert">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>La tienda no está respondiendo. Puedes ver productos, pero las reservas están en pausa.</span>
+            <span>Por ahora no podemos apartar productos. Puedes seguir mirando el catálogo.</span>
             <button onClick={() => void handleRetryConnection()} className="font-semibold underline underline-offset-2">
               Volver a intentar
             </button>
@@ -447,32 +446,28 @@ export const App: React.FC = () => {
           <>
             <HeroSection
               onNavigate={goTo}
-              featuredOffer={featuredOffer}
+              offers={offersByExpiry}
+              userName={currentUser?.nombre.split(' ')[0]}
               onReserveOffer={offer => void handleReserveOffer(offer)}
               activePassCode={activeCode}
               onOpenPass={() => setIsPassModalOpen(true)}
             />
 
-            <SpecialOffersSlider
-              realOffers={offers}
-              onReserveFlashOffer={offer => void handleReserveOffer(offer)}
-              onExploreProducts={() => goTo('productos')}
-              onExploreOffers={() => goTo('ofertas')}
-            />
+            <OffersMarquee offers={offersByExpiry} onSelect={() => goTo('ofertas')} />
 
-            {offersByExpiry.length > 0 && (
-              <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12" aria-labelledby="por-vencer">
-                <div className="flex items-end justify-between gap-4 mb-6">
+            {offersByExpiry.length > 3 && (
+              <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-14" aria-labelledby="por-vencer">
+                <div className="flex items-end justify-between gap-4 mb-7">
                   <div>
-                    <h2 id="por-vencer" className="font-tag font-bold text-3xl sm:text-4xl text-ink dark:text-white">Por vencer, con descuento</h2>
-                    <p className="mt-1 text-ink-soft dark:text-slate-300">Lo que vence primero, primero.</p>
+                    <h2 id="por-vencer" className="text-4xl sm:text-5xl text-ink">También se acaban pronto</h2>
+                    <p className="mt-2 text-lg text-ink-soft">Lo que vence primero, primero.</p>
                   </div>
-                  <button onClick={() => goTo('ofertas')} className="shrink-0 text-sm font-semibold text-ink dark:text-slate-200 hover:text-karen dark:hover:text-sticker underline underline-offset-4">
+                  <button onClick={() => goTo('ofertas')} className="shrink-0 text-sm font-extrabold text-ink hover:text-karen-text underline underline-offset-4 decoration-2 decoration-limon">
                     Ver las {offers.length} ofertas
                   </button>
                 </div>
-                <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 sm:overflow-visible">
-                  {offersByExpiry.slice(0, 4).map(offer => (
+                <div className="-mx-4 px-4 py-2 flex gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-5 sm:overflow-visible">
+                  {offersByExpiry.slice(3, 7).map(offer => (
                     <div key={offer.id} className="w-[78%] shrink-0 snap-start sm:w-auto">
                       <OfferTag offer={offer} onReserve={handleReserveOffer} />
                     </div>
@@ -480,6 +475,13 @@ export const App: React.FC = () => {
                 </div>
               </section>
             )}
+
+            <SpecialOffersSlider
+              realOffers={offers}
+              onReserveFlashOffer={offer => void handleReserveOffer(offer)}
+              onExploreProducts={() => goTo('productos')}
+              onExploreOffers={() => goTo('ofertas')}
+            />
 
             <CategoriesGrid
               categories={categoriesList.filter(category => category !== 'Todos')}
@@ -536,7 +538,7 @@ export const App: React.FC = () => {
               await api.cancelReservation(id);
               if (currentUser) await syncReservations(currentUser);
               await loadBackendData();
-              showToast('Reserva cancelada. Las unidades volvieron a la percha.');
+              showToast('Cancelaste tu reserva. Los productos volvieron a la percha.');
             }}
             onOpenPass={reservation => {
               if (!currentUser) return;
@@ -560,7 +562,7 @@ export const App: React.FC = () => {
 
       {toastMessage && (
         <div
-          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100%-2rem)] rounded-tag bg-ink text-white text-sm px-4 py-3 shadow-lift animate-slide-up"
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100%-2rem)] rounded-full border-2 border-mora bg-limon text-mora text-sm font-bold px-5 py-3 shadow-pop animate-pop"
           role="status"
         >
           {toastMessage}
