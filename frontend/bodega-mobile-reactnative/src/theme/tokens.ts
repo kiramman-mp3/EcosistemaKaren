@@ -61,10 +61,33 @@ export const darkColors = {
 
 export type ThemeMode = 'light' | 'dark';
 
-export const colors = lightColors;
-
 export function getThemeColors(mode: ThemeMode) {
   return mode === 'dark' ? darkColors : lightColors;
+}
+
+// El modo activo vive a nivel de módulo: ThemeProvider lo fija durante el render, antes de que
+// los hijos lean colors o styles. Así los StyleSheet creados con themed cambian de color
+// al alternar el tema sin reescribir cada componente.
+let activeMode: ThemeMode = 'light';
+
+export function setThemeMode(mode: ThemeMode) {
+  activeMode = mode;
+}
+
+/** Colores del tema activo; se lee en cada acceso, por eso no se puede desestructurar a nivel de módulo. */
+export const colors = new Proxy({} as typeof lightColors, {
+  get: (_target, key) => getThemeColors(activeMode)[key as keyof typeof lightColors],
+});
+
+/** StyleSheet que se vuelve a crear (y se guarda) una vez por modo de tema. */
+export function themed<T extends object>(factory: () => T): T {
+  const cache: Partial<Record<ThemeMode, T>> = {};
+  return new Proxy({} as T, {
+    get: (_target, key) => {
+      const sheet = (cache[activeMode] ??= factory());
+      return sheet[key as keyof T];
+    },
+  });
 }
 
 export const fonts = {
