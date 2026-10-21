@@ -139,6 +139,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* El papel del ticket no cambia con el tema: sus hijos vuelven a leer la paleta clara. */
+.paper-light {
+  --c-ink: #2A1D14;
+  --c-surface: #FFFFFF;
+  --c-naranja-tint: #FFE6D1;
+  --c-rule-strong: #D4C4A8;
+}
+
 /* Borde dentado del ticket térmico del pase de retiro (el papel es siempre blanco). */
 .ticket-edge {
   --notch: 8px;
