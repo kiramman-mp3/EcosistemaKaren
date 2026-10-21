@@ -35,9 +35,12 @@ import { BricolageGrotesque_600SemiBold, BricolageGrotesque_800ExtraBold } from 
 import { Caveat_700Bold } from '@expo-google-fonts/caveat';
 import { Doto_900Black } from '@expo-google-fonts/doto';
 import { colors, fonts, themed } from './src/theme/tokens';
-import { ThemeProvider } from './src/theme/ThemeContext';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 function BodegaAppContent() {
+  // Suscribe a este componente al tema: los colores se leen al renderizar y, sin esta
+  // suscripción, las pantallas hijas conservaban los del tema anterior hasta volver a montarse.
+  useTheme();
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol: string } | null>(null);
   const [activeTab, setActiveTab] = useState<BodegaTab>('ingreso');
   const [isOnline, setIsOnline] = useState<boolean>(false);
