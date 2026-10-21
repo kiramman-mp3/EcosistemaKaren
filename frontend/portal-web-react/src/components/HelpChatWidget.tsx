@@ -137,62 +137,58 @@ export const HelpChatWidget: React.FC = () => {
         <button
           onClick={() => setIsOpen(true)}
           aria-label="Abrir chat de ayuda en línea"
-          className="group flex items-center gap-2.5 rounded-full bg-mora text-white pl-4 pr-5 py-3 shadow-lift hover:bg-karen transition-all transform hover:scale-105"
+          className="press flex items-center gap-2.5 rounded-full border-2 border-mora bg-limon text-mora pl-4 pr-5 py-3"
         >
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-karen opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-karen" />
-          </span>
-          <MessageSquare className="w-5 h-5 text-limon" />
-          <span className="font-semibold text-sm">¿Necesitas ayuda?</span>
+          <MessageSquare className="w-5 h-5" />
+          <span className="font-display font-extrabold text-sm">¿Necesitas ayuda?</span>
         </button>
       )}
 
       {isOpen && (
-        <div className="w-[360px] sm:w-[400px] h-[520px] max-h-[calc(100vh-6rem)] rounded-2xl bg-surface shadow-2xl border border-aisle-rule flex flex-col overflow-hidden animate-scale-up">
+        <div className="w-[360px] sm:w-[400px] max-w-[calc(100vw-2.5rem)] h-[520px] max-h-[calc(100vh-6rem)] rounded-block bg-surface shadow-pop-lg border-2 border-mora flex flex-col overflow-hidden animate-scale-up">
           {/* Cabecera del chat */}
-          <div className="bg-mora text-white px-5 py-3.5 flex items-center justify-between">
+          <div className="bg-limon text-mora border-b-2 border-mora px-5 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-9 h-9 rounded-full bg-karen flex items-center justify-center font-display font-extrabold text-white">
+                <div className="w-10 h-10 rounded-full border-2 border-mora bg-karen flex items-center justify-center text-white">
                   <Bot className="w-5 h-5" />
                 </div>
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-ink" />
+                <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-aguacate-solid ring-2 ring-limon" />
               </div>
               <div>
-                <h3 className="font-display font-extrabold text-sm flex items-center gap-1.5">
+                <h3 className="font-display font-extrabold text-base flex items-center gap-1.5">
                   KarenBot
-                  <span className="text-[10px] bg-karen text-white px-1.5 py-0.2 rounded font-normal">Oficial</span>
+                  <span className="text-[10px] bg-mora text-white px-2 py-0.5 rounded-full font-bold">Oficial</span>
                 </h3>
-                <p className="text-[11px] text-white/70">Asistente en línea · Respuestas al instante</p>
+                <p className="text-xs font-semibold">Te respondo al instante</p>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
               aria-label="Cerrar chat de ayuda"
-              className="w-8 h-8 rounded-full text-white/80 hover:text-white hover:bg-surface/10 flex items-center justify-center transition-colors"
+              className="w-9 h-9 rounded-full hover:bg-mora/10 flex items-center justify-center transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Área de mensajes con scroll */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-aisle/40 text-xs sm:text-sm">
+          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-page text-sm">
             {messages.map(msg => (
               <div
                 key={msg.id}
                 className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.sender === 'bot' && (
-                  <div className="w-7 h-7 rounded-full bg-karen text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-full border-2 border-mora bg-karen text-white flex items-center justify-center shrink-0 mt-0.5">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm leading-relaxed ${
+                  className={`max-w-[82%] rounded-2xl px-4 py-2.5 leading-relaxed ${
                     msg.sender === 'user'
-                      ? 'bg-mora text-white rounded-tr-none'
-                      : 'bg-surface text-ink border border-aisle-rule rounded-tl-none'
+                      ? 'bg-karen text-white rounded-tr-sm font-semibold'
+                      : 'bg-surface text-ink border-2 border-aisle-rule rounded-tl-sm'
                   }`}
                 >
                   <p>{msg.text}</p>
@@ -201,7 +197,7 @@ export const HelpChatWidget: React.FC = () => {
                       href={msg.actionUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-tag bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition-colors"
+                      className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-2 rounded-full border-2 border-mora bg-aguacate-solid text-white font-extrabold text-xs press"
                     >
                       <span>{msg.actionLabel || 'Abrir enlace'}</span>
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -209,14 +205,14 @@ export const HelpChatWidget: React.FC = () => {
                   )}
                   <span
                     className={`block mt-1 text-[10px] ${
-                      msg.sender === 'user' ? 'text-white/60 text-right' : 'text-ink-muted'
+                      msg.sender === 'user' ? 'text-white/80 text-right' : 'text-ink-muted'
                     }`}
                   >
                     {msg.timestamp}
                   </span>
                 </div>
                 {msg.sender === 'user' && (
-                  <div className="w-7 h-7 rounded-full bg-ink-soft text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-full border-2 border-mora bg-limon text-mora flex items-center justify-center shrink-0 mt-0.5">
                     <User className="w-4 h-4" />
                   </div>
                 )}
@@ -225,13 +221,13 @@ export const HelpChatWidget: React.FC = () => {
 
             {isTyping && (
               <div className="flex gap-2.5 items-center text-xs text-ink-muted">
-                <div className="w-7 h-7 rounded-full bg-karen text-white flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full border-2 border-mora bg-karen text-white flex items-center justify-center shrink-0">
                   <Bot className="w-4 h-4" />
                 </div>
-                <div className="bg-surface px-3 py-2 rounded-2xl border border-aisle-rule flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-ink-muted rounded-full animate-bounce" />
-                  <span className="w-1.5 h-1.5 bg-ink-muted rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 bg-ink-muted rounded-full animate-bounce [animation-delay:0.4s]" />
+                <div className="bg-surface px-4 py-3 rounded-2xl rounded-tl-sm border-2 border-aisle-rule flex items-center gap-1.5" role="status" aria-label="KarenBot está escribiendo">
+                  <span className="w-2 h-2 bg-karen rounded-full animate-typing-dot" />
+                  <span className="w-2 h-2 bg-karen rounded-full animate-typing-dot [animation-delay:0.15s]" />
+                  <span className="w-2 h-2 bg-karen rounded-full animate-typing-dot [animation-delay:0.3s]" />
                 </div>
               </div>
             )}
@@ -239,12 +235,12 @@ export const HelpChatWidget: React.FC = () => {
           </div>
 
           {/* Preguntas frecuentes rápidas (chips) */}
-          <div className="px-3 py-2 bg-surface border-t border-aisle-rule overflow-x-auto no-scrollbar flex gap-1.5 shrink-0">
+          <div className="px-3 py-2.5 bg-surface border-t-2 border-aisle-rule overflow-x-auto no-scrollbar flex gap-2 shrink-0">
             {FAQ_CHIPS.map((chip, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(chip.label)}
-                className="whitespace-nowrap rounded-full bg-aisle hover:bg-karen-tint hover:text-karen-text border border-aisle-rule px-3 py-1 text-xs text-ink transition-colors shrink-0"
+                className="whitespace-nowrap rounded-full bg-surface hover:bg-limon hover:text-mora hover:border-mora border-2 border-aisle-rule px-3.5 py-1.5 text-xs font-bold text-ink transition-colors shrink-0"
               >
                 {chip.label}
               </button>
@@ -252,20 +248,20 @@ export const HelpChatWidget: React.FC = () => {
           </div>
 
           {/* Campo de entrada de texto */}
-          <div className="p-3 bg-surface border-t border-aisle-rule flex items-center gap-2">
+          <div className="p-3 bg-surface border-t-2 border-aisle-rule flex items-center gap-2">
             <input
               type="text"
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Escribe tu consulta aquí..."
-              className="flex-1 h-10 px-3 rounded-tag bg-aisle border border-aisle-rule text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:border-karen focus:bg-surface transition-colors"
+              className="flex-1 h-11 px-4 rounded-full bg-page border-2 border-transparent text-sm font-semibold text-ink placeholder:text-ink-muted placeholder:font-normal focus:outline-none focus:border-mora focus:bg-surface transition-colors"
             />
             <button
               onClick={() => handleSend()}
               disabled={!inputText.trim()}
               aria-label="Enviar mensaje"
-              className="w-10 h-10 rounded-tag bg-karen text-white flex items-center justify-center hover:bg-karen-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="press w-11 h-11 rounded-full border-2 border-mora bg-karen text-white flex items-center justify-center disabled:opacity-40"
             >
               <Send className="w-4 h-4" />
             </button>
