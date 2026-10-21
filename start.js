@@ -6,6 +6,7 @@
  *   node start.js --mobile=portal # solo el Expo del portal mobile (también: bodega, all, none)
  *   node start.js --no-mobile     # sin Expo (equivale a --mobile=none)
  *   node start.js --setup         # solo prepara (deps, .env, base de datos) y termina
+ *   node start.js --api-url=URL   # URL del backend para las apps móviles (por defecto, la IP de la red local)
  *   node start.js --no-seed       # no siembra datos aunque la base esté vacía
  *   node start.js --skip-images   # el seed no descarga imágenes de productos
  *   node start.js --down          # detiene PostgreSQL y pgAdmin
@@ -123,8 +124,8 @@ function seedIfNeeded() {
   if (run('npm', seedArgs, BACKEND).status !== 0) fail('El seed falló');
 }
 
-function start(name, color, cwd, cmd, cmdArgs, { interactive = true } = {}) {
-  const child = spawn(cmd, cmdArgs, { cwd, shell: IS_WIN && cmd === 'npm', stdio: [interactive ? 'inherit' : 'ignore', 'pipe', 'pipe'] });
+function start(name, color, cwd, cmd, cmdArgs, { interactive = true, env = {} } = {}) {
+  const child = spawn(cmd, cmdArgs, { cwd, env: { ...process.env, ...env }, shell: IS_WIN && cmd === 'npm', stdio: [interactive ? 'inherit' : 'ignore', 'pipe', 'pipe'] });
   const prefix = `\x1b[${color}m[${name}]\x1b[0m `;
   for (const stream of [child.stdout, child.stderr]) {
     let pending = '';
@@ -139,13 +140,16 @@ function start(name, color, cwd, cmd, cmdArgs, { interactive = true } = {}) {
 }
 
 // Abre el comando en una terminal propia (con TTY, así Expo imprime el QR). Devuelve false si no hay forma de hacerlo.
-function openTerminal(title, cwd, command) {
+function openTerminal(title, cwd, command, env = {}) {
   let child;
   if (IS_WIN) {
+    // cmd.exe hereda el entorno del proceso que lo lanza, y Expo lee de ahí EXPO_PUBLIC_*.
     child = spawn('cmd.exe', ['/c', 'start', `"${title}"`, '/D', `"${cwd}"`, 'cmd', '/k', `"${command}"`],
-      { windowsVerbatimArguments: true, detached: true, stdio: 'ignore' });
+      { windowsVerbatimArguments: true, detached: true, stdio: 'ignore', env: { ...process.env, ...env } });
   } else if (process.platform === 'darwin') {
-    const script = `tell application "Terminal" to do script "cd '${cwd}' && ${command}"`;
+    // Terminal.app no hereda el entorno: se exporta dentro del propio comando.
+    const exports = Object.entries(env).map(([key, value]) => `export ${key}='${value}' && `).join('');
+    const script = `tell application "Terminal" to do script "cd '${cwd}' && ${exports}${command}"`;
     child = spawn('osascript', ['-e', script, '-e', 'tell application "Terminal" to activate'], { detached: true, stdio: 'ignore' });
   } else {
     return false;
@@ -153,6 +157,24 @@ function openTerminal(title, cwd, command) {
   child.on('error', () => {});
   child.unref();
   return true;
+}
+
+// IP de la PC en la red local (ignora adaptadores virtuales de WSL, Docker, VirtualBox...).
+function lanAddress() {
+  const lan = Object.entries(os.networkInterfaces())
+    .filter(([name]) => !/vEthernet|WSL|VirtualBox|VMware|Docker|Hyper-V/i.test(name))
+    .flatMap(([, list]) => list)
+    .find(i => i.family === 'IPv4' && !i.internal);
+  return lan ? lan.address : null;
+}
+
+// Un teléfono no alcanza "localhost" de la PC: las apps móviles necesitan la IP de la red local.
+// Prioridad: --api-url, luego EXPO_PUBLIC_API_URL ya definida, luego la IP detectada ahora.
+function mobileApiUrl(port) {
+  if (typeof args['api-url'] === 'string') return args['api-url'].replace(/\/$/, '');
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  const host = lanAddress();
+  return host ? `http://${host}:${port}/api/v1` : null;
 }
 
 function stopAll() {
@@ -201,19 +223,19 @@ async function main() {
     ['bodega', 'bodega-mobile', '34', PROJECTS[3], 8082],
   ].filter(([key]) => mobile === key || mobile === 'all');
   const inline = [];
+  const apiUrl = expos.length ? mobileApiUrl(port) : null;
+  const expoEnv = apiUrl ? { EXPO_PUBLIC_API_URL: apiUrl } : {};
+  if (apiUrl) log(`Apps móviles → backend en ${apiUrl} (el teléfono debe estar en la misma red Wi-Fi)`);
+  else if (expos.length) log('No se detectó la IP de la red local; las apps móviles usarán localhost (solo sirve en emulador).');
   for (const expo of expos) {
     const [, name, , cwd, expoPort] = expo;
-    if (openTerminal(name, cwd, `npm start -- --port ${expoPort}`)) log(`${name}: Expo abierto en otra terminal`);
+    if (openTerminal(name, cwd, `npm start -- --port ${expoPort}`, expoEnv)) log(`${name}: Expo abierto en otra terminal`);
     else inline.push(expo);
   }
   // Sin terminal externa (p. ej. Linux) Expo corre aquí sin stdin y no imprime el QR; se muestra la URL para pegarla en Expo Go ("Enter URL manually").
-  for (const [, name, color, cwd, expoPort] of inline) start(name, color, cwd, 'npm', ['start', '--', '--port', String(expoPort)], { interactive: false });
+  for (const [, name, color, cwd, expoPort] of inline) start(name, color, cwd, 'npm', ['start', '--', '--port', String(expoPort)], { interactive: false, env: expoEnv });
   if (inline.length) {
-    const lan = Object.entries(os.networkInterfaces())
-      .filter(([name]) => !/vEthernet|WSL|VirtualBox|VMware|Docker|Hyper-V/i.test(name))
-      .flatMap(([, list]) => list)
-      .find(i => i.family === 'IPv4' && !i.internal);
-    const host = lan ? lan.address : 'localhost';
+    const host = lanAddress() || 'localhost';
     for (const [, name, , , expoPort] of inline) log(`${name}: exp://${host}:${expoPort}`);
   }
 
