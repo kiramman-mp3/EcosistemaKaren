@@ -1,47 +1,61 @@
-// Sistema "Fleje" de Supermercado Karen (el mismo del portal web y de la app de bodega):
-// la etiqueta de precio de percha es la señal fuerte de cada producto.
+// Sistema "El pasillo de Karen" (el mismo del portal web y de la app de bodega):
+// bloques de color plano, pegatinas con sombra dura y notas a mano.
 type NivelAlerta = 'VENCIDO' | 'ROJO' | 'AMARILLO' | 'NORMAL';
 
 export const lightColors = {
   karen: '#D52B1E',
   karenDeep: '#A81E14',
-  karenTint: '#FBE9E7',
-  ink: '#13284B',
-  inkSoft: '#3B4A66',
-  inkMuted: '#5E6B82',
-  inkFaint: '#8C96A8',
+  karenTint: '#FDE6E3',
+  karenText: '#C42418',
+  ink: '#2A1148',
+  inkSoft: '#4A3566',
+  inkMuted: '#6B5A86',
+  inkFaint: '#8E7FA6',
   sticker: '#FFD400',
-  stickerDeep: '#C9A400',
-  stickerTint: '#FFF6C7',
-  aisle: '#EFF1F4',
-  rule: '#D9DDE3',
-  ruleStrong: '#C5CBD4',
-  fresh: '#12805C',
-  freshTint: '#E3F3EC',
+  stickerDeep: '#E0B800',
+  stickerTint: '#FFF3B8',
+  naranja: '#FF7A1A',
+  naranjaTint: '#FFE6D1',
+  guayaba: '#FF9EB5',
+  guayabaTint: '#FFE3EA',
+  mora: '#2A1148',
+  shadow: '#2A1148',
+  aisle: '#F6F1FB',
+  rule: '#E2D8EE',
+  ruleStrong: '#CBBBE0',
+  fresh: '#0E7A43',
+  freshTint: '#DDF5E6',
   white: '#FFFFFF',
   card: '#FFFFFF',
-  cardBorder: '#D9DDE3',
+  cardBorder: '#E2D8EE',
 } as const;
 
 export const darkColors = {
-  karen: '#EF4444',
-  karenDeep: '#DC2626',
-  karenTint: '#3B1515',
-  ink: '#F8FAFC',
-  inkSoft: '#CBD5E1',
-  inkMuted: '#94A3B8',
-  inkFaint: '#64748B',
-  sticker: '#FBBF24',
-  stickerDeep: '#D97706',
-  stickerTint: '#452A05',
-  aisle: '#0B1120',
-  rule: '#1E293B',
-  ruleStrong: '#334155',
-  fresh: '#10B981',
-  freshTint: '#063928',
-  white: '#1E293B',
-  card: '#1E293B',
-  cardBorder: '#334155',
+  karen: '#D52B1E',
+  karenDeep: '#FF8A80',
+  karenTint: '#4A1620',
+  karenText: '#FF6B5E',
+  ink: '#F6F1FB',
+  inkSoft: '#D9CCEB',
+  inkMuted: '#B5A5CC',
+  inkFaint: '#8E7FA6',
+  sticker: '#FFD400',
+  stickerDeep: '#E0B800',
+  stickerTint: '#4A3A00',
+  naranja: '#FF7A1A',
+  naranjaTint: '#4A2508',
+  guayaba: '#FF9EB5',
+  guayabaTint: '#4A1A2A',
+  mora: '#2A1148',
+  shadow: '#0C0516',
+  aisle: '#1B0B2E',
+  rule: '#43275F',
+  ruleStrong: '#5B3A7C',
+  fresh: '#34D388',
+  freshTint: '#0B3A24',
+  white: '#2A1148',
+  card: '#2A1148',
+  cardBorder: '#43275F',
 } as const;
 
 export type ThemeMode = 'light' | 'dark';
@@ -53,18 +67,20 @@ export function getThemeColors(mode: ThemeMode) {
 }
 
 export const fonts = {
-  body: 'Archivo_400Regular',
-  medium: 'Archivo_500Medium',
-  semibold: 'Archivo_600SemiBold',
-  bold: 'Archivo_700Bold',
-  tag: 'ArchivoNarrow_700Bold',
-  tagSemibold: 'ArchivoNarrow_600SemiBold',
+  body: 'Nunito_400Regular',
+  medium: 'Nunito_600SemiBold',
+  semibold: 'Nunito_700Bold',
+  bold: 'Nunito_700Bold',
+  tag: 'BricolageGrotesque_800ExtraBold',
+  tagSemibold: 'BricolageGrotesque_600SemiBold',
+  hand: 'Caveat_700Bold',
   stamp: 'Doto_900Black',
 } as const;
 
-export const radius = { tag: 6, pill: 999 } as const;
+// Radios por rol: botones en píldora, pegatinas y fotos más redondeadas que antes.
+export const radius = { tag: 14, photo: 20, block: 28, pill: 999 } as const;
 
-/** Color del nivel FEFO: la banda lateral de cada lote. */
+/** Color del nivel FEFO: la banda lateral de cada lote. Es regla de negocio, no decoración. */
 export function levelColors(nivel: NivelAlerta | string, mode: ThemeMode = 'light') {
   const c = getThemeColors(mode);
   switch (nivel) {

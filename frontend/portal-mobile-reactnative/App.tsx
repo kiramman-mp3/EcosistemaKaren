@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ActivityIndicator, AppState, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { useFonts, Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold } from '@expo-google-fonts/archivo';
-import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow';
+import { useFonts } from 'expo-font';
+import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
+import { BricolageGrotesque_600SemiBold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque';
+import { Caveat_700Bold } from '@expo-google-fonts/caveat';
 import { Doto_900Black } from '@expo-google-fonts/doto';
 import { NavbarMobile, TabBar } from './src/components/NavbarMobile';
 import { PickupPassModal } from './src/components/PickupPassModal';
@@ -34,8 +36,9 @@ const describe = (value?: string) => value?.replace(/\s*·\s*/g, ', ').trim() ||
 
 function PortalAppContent() {
   const [fontsLoaded, fontError] = useFonts({
-    Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold,
-    ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold, Doto_900Black,
+    Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold,
+    BricolageGrotesque_600SemiBold, BricolageGrotesque_800ExtraBold,
+    Caveat_700Bold, Doto_900Black,
   });
   const [activeTab, setActiveTab] = useState<NavTab>('inicio');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Todos');
