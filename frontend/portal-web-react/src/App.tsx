@@ -419,7 +419,7 @@ export const App: React.FC = () => {
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen flex flex-col bg-page text-ink">
+      <div className="min-h-screen flex flex-col bg-page text-ink pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0">
         {!isOnline && (
         <div className="bg-karen text-white text-sm font-semibold border-b-2 border-mora" role="alert">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
@@ -443,6 +443,7 @@ export const App: React.FC = () => {
         user={currentUser}
         onLogout={() => void handleLogout()}
         offersCount={offers.length}
+        hasActivePass={Boolean(activeCode)}
         searchQuery={searchQuery}
         onSearch={query => { setSearchQuery(query); if (query) setSelectedCategory('Todos'); }}
       />
@@ -569,7 +570,7 @@ export const App: React.FC = () => {
 
       {toastMessage && (
         <div
-          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100%-2rem)] rounded-full border-2 border-mora bg-limon text-mora text-sm font-bold px-5 py-3 shadow-pop animate-pop"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] sm:bottom-5 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100%-2rem)] rounded-full border-2 border-mora bg-limon text-mora text-sm font-bold px-5 py-3 shadow-pop animate-pop"
           role="status"
         >
           {toastMessage}

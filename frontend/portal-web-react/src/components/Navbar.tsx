@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LogOut, Moon, Search, ShoppingBasket, Sun, Ticket, User, X } from 'lucide-react';
+import { Home, LayoutGrid, LogOut, Moon, Search, ShoppingBasket, Sun, Tag, Ticket, User, X } from 'lucide-react';
 import { NavTab } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { RollingNumber } from './ui/RollingNumber';
@@ -18,6 +18,8 @@ interface NavbarProps {
   offersCount: number;
   searchQuery: string;
   onSearch: (query: string) => void;
+  /** Hay una reserva vigente: se marca la pestaña "Mis reservas" en la barra inferior móvil. */
+  hasActivePass?: boolean;
 }
 
 const TABS: { id: NavTab; label: string }[] = [
@@ -27,9 +29,17 @@ const TABS: { id: NavTab; label: string }[] = [
   { id: 'reservas', label: 'Mis reservas' },
 ];
 
+// Barra inferior del móvil (la misma de la app): etiquetas cortas e iconos.
+const BOTTOM_TABS: { id: NavTab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'inicio', label: 'Inicio', Icon: Home },
+  { id: 'productos', label: 'Productos', Icon: LayoutGrid },
+  { id: 'ofertas', label: 'Por vencer', Icon: Tag },
+  { id: 'reservas', label: 'Mis reservas', Icon: Ticket },
+];
+
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab, onTabChange, cartCount, cartTotal, onOpenCart, onOpenLogin, isOnline = true,
-  user = null, onLogout, offersCount, searchQuery, onSearch,
+  user = null, onLogout, offersCount, searchQuery, onSearch, hasActivePass = false,
 }) => {
   const firstName = user?.nombre.split(' ')[0];
   const { theme, toggleTheme } = useTheme();
@@ -60,7 +70,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   return (
-    // En móvil el encabezado ocupa casi 190px: se esconde al bajar y reaparece al subir (o al enfocar la búsqueda).
+    <>
+    {/* En móvil el encabezado se esconde al bajar y reaparece al subir (o al enfocar la búsqueda). */}
     <header
       ref={headerRef}
       className={`sticky top-0 z-40 bg-surface border-b-2 border-mora/90 transition-transform duration-200 sm:translate-y-0 ${hidden ? '-translate-y-full' : ''}`}
@@ -156,7 +167,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-4 pb-3">
+        {/* En móvil las secciones van en la barra inferior; esta fila es para pantallas desde sm. */}
+        <div className="hidden sm:flex items-center justify-between gap-4 pb-3">
           <nav ref={tabsRef} className="relative flex gap-1.5 overflow-x-auto no-scrollbar py-1" aria-label="Secciones">
             {TABS.map(tab => {
               const active = activeTab === tab.id;
@@ -189,5 +201,42 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
     </header>
+
+    <nav
+      className="sm:hidden fixed bottom-0 inset-x-0 z-40 flex bg-surface border-t-2 border-mora pb-[env(safe-area-inset-bottom)]"
+      aria-label="Secciones"
+    >
+      {BOTTOM_TABS.map(({ id, label, Icon }) => {
+        const active = activeTab === id;
+        const badge = id === 'ofertas' && offersCount > 0 ? offersCount : id === 'reservas' && hasActivePass ? 1 : 0;
+        return (
+          <button
+            key={id}
+            onClick={() => onTabChange(id)}
+            aria-current={active ? 'page' : undefined}
+            className="flex-1 min-w-0 min-h-16 flex flex-col items-center justify-center gap-0.5 py-1.5"
+          >
+            <span
+              className={`relative min-w-[3.25rem] h-8 px-3 rounded-full border-2 flex items-center justify-center transition-colors ${
+                active ? 'bg-limon text-mora border-mora' : 'border-transparent text-ink-muted'
+              }`}
+            >
+              <Icon className="w-[22px] h-[22px]" />
+              {badge > 0 && (
+                <span
+                  className={`absolute -top-1.5 -right-1 min-w-5 h-[18px] px-1 rounded-full border-2 border-surface text-[10px] font-extrabold flex items-center justify-center tabular ${
+                    id === 'ofertas' ? 'bg-naranja text-mora' : 'bg-karen text-white'
+                  }`}
+                >
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
+            </span>
+            <span className={`max-w-full truncate text-xs ${active ? 'font-extrabold text-ink' : 'font-semibold text-ink-muted'}`}>{label}</span>
+          </button>
+        );
+      })}
+    </nav>
+    </>
   );
 };
