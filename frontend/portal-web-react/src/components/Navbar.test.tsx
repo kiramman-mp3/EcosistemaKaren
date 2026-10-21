@@ -58,3 +58,23 @@ describe('Navbar: barra inferior móvil', () => {
     expect(bar.getByRole('button', { name: 'Mis reservas' })).not.toHaveTextContent(/\d/);
   });
 });
+
+describe('Navbar: indicador de sesión en móvil', () => {
+  const user = { id: 'u1', nombre: 'Ana María López', email: 'ana@example.com', rol: 'CLIENTE' };
+
+  it('con sesión muestra el nombre y abre "Tu cuenta"', () => {
+    const onOpenAccount = vi.fn();
+    renderNavbar({ user, onOpenAccount });
+    const chip = screen.getByRole('button', { name: 'Tu cuenta, Ana María López' });
+    expect(chip).toHaveTextContent('Ana');
+    expect(chip).not.toHaveTextContent('López');
+    fireEvent.click(chip);
+    expect(onOpenAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin sesión ofrece Ingresar y no muestra el chip', () => {
+    renderNavbar();
+    expect(screen.getByRole('button', { name: 'Ingresar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Tu cuenta/ })).toBeNull();
+  });
+});

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Home, LayoutGrid, LogOut, Moon, Search, ShoppingBasket, Sun, Tag, Ticket, User, X } from 'lucide-react';
+import { CircleUser, Home, LayoutGrid, LogOut, Moon, Search, ShoppingBasket, Sun, Tag, Ticket, User, X } from 'lucide-react';
 import { NavTab } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { RollingNumber } from './ui/RollingNumber';
@@ -15,6 +15,8 @@ interface NavbarProps {
   isOnline?: boolean;
   user?: { id: string; nombre: string; email: string; rol?: string } | null;
   onLogout?: () => void;
+  /** Abre "Tu cuenta" desde el chip del nombre (móvil). */
+  onOpenAccount?: () => void;
   offersCount: number;
   searchQuery: string;
   onSearch: (query: string) => void;
@@ -39,7 +41,7 @@ const BOTTOM_TABS: { id: NavTab; label: string; Icon: React.ComponentType<{ clas
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab, onTabChange, cartCount, cartTotal, onOpenCart, onOpenLogin, isOnline = true,
-  user = null, onLogout, offersCount, searchQuery, onSearch, hasActivePass = false,
+  user = null, onLogout, onOpenAccount, offersCount, searchQuery, onSearch, hasActivePass = false,
 }) => {
   const firstName = user?.nombre.split(' ')[0];
   const { theme, toggleTheme } = useTheme();
@@ -79,15 +81,79 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* En móvil: logo y acciones arriba y la búsqueda a todo el ancho debajo; desde sm, una sola fila. */}
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 py-2.5 sm:flex-nowrap sm:gap-4 sm:h-24 sm:py-0">
-          <button
-            onClick={() => onTabChange('inicio')}
-            className="order-1 flex items-center shrink-0 group rounded-tag"
-            aria-label="Supermercado Karen, ir al inicio"
-          >
-            <div className="p-1 sm:p-1.5 w-32 sm:w-56 transition-transform group-hover:-rotate-2 group-hover:scale-105">
-              <Logo alt="Supermercado Karen" className="w-full" />
-            </div>
-          </button>
+          {/* Primera fila (logo, tema, cuenta, carrito): en móvil no puede partirse; el logo cede espacio y el nombre se recorta.
+              Desde sm el contenedor desaparece (contents) y todo comparte fila con la búsqueda. */}
+          <div className="flex items-center gap-2.5 w-full min-w-0 sm:contents">
+            <button
+              onClick={() => onTabChange('inicio')}
+              className="order-1 flex flex-1 min-w-[6rem] items-center sm:flex-none sm:min-w-0 sm:shrink-0 group rounded-tag"
+              aria-label="Supermercado Karen, ir al inicio"
+            >
+              <div className="p-1 sm:p-1.5 w-32 max-w-full sm:w-56 transition-transform group-hover:-rotate-2 group-hover:scale-105">
+                <Logo alt="Supermercado Karen" className="w-full" />
+              </div>
+            </button>
+
+
+            <button
+              type="button"
+              onClick={(event) => toggleTheme({ x: event.clientX, y: event.clientY })}
+              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+              className="order-2 sm:order-3 shrink-0 w-11 h-11 rounded-full text-ink hover:bg-limon hover:text-mora flex items-center justify-center transition-colors"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+
+            {user ? (
+              <>
+              {/* Móvil, como en la app: icono y nombre de quien tiene la sesión; abre "Tu cuenta". El nombre se recorta antes que desbordar. */}
+              <button
+                onClick={onOpenAccount ?? onLogout}
+                className="order-3 sm:hidden min-w-0 shrink h-11 px-1 flex items-center gap-1 rounded-full text-ink"
+                aria-label={`Tu cuenta, ${user.nombre}`}
+              >
+                <CircleUser className="w-6 h-6 shrink-0" />
+                <span className="truncate text-sm font-bold">{firstName}</span>
+              </button>
+              <div className="hidden sm:flex order-4 items-center gap-1 shrink-0">
+                <span className="text-sm text-ink-soft">Hola, <strong className="font-display font-extrabold text-ink">{firstName}</strong></span>
+                <button
+                  onClick={onLogout}
+                  className="w-11 h-11 flex items-center justify-center text-ink-muted hover:text-karen-text rounded-full"
+                  aria-label="Cerrar sesión"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+              </>
+            ) : (
+              <button
+                onClick={onOpenLogin}
+                aria-label="Ingresar"
+                className="order-3 sm:order-4 shrink-0 h-11 px-3 sm:px-4 rounded-full text-sm font-bold text-ink hover:bg-limon hover:text-mora flex items-center gap-2 transition-colors"
+              >
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">Ingresar</span>
+              </button>
+            )}
+
+            <button
+              onClick={onOpenCart}
+              data-cart-target
+              className="order-4 sm:order-5 press shrink-0 h-12 pl-3.5 pr-4 rounded-full bg-karen text-white border-2 border-mora flex items-center gap-2.5"
+              aria-label={`Abrir mi lista, ${cartCount} productos`}
+            >
+              <ShoppingBasket className="w-5 h-5" />
+              <RollingNumber value={cartCount} className="font-display font-extrabold text-lg" />
+              {cartCount > 0 && (
+                <span className="hidden lg:inline text-sm font-bold tabular border-l-2 border-white/40 pl-2.5">
+                  ${cartTotal.toFixed(2)}
+                </span>
+              )}
+            </button>
+          </div>
 
           <form
             role="search"
@@ -117,54 +183,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
           </form>
-
-          <button
-            type="button"
-            onClick={(event) => toggleTheme({ x: event.clientX, y: event.clientY })}
-            aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-            title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
-            className="order-2 ml-auto sm:ml-0 sm:order-3 shrink-0 w-11 h-11 rounded-full text-ink hover:bg-limon hover:text-mora flex items-center justify-center transition-colors"
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
-
-          {user ? (
-            <div className="order-3 sm:order-4 flex items-center gap-1 shrink-0">
-              <span className="hidden sm:inline text-sm text-ink-soft">Hola, <strong className="font-display font-extrabold text-ink">{firstName}</strong></span>
-              <button
-                onClick={onLogout}
-                className="w-11 h-11 flex items-center justify-center text-ink-muted hover:text-karen-text rounded-full"
-                aria-label="Cerrar sesión"
-                title="Cerrar sesión"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onOpenLogin}
-              aria-label="Ingresar"
-              className="order-3 sm:order-4 shrink-0 h-11 px-3 sm:px-4 rounded-full text-sm font-bold text-ink hover:bg-limon hover:text-mora flex items-center gap-2 transition-colors"
-            >
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Ingresar</span>
-            </button>
-          )}
-
-          <button
-            onClick={onOpenCart}
-            data-cart-target
-            className="order-4 sm:order-5 press shrink-0 h-12 pl-3.5 pr-4 rounded-full bg-karen text-white border-2 border-mora flex items-center gap-2.5"
-            aria-label={`Abrir mi lista, ${cartCount} productos`}
-          >
-            <ShoppingBasket className="w-5 h-5" />
-            <RollingNumber value={cartCount} className="font-display font-extrabold text-lg" />
-            {cartCount > 0 && (
-              <span className="hidden lg:inline text-sm font-bold tabular border-l-2 border-white/40 pl-2.5">
-                ${cartTotal.toFixed(2)}
-              </span>
-            )}
-          </button>
         </div>
 
         {/* En móvil las secciones van en la barra inferior; esta fila es para pantallas desde sm. */}
