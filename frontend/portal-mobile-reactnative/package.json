@@ -11,8 +11,6 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
-    "@expo-google-fonts/archivo": "^0.4.2",
-    "@expo-google-fonts/archivo-narrow": "^0.4.2",
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
     "@expo-google-fonts/caveat": "^0.4.2",
     "@expo-google-fonts/doto": "^0.4.1",
