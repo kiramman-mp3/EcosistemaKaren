@@ -202,8 +202,26 @@ libera el stock una sola vez y cambia su estado a `EXPIRADA` de forma atómica.
 ## 4. Alertas y SSE Stream en Tiempo Real (`/alerts`)
 
 ### `GET /alerts`
-Obtiene las alertas estáticas calculadas con la política aprobada: `VENCIDO` ≤ 0 días,
-`ROJO` de 1 a 6 días, `AMARILLO` de 7 a 14 días y `NORMAL` desde 15 días.
+Obtiene las alertas de caducidad persistidas en la tabla `alertas_caducidad` (o calculadas dinámicamente según la política aprobada: `VENCIDO` ≤ 0 días, `ROJO` 1–6 días, `AMARILLO` 7–14 días).
+* **Roles Autorizados**: `BODEGUERO`, `PERCHERO`, `ADMIN`
+* **Query Params opcionales**:
+  * `atendida`: `true` | `false`
+  * `nivel`: `AMARILLO` | `ROJO` | `VENCIDO`
+  * `limit`: número entero (por defecto 100)
+  * `offset`: número entero (por defecto 0)
+
+### `PATCH /alerts/:id/atender`
+Marca una alerta de caducidad como atendida (`atendida = true`).
+* **Roles Autorizados**: `BODEGUERO`, `PERCHERO`, `ADMIN`
+* **Parámetros**: `id` (UUID de la alerta)
+* **Respuesta**:
+```json
+{
+  "success": true,
+  "message": "Alerta marcada como atendida exitosamente.",
+  "data": { "id": "...", "atendida": true, ... }
+}
+```
 
 ### `GET /alerts/stream` (Server-Sent Events)
 Conexión de stream en tiempo real `text/event-stream` para empujar alertas a bodegueros y percheros.

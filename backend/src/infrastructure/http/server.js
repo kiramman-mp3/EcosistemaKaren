@@ -4,7 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const { testConnection, getPool } = require('../db/postgres');
+const { testConnection, getPool, closePool } = require('../db/postgres');
 const { runMigrations } = require('../db/migrations');
 const setupSwagger = require('../swagger/swaggerDoc');
 const errorHandler = require('./middlewares/errorHandler');
@@ -13,7 +13,9 @@ const { createSecurityMiddlewares, validateProductionSecurity, cookieCsrfProtect
 const AlertStreamManager = require('../sse/AlertStreamManager');
 const ReservationCleanerWorker = require('../workers/ReservationCleanerWorker');
 const LotExpiryWorker = require('../workers/LotExpiryWorker');
+const HeartbeatSimulatorWorker = require('../workers/HeartbeatSimulatorWorker');
 const HeartbeatMonitor = require('../heartbeat/HeartbeatMonitor');
+const PostgresHeartbeatStore = require('../heartbeat/PostgresHeartbeatStore');
 const PromotionCache = require('../cache/PromotionCache');
 const aiMetrics = require('../metrics/AiMetricsCollector');
 
@@ -25,7 +27,8 @@ const {
   PostgresReservationRepository,
   PostgresUserRepository,
   PostgresAlertRepository,
-  PostgresPromotionRepository
+  PostgresPromotionRepository,
+  PostgresTokenBlacklistRepository
 } = require('../../adapters/repositories/PostgresRepositories');
 const InMemoryRepositories = require('../../adapters/repositories/InMemoryRepositories');
 const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
@@ -33,7 +36,7 @@ const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 // Use Cases
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
 const { GetProducts, GetProductByBarcode, CreateProduct } = require('../../use-cases/products/ProductUseCases');
-const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
+const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
 const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const {
   GenerarPromocionesIA,
@@ -59,7 +62,21 @@ const createApiRouter = require('./routes/router');
 async function createServer() {
   validateProductionSecurity(process.env);
   const app = express();
-  const httpSecurity = createSecurityMiddlewares(process.env);
+
+  // Probar conexión PostgreSQL
+  const dbConnected = await testConnection();
+  let pool = null;
+
+  if (dbConnected) {
+    pool = getPool();
+    await runMigrations(pool);
+  } else {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('PostgreSQL es obligatorio en producción; se rechazó el fallback en memoria.');
+    }
+  }
+
+  const httpSecurity = createSecurityMiddlewares(process.env, { pool });
 
   const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
   if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) app.set('trust proxy', trustProxyHops);
@@ -99,14 +116,9 @@ async function createServer() {
   app.use(httpSecurity.hpp);
   app.use(httpSecurity.rejectDangerousKeys);
 
-  // Probar conexión PostgreSQL
-  const dbConnected = await testConnection();
-
-  let categoryRepo, productRepo, lotRepo, reservationRepo, userRepo, alertRepo, promotionRepo;
+  let categoryRepo, productRepo, lotRepo, reservationRepo, userRepo, alertRepo, promotionRepo, tokenBlacklistRepo;
 
   if (dbConnected) {
-    const pool = getPool();
-    await runMigrations(pool);
     categoryRepo = new PostgresCategoryRepository(pool);
     productRepo = new PostgresProductRepository(pool);
     lotRepo = new PostgresLotRepository(pool);
@@ -114,10 +126,8 @@ async function createServer() {
     userRepo = new PostgresUserRepository(pool);
     alertRepo = new PostgresAlertRepository(pool);
     promotionRepo = new PostgresPromotionRepository(pool);
+    tokenBlacklistRepo = new PostgresTokenBlacklistRepository(pool);
   } else {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('PostgreSQL es obligatorio en producción; se rechazó el fallback en memoria.');
-    }
     const mem = new InMemoryRepositories();
     categoryRepo = mem.categoryRepository;
     productRepo = mem.productRepository;
@@ -126,12 +136,18 @@ async function createServer() {
     userRepo = mem.userRepository;
     alertRepo = mem.alertRepository;
     promotionRepo = mem.promotionRepository;
+    tokenBlacklistRepo = mem.tokenBlacklistRepository;
   }
 
   // Componentes de Infraestructura
   const alertStreamManager = new AlertStreamManager();
   const geminiAdapter = new GeminiAdapter(process.env.GEMINI_API_KEY);
-  const heartbeatMonitor = new HeartbeatMonitor(process.env.HEARTBEAT_TIMEOUT_SECONDS || 60);
+  const heartbeatStore = pool ? new PostgresHeartbeatStore(pool) : null;
+  const heartbeatMonitor = new HeartbeatMonitor(
+    process.env.HEARTBEAT_TIMEOUT_SECONDS || 60,
+    () => Date.now(),
+    heartbeatStore
+  );
   const cacheTtlSeconds = process.env.GEMINI_CACHE_TTL_SECONDS === undefined
     ? 900
     : Number(process.env.GEMINI_CACHE_TTL_SECONDS);
@@ -155,7 +171,8 @@ async function createServer() {
   const registerMermaUC = new RegisterMerma(lotRepo);
   const getInventoryMovementsUC = new GetInventoryMovements(lotRepo);
   const getWastesUC = new GetWastes(lotRepo);
-  const obtenerAlertasCaducidadUC = new ObtenerAlertasCaducidad(lotRepo);
+  const obtenerAlertasCaducidadUC = new ObtenerAlertasCaducidad(lotRepo, alertRepo);
+  const atenderAlertaCaducidadUC = new AtenderAlertaCaducidad(alertRepo);
   const expireLotsUC = new ExpireLots(lotRepo);
 
   const reservarStockUC = new ReservarStock(reservationRepo, heartbeatMonitor);
@@ -192,7 +209,7 @@ async function createServer() {
     cancelReservationUC,
     getReservationsByUserUC
   );
-  const alertController = new AlertController(obtenerAlertasCaducidadUC, alertStreamManager);
+  const alertController = new AlertController(obtenerAlertasCaducidadUC, alertStreamManager, atenderAlertaCaducidadUC);
   const promotionController = new PromotionController(
     generarPromocionesIAUC,
     getPromotionsUC,
@@ -202,15 +219,34 @@ async function createServer() {
     managePromotionsUC,
     aiMetrics
   );
-  const authController = new AuthController(registerUserUC, loginUserUC);
+  const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'dev_jwt_secret_ecosistema_karen_2026_super_secret_32chars');
+  const authController = new AuthController(registerUserUC, loginUserUC, tokenBlacklistRepo, jwtSecret);
   const heartbeatController = new HeartbeatController(heartbeatMonitor);
-  const security = createAuthMiddleware(process.env.JWT_SECRET);
+  const security = createAuthMiddleware(jwtSecret, tokenBlacklistRepo);
 
   // Iniciar Worker Background Sweeper para expiración de reservas TTL
   const sweeperWorker = new ReservationCleanerWorker(cleanExpiredReservationsUC, 60000);
   sweeperWorker.start();
   const lotExpiryWorker = new LotExpiryWorker(expireLotsUC, 60000);
   lotExpiryWorker.start();
+
+  const autoPingEnabled = process.env.HEARTBEAT_AUTO_PING === 'true' ||
+    (process.env.HEARTBEAT_AUTO_PING !== 'false' && process.env.NODE_ENV === 'development');
+  let heartbeatSimulator = null;
+  if (autoPingEnabled) {
+    const timeoutSec = Number(process.env.HEARTBEAT_TIMEOUT_SECONDS) || 60;
+    const intervalMs = Math.min(25000, Math.max(5000, Math.floor((timeoutSec * 1000) / 2)));
+    heartbeatSimulator = new HeartbeatSimulatorWorker(heartbeatMonitor, intervalMs);
+    heartbeatSimulator.start();
+  }
+
+  app.locals.shutdown = async () => {
+    sweeperWorker.stop();
+    lotExpiryWorker.stop();
+    if (heartbeatSimulator) heartbeatSimulator.stop();
+    alertStreamManager.closeAll();
+    await closePool();
+  };
 
   // Configurar Swagger UI
   const swaggerEnabled = setupSwagger(app, process.env);

@@ -43,5 +43,13 @@
       "**/*.test.ts",
       "**/*.test.tsx"
     ]
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "expo",
+        "jest-expo"
+      ]
+    }
   }
 }

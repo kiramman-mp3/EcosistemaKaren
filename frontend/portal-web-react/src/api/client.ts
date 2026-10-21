@@ -146,18 +146,40 @@ export const api = {
   },
 
   // Products
-  // El backend pagina de a 100 productos: se recorren todas las páginas.
-  async getProducts(): Promise<BackendProduct[]> {
-    const pageSize = 100;
-    const all: BackendProduct[] = [];
-    for (let offset = 0; ; offset += pageSize) {
-      const res = await apiClient.get<{ success: boolean; data: BackendProduct[]; total?: number }>('/products', {
-        params: { limit: pageSize, offset },
-      });
-      const items = res.data.data || [];
-      all.push(...items);
-      if (items.length < pageSize || all.length >= Number(res.data.total ?? all.length)) return all;
+  async getProducts(params?: {
+    q?: string;
+    categoriaId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<BackendProduct[]> {
+    if (params && (params.q !== undefined || params.categoriaId !== undefined || params.limit !== undefined || params.offset !== undefined)) {
+      const page = await this.getProductsPage(params);
+      return page.items;
     }
+    const page = await this.getProductsPage({ limit: 100, offset: 0 });
+    return page.items;
+  },
+
+  async getProductsPage(params?: {
+    q?: string;
+    categoriaId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ items: BackendProduct[]; total: number; limit: number; offset: number }> {
+    const res = await apiClient.get<{ success: boolean; data: BackendProduct[]; total?: number; limit?: number; offset?: number }>('/products', {
+      params: {
+        q: params?.q?.trim() || undefined,
+        categoriaId: params?.categoriaId || undefined,
+        limit: params?.limit ?? 30,
+        offset: params?.offset ?? 0,
+      },
+    });
+    return {
+      items: res.data.data || [],
+      total: Number(res.data.total ?? (res.data.data ? res.data.data.length : 0)),
+      limit: Number(res.data.limit ?? params?.limit ?? 30),
+      offset: Number(res.data.offset ?? params?.offset ?? 0),
+    };
   },
 
   // Lots & Stock

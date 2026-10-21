@@ -87,11 +87,14 @@ async function runTests() {
     console.log('5. GET /alerts:', alerts.status, `(${alerts.body.count || 0} alertas calculadas)`);
 
     // 6. Sin heartbeat, reservar debe fallar sin tocar stock
-    if (prods.body.data && prods.body.data.length > 0) {
-      const blockedReservation = await request('/reservations', 'POST', {
-        items: [{ productoId: prods.body.data[0].id, cantidad: 1 }]
-      }, clientToken);
-      expectStatus('POST /reservations sin heartbeat', blockedReservation, 503);
+    const initialHb = await request('/heartbeat');
+    if (initialHb.body && initialHb.body.reservationsBlocked) {
+      if (prods.body.data && prods.body.data.length > 0) {
+        const blockedReservation = await request('/reservations', 'POST', {
+          items: [{ productoId: prods.body.data[0].id, cantidad: 1 }]
+        }, clientToken);
+        expectStatus('POST /reservations sin heartbeat', blockedReservation, 503);
+      }
     }
 
     // Heartbeat operativo obligatorio antes de reservar

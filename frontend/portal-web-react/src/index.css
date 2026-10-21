@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   html {
@@ -9,8 +10,34 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html.dark {
+    color: #E2E8F0;
+    background: #0B1120;
+  }
+
   body {
     background: #EFF1F4;
+  }
+
+  html.dark body {
+    background: #0B1120;
+  }
+
+  /* Ajuste global de legibilidad en modo oscuro para textos del tema Fleje */
+  html.dark .text-ink:not(.bg-sticker *):not([data-keep-dark] *) {
+    color: #F8FAFC;
+  }
+
+  html.dark .text-ink-soft:not(.bg-sticker *):not([data-keep-dark] *) {
+    color: #CBD5E1;
+  }
+
+  html.dark .text-ink-muted:not(.bg-sticker *):not([data-keep-dark] *) {
+    color: #94A3B8;
+  }
+
+  html.dark .text-ink-faint:not(.bg-sticker *):not([data-keep-dark] *) {
+    color: #64748B;
   }
 
   :focus-visible {

@@ -35,7 +35,7 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
   };
 
   return (
-    <article className={`flex flex-col rounded-tag bg-white border ${offer ? 'border-sticker-deep' : 'border-aisle-rule'} overflow-hidden`}>
+    <article className={`flex flex-col rounded-tag bg-white dark:bg-slate-800/90 border ${offer ? 'border-sticker-deep' : 'border-aisle-rule dark:border-slate-700'} overflow-hidden`}>
       <div className="relative">
         <ProductImage src={product.image} alt={product.name} className={`aspect-square p-4 ${soldOut ? 'opacity-40' : ''}`} />
         {offer && (
@@ -45,11 +45,11 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
         )}
       </div>
 
-      <div className={`flex flex-1 flex-col border-t-4 ${offer ? 'border-sticker bg-sticker-tint' : 'border-ink'} px-3.5 pt-3 pb-3.5`}>
-        {showCategory && <p className="text-xs text-ink-muted mb-1">{product.category}</p>}
-        <h3 className="font-semibold text-ink leading-snug line-clamp-2 min-h-[2.75em]">{product.name}</h3>
+      <div className={`flex flex-1 flex-col border-t-4 ${offer ? 'border-sticker bg-sticker-tint dark:bg-amber-950/40' : 'border-ink dark:border-slate-600'} px-3.5 pt-3 pb-3.5`}>
+        {showCategory && <p className="text-xs text-ink-muted dark:text-slate-400 mb-1">{product.category}</p>}
+        <h3 className="font-semibold text-ink dark:text-white leading-snug line-clamp-2 min-h-[2.75em]">{product.name}</h3>
         {product.description && (
-          <p className="mt-0.5 text-xs text-ink-muted truncate">{product.description}</p>
+          <p className="mt-0.5 text-xs text-ink-muted dark:text-slate-400 truncate">{product.description}</p>
         )}
 
         <div className="mt-3 flex items-end justify-between gap-2">

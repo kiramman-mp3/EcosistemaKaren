@@ -43,7 +43,7 @@ class ReservarStock {
 
     // La reserva no puede comenzar si la tienda no ha reportado conectividad
     // recientemente. Se comprueba justo antes de abrir la transacción de stock.
-    this.heartbeatMonitor.assertReservationsAvailable();
+    await this.heartbeatMonitor.assertReservationsAvailable();
 
     const reservation = new Reservation({
       usuarioId,

@@ -14,23 +14,23 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({
   onNavigate, featuredOffer, onReserveOffer, activePassCode, onOpenPass,
 }) => (
-  <section className="bg-white border-b border-aisle-rule">
+  <section className="bg-white dark:bg-[#0F172A] border-b border-aisle-rule dark:border-slate-800 transition-colors">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14 grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-16 items-center">
       <div>
         {activePassCode && (
           <button
             onClick={onOpenPass}
-            className="mb-6 inline-flex items-center gap-3 rounded-tag bg-ink text-white pl-3 pr-4 py-2 text-sm hover:bg-ink-soft"
+            className="mb-6 inline-flex items-center gap-3 rounded-tag bg-ink dark:bg-slate-800 text-white pl-3 pr-4 py-2 text-sm hover:bg-ink-soft dark:hover:bg-slate-700 transition-colors"
           >
             <Ticket className="w-4 h-4 text-sticker" />
             <span>Tienes una reserva activa</span>
             <span className="font-tag font-bold tracking-wide text-sticker">{activePassCode}</span>
           </button>
         )}
-        <h1 className="font-tag font-bold text-ink leading-[0.95] tracking-tight text-5xl sm:text-6xl lg:text-7xl max-w-[12ch]">
+        <h1 className="font-tag font-bold text-ink dark:text-white leading-[0.95] tracking-tight text-5xl sm:text-6xl lg:text-7xl max-w-[12ch]">
           Reserva en línea y retira en caja sin hacer fila
         </h1>
-        <p className="mt-6 text-lg text-ink-soft max-w-[46ch] leading-relaxed">
+        <p className="mt-6 text-lg text-ink-soft dark:text-slate-300 max-w-[46ch] leading-relaxed">
           Elige tus productos, te los apartamos 10 minutos y pagas al retirarlos en la Sucursal Matriz.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
@@ -43,7 +43,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </button>
           <button
             onClick={() => onNavigate('ofertas')}
-            className="h-12 px-6 rounded-tag border-2 border-ink text-ink font-semibold hover:bg-aisle"
+            className="h-12 px-6 rounded-tag border-2 border-ink dark:border-slate-500 text-ink dark:text-white font-semibold hover:bg-aisle dark:hover:bg-slate-800 transition-colors"
           >
             Ofertas por vencer
           </button>

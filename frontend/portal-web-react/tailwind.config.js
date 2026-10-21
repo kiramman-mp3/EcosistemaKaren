@@ -3,6 +3,7 @@
 // Rojo Karen para ofertas y urgencia, tinta azul para texto, amarillo de
 // etiqueta de precio rebajado, gris de pasillo para fondos.
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
