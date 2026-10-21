@@ -43,7 +43,7 @@ describe('ProductCatalog', () => {
     expect(screen.getByLabelText('$1.25')).toBeInTheDocument();
     expect(screen.getByLabelText('Antes $2.50')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Añadir oferta al carrito' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar Yogurt a mi lista' }));
     expect(reserveOffer).toHaveBeenCalledWith(offer);
   });
 

@@ -390,8 +390,7 @@ export const App: React.FC = () => {
       originalPrice: offer.originalPrice,
       stock: offer.stockAvailable,
       badge: offer.discountBadge,
-    }, { silent: true });
-    setIsCartOpen(true);
+    });
   };
 
   const handleLogout = async () => {

@@ -109,10 +109,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                           {onReserveOffer && (
                             <button
                               onClick={() => onReserveOffer(offer)}
-                              aria-label={`Apartar ${offer.productName || offer.title}`}
+                              aria-label={`Agregar ${offer.productName || offer.title}`}
                               className="rounded-full bg-mora px-3 py-1 text-xs font-extrabold text-white hover:bg-karen transition-colors"
                             >
-                              Apartar
+                              Agregar
                             </button>
                           )}
                         </div>

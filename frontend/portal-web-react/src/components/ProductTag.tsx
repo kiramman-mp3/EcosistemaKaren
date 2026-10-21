@@ -29,12 +29,9 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
   const soldOut = product.stock <= 0;
 
   const add = () => {
-    if (offer && onReserveOffer) {
-      void onReserveOffer(offer);
-      return;
-    }
     flyToCart(imageRef.current);
-    onAdd(product);
+    if (offer && onReserveOffer) void onReserveOffer(offer);
+    else onAdd(product);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1400);
   };
@@ -80,11 +77,11 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
           onClick={add}
           disabled={soldOut}
           variant={added ? 'limon' : offer ? 'primary' : 'surface'}
-          aria-label={offer ? 'Añadir oferta al carrito' : `Agregar ${product.name} a mi lista`}
+          aria-label={`Agregar ${product.name} a mi lista`}
           className="mt-3.5 w-full"
         >
           {added ? <Check className="w-4 h-4 animate-pop" /> : <Plus className="w-4 h-4" />}
-          {soldOut ? 'Agotado' : added ? 'En tu lista' : offer ? 'Apartar oferta' : 'Agregar'}
+          {soldOut ? 'Agotado' : added ? 'En tu lista' : 'Agregar'}
         </Button>
       </div>
     </article>
@@ -143,12 +140,12 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
             flyToCart(imageRef.current);
             void onReserve(offer);
           }}
-          aria-label="Añadir oferta al carrito"
+          aria-label={`Agregar ${offer.productName || offer.title} a mi lista`}
           variant="primary"
           className="mt-4 w-full"
         >
           <Plus className="w-4 h-4" />
-          Apartar por ${offer.price.toFixed(2)}
+          Agregar por ${offer.price.toFixed(2)}
         </Button>
       </div>
     </article>
