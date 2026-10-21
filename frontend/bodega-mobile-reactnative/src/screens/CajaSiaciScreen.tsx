@@ -181,10 +181,10 @@ const styles = themed(() => StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   manual: { flexDirection: 'row', gap: 10, marginTop: 12, marginBottom: 14 },
   codeInput: {
-    flex: 1, minHeight: 52, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
+    flex: 1, minWidth: 0, minHeight: 52, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
     backgroundColor: colors.card, paddingHorizontal: 12, fontFamily: fonts.tag, fontSize: 22, color: colors.ink, letterSpacing: 1,
   },
-  searchBtn: { minWidth: 110 },
+  searchBtn: { minWidth: 100, flexShrink: 0 },
   ticket: { backgroundColor: colors.card, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule, padding: 16 },
   ticketHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   ticketHeadText: { flex: 1 },
