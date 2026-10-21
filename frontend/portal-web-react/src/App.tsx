@@ -11,6 +11,7 @@ import { ReservationModal } from './components/ReservationModal';
 import { MyReservationsPage } from './components/MyReservationsPage';
 import { CartDrawer } from './components/CartDrawer';
 import { LoginModal } from './components/LoginModal';
+import { AccountModal } from './components/AccountModal';
 import { SpecialOffersSlider } from './components/SpecialOffersSlider';
 import { TermsModal } from './components/TermsModal';
 import { HelpChatWidget } from './components/HelpChatWidget';
@@ -68,6 +69,7 @@ export const App: React.FC = () => {
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -442,6 +444,7 @@ export const App: React.FC = () => {
         isOnline={isOnline}
         user={currentUser}
         onLogout={() => void handleLogout()}
+        onOpenAccount={() => setIsAccountOpen(true)}
         offersCount={offers.length}
         hasActivePass={Boolean(activeCode)}
         searchQuery={searchQuery}
@@ -598,6 +601,13 @@ export const App: React.FC = () => {
         isSubmitting={isSubmittingReservation}
         error={cartError}
         isLoggedIn={Boolean(currentUser)}
+      />
+
+      <AccountModal
+        isOpen={isAccountOpen}
+        onClose={() => setIsAccountOpen(false)}
+        user={currentUser}
+        onLogout={() => { setIsAccountOpen(false); void handleLogout(); }}
       />
 
       <LoginModal
