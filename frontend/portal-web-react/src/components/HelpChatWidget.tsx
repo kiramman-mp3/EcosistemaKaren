@@ -23,12 +23,12 @@ const FAQ_CHIPS = [
   {
     label: '¿Cómo retiro con mi código KR?',
     query: 'como retiro con el codigo',
-    response: '¡Es muy fácil! Cuando confirmas tu reserva en la web, generas un Pase de Retiro con un PIN como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en la Sucursal Matriz, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 10 minutos.',
+    response: '¡Es muy fácil! Cuando confirmas tu reserva en la web, generas un Pase de Retiro con un PIN como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en la Sucursal Matriz, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 30 minutos.',
   },
   {
-    label: '¿Qué pasa si pasan los 10 minutos?',
-    query: 'que pasa si pasan los 10 minutos',
-    response: 'Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta exactamente por 10 minutos. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!',
+    label: '¿Qué pasa si pasan los 30 minutos?',
+    query: 'que pasa si pasan los 30 minutos',
+    response: 'Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta exactamente por 30 minutos. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!',
   },
   {
     label: '¿Qué formas de pago aceptan?',
@@ -43,9 +43,9 @@ const FAQ_CHIPS = [
   {
     label: '📲 Hablar con un asesor en WhatsApp',
     query: 'whatsapp asesor humano',
-    response: 'Si necesitas asistencia personalizada de un cajero o bodeguero, puedes escribir directamente a nuestra línea oficial de WhatsApp:',
-    actionUrl: 'https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva',
-    actionLabel: 'Abrir WhatsApp (+593 99 876 5432)',
+    response: 'Si necesitas asistencia personalizada, puedes escribir directamente a nuestra línea oficial de WhatsApp:',
+    actionUrl: 'https://wa.me/593983553724?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva',
+    actionLabel: 'Abrir WhatsApp (+593 98 355 3724)',
   },
 ];
 
@@ -97,7 +97,7 @@ export const HelpChatWidget: React.FC = () => {
         actionUrl = matchedFaq.actionUrl;
         actionLabel = matchedFaq.actionLabel;
       } else if (lower.includes('reserva') || lower.includes('tiempo') || lower.includes('minuto') || lower.includes('ttl')) {
-        replyText = 'Las reservas web tienen una duración de 10 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.';
+        replyText = 'Las reservas web tienen una duración de 30 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.';
       } else if (lower.includes('oferta') || lower.includes('descuento') || lower.includes('fefo') || lower.includes('caducidad')) {
         replyText = 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 20% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.';
       } else if (lower.includes('pago') || lower.includes('tarjeta') || lower.includes('efectivo') || lower.includes('precio')) {
@@ -106,8 +106,8 @@ export const HelpChatWidget: React.FC = () => {
         replyText = '¡Hola! Un gusto saludarte. ¿En qué podemos orientarte sobre tu compra o reserva en Supermercados Karen?';
       } else if (lower.includes('humano') || lower.includes('asesor') || lower.includes('whatsapp') || lower.includes('telefono')) {
         replyText = 'Con gusto te comunicamos con nuestro equipo de atención humana en WhatsApp:';
-        actionUrl = 'https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20asistencia%20personalizada';
-        actionLabel: 'Contactar a Asesor por WhatsApp';
+        actionUrl = 'https://wa.me/593983553724?text=Hola%20Supermercado%20Karen,%20necesito%20asistencia%20personalizada';
+        actionLabel = 'Contactar a Asesor por WhatsApp';
       }
 
       const botMsg: ChatMessage = {
@@ -132,67 +132,63 @@ export const HelpChatWidget: React.FC = () => {
   };
 
   return (
-    <aside aria-label="Asistente de ayuda KarenBot" className="fixed bottom-5 right-5 z-50">
+    <aside aria-label="Asistente de ayuda KarenBot" className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 sm:bottom-5 sm:right-5 z-[45]">
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
           aria-label="Abrir chat de ayuda en línea"
-          className="group flex items-center gap-2.5 rounded-full bg-ink text-white pl-4 pr-5 py-3 shadow-lift hover:bg-ink-soft transition-all transform hover:scale-105"
+          className="press flex items-center justify-center gap-2.5 rounded-full border-2 border-mora bg-limon text-mora w-12 h-12 sm:w-auto sm:h-auto sm:pl-4 sm:pr-5 sm:py-3"
         >
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-karen opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-karen" />
-          </span>
-          <MessageSquare className="w-5 h-5 text-sticker" />
-          <span className="font-semibold text-sm">¿Necesitas ayuda?</span>
+          <MessageSquare className="w-5 h-5" />
+          <span className="hidden sm:inline font-display font-extrabold text-sm">¿Necesitas ayuda?</span>
         </button>
       )}
 
       {isOpen && (
-        <div className="w-[360px] sm:w-[400px] h-[520px] max-h-[calc(100vh-6rem)] rounded-2xl bg-white shadow-2xl border border-aisle-rule flex flex-col overflow-hidden animate-scale-up">
+        <div className="w-[360px] sm:w-[400px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100dvh-9rem)] sm:max-h-[calc(100dvh-6rem)] rounded-block bg-surface shadow-pop-lg border-2 border-mora flex flex-col overflow-hidden animate-scale-up">
           {/* Cabecera del chat */}
-          <div className="bg-ink text-white px-5 py-3.5 flex items-center justify-between">
+          <div className="bg-limon text-mora border-b-2 border-mora px-5 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-9 h-9 rounded-full bg-karen flex items-center justify-center font-tag font-bold text-white">
+                <div className="w-10 h-10 rounded-full border-2 border-mora bg-karen flex items-center justify-center text-white">
                   <Bot className="w-5 h-5" />
                 </div>
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-ink" />
+                <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-aguacate-solid ring-2 ring-limon" />
               </div>
               <div>
-                <h3 className="font-tag font-bold text-sm flex items-center gap-1.5">
+                <h3 className="font-display font-extrabold text-base flex items-center gap-1.5">
                   KarenBot
-                  <span className="text-[10px] bg-karen text-white px-1.5 py-0.2 rounded font-normal">Oficial</span>
+                  <span className="text-[10px] bg-mora text-white px-2 py-0.5 rounded-full font-bold">Oficial</span>
                 </h3>
-                <p className="text-[11px] text-white/70">Asistente en línea · Respuestas al instante</p>
+                <p className="text-xs font-semibold">Te respondo al instante</p>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
               aria-label="Cerrar chat de ayuda"
-              className="w-8 h-8 rounded-full text-white/80 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+              className="w-11 h-11 rounded-full hover:bg-mora/10 flex items-center justify-center transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Área de mensajes con scroll */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-aisle/40 text-xs sm:text-sm">
+          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-page text-sm">
             {messages.map(msg => (
               <div
                 key={msg.id}
                 className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.sender === 'bot' && (
-                  <div className="w-7 h-7 rounded-full bg-karen text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-full border-2 border-mora bg-karen text-white flex items-center justify-center shrink-0 mt-0.5">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm leading-relaxed ${
+                  className={`max-w-[82%] rounded-2xl px-4 py-2.5 leading-relaxed ${
                     msg.sender === 'user'
-                      ? 'bg-ink text-white rounded-tr-none'
-                      : 'bg-white text-ink border border-aisle-rule rounded-tl-none'
+                      ? 'bg-karen text-white rounded-tr-sm font-semibold'
+                      : 'bg-surface text-ink border-2 border-aisle-rule rounded-tl-sm'
                   }`}
                 >
                   <p>{msg.text}</p>
@@ -201,7 +197,7 @@ export const HelpChatWidget: React.FC = () => {
                       href={msg.actionUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-tag bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition-colors"
+                      className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-2 rounded-full border-2 border-mora bg-aguacate-solid text-white font-extrabold text-xs press"
                     >
                       <span>{msg.actionLabel || 'Abrir enlace'}</span>
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -209,14 +205,14 @@ export const HelpChatWidget: React.FC = () => {
                   )}
                   <span
                     className={`block mt-1 text-[10px] ${
-                      msg.sender === 'user' ? 'text-white/60 text-right' : 'text-ink-muted'
+                      msg.sender === 'user' ? 'text-white/80 text-right' : 'text-ink-muted'
                     }`}
                   >
                     {msg.timestamp}
                   </span>
                 </div>
                 {msg.sender === 'user' && (
-                  <div className="w-7 h-7 rounded-full bg-ink-soft text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-full border-2 border-mora bg-limon text-mora flex items-center justify-center shrink-0 mt-0.5">
                     <User className="w-4 h-4" />
                   </div>
                 )}
@@ -225,13 +221,13 @@ export const HelpChatWidget: React.FC = () => {
 
             {isTyping && (
               <div className="flex gap-2.5 items-center text-xs text-ink-muted">
-                <div className="w-7 h-7 rounded-full bg-karen text-white flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full border-2 border-mora bg-karen text-white flex items-center justify-center shrink-0">
                   <Bot className="w-4 h-4" />
                 </div>
-                <div className="bg-white px-3 py-2 rounded-2xl border border-aisle-rule flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-ink-muted rounded-full animate-bounce" />
-                  <span className="w-1.5 h-1.5 bg-ink-muted rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 bg-ink-muted rounded-full animate-bounce [animation-delay:0.4s]" />
+                <div className="bg-surface px-4 py-3 rounded-2xl rounded-tl-sm border-2 border-aisle-rule flex items-center gap-1.5" role="status" aria-label="KarenBot está escribiendo">
+                  <span className="w-2 h-2 bg-karen rounded-full animate-typing-dot" />
+                  <span className="w-2 h-2 bg-karen rounded-full animate-typing-dot [animation-delay:0.15s]" />
+                  <span className="w-2 h-2 bg-karen rounded-full animate-typing-dot [animation-delay:0.3s]" />
                 </div>
               </div>
             )}
@@ -239,12 +235,16 @@ export const HelpChatWidget: React.FC = () => {
           </div>
 
           {/* Preguntas frecuentes rápidas (chips) */}
-          <div className="px-3 py-2 bg-white border-t border-aisle-rule overflow-x-auto no-scrollbar flex gap-1.5 shrink-0">
+          <div
+            role="group"
+            aria-label="Preguntas frecuentes"
+            className="px-3 py-2.5 bg-surface border-t-2 border-aisle-rule overflow-x-auto no-scrollbar flex gap-2 sm:flex-wrap sm:overflow-x-visible sm:overflow-y-auto sm:max-h-28 shrink-0"
+          >
             {FAQ_CHIPS.map((chip, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(chip.label)}
-                className="whitespace-nowrap rounded-full bg-aisle hover:bg-karen-tint hover:text-karen border border-aisle-rule px-3 py-1 text-xs text-ink transition-colors shrink-0"
+                className="shrink-0 rounded-full bg-surface hover:bg-limon hover:text-mora hover:border-mora border-2 border-aisle-rule px-3.5 py-2 text-left text-xs font-bold text-ink transition-colors"
               >
                 {chip.label}
               </button>
@@ -252,20 +252,20 @@ export const HelpChatWidget: React.FC = () => {
           </div>
 
           {/* Campo de entrada de texto */}
-          <div className="p-3 bg-white border-t border-aisle-rule flex items-center gap-2">
+          <div className="p-3 bg-surface border-t-2 border-aisle-rule flex items-center gap-2">
             <input
               type="text"
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Escribe tu consulta aquí..."
-              className="flex-1 h-10 px-3 rounded-tag bg-aisle border border-aisle-rule text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:border-karen focus:bg-white transition-colors"
+              className="flex-1 min-w-0 h-11 px-4 rounded-full bg-page border-2 border-transparent text-base sm:text-sm font-semibold text-ink placeholder:text-ink-muted placeholder:font-normal focus:outline-none focus:border-mora focus:bg-surface transition-colors"
             />
             <button
               onClick={() => handleSend()}
               disabled={!inputText.trim()}
               aria-label="Enviar mensaje"
-              className="w-10 h-10 rounded-tag bg-karen text-white flex items-center justify-center hover:bg-karen-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="press w-11 h-11 rounded-full border-2 border-mora bg-karen text-white flex items-center justify-center disabled:opacity-40"
             >
               <Send className="w-4 h-4" />
             </button>

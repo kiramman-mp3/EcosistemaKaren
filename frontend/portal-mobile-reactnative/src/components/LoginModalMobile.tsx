@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, Te
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { Button, Field, Notice } from './ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 interface LoginModalMobileProps {
   visible: boolean;
@@ -11,10 +11,11 @@ interface LoginModalMobileProps {
   currentUser?: { id: string; nombre: string; email: string; rol?: string } | null;
   onLoginSuccess?: (user: any) => void;
   onLogout?: () => void;
+  onOpenPrivacy?: () => void;
 }
 
 export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
-  visible, onClose, currentUser = null, onLoginSuccess, onLogout,
+  visible, onClose, currentUser = null, onLoginSuccess, onLogout, onOpenPrivacy,
 }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -60,14 +61,14 @@ export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
             <View style={styles.head}>
               <View style={styles.flex}>
                 <Text style={styles.title}>
-                  {currentUser ? 'Tu cuenta' : isRegisterMode ? 'Crea tu cuenta' : 'Ingresa a tu cuenta'}
+                  {currentUser ? 'Tu cuenta' : isRegisterMode ? 'Crea tu cuenta' : 'Hola de nuevo'}
                 </Text>
                 <Text style={styles.subtitle}>
-                  {currentUser ? currentUser.email : 'Para reservar y ver tus códigos de retiro.'}
+                  {currentUser ? currentUser.email : 'Ingresa para apartar y ver tus códigos de retiro.'}
                 </Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.close} accessibilityLabel="Cerrar">
-                <Ionicons name="close" size={26} color={colors.white} />
+                <Ionicons name="close" size={26} color={colors.mora} />
               </TouchableOpacity>
             </View>
 
@@ -118,6 +119,11 @@ export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
                   </TouchableOpacity>
                 </>
               )}
+              {onOpenPrivacy && (
+                <TouchableOpacity style={styles.privacy} onPress={onOpenPrivacy} accessibilityRole="link">
+                  <Text style={styles.privacyText}>Política de privacidad</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -126,18 +132,20 @@ export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.6)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.7)' },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: colors.white, borderRadius: radius.tag, overflow: 'hidden', width: '100%', maxWidth: 420, alignSelf: 'center' },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: colors.ink, padding: 18 },
-  title: { fontFamily: fonts.tag, fontSize: 26, color: colors.white },
-  subtitle: { fontFamily: fonts.body, fontSize: 14, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  card: { backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, overflow: 'hidden', width: '100%', maxWidth: 420, alignSelf: 'center' },
+  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: colors.sticker, borderBottomWidth: 2, borderBottomColor: colors.mora, padding: 18 },
+  title: { fontFamily: fonts.tag, fontSize: 28, color: colors.mora },
+  subtitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.mora, marginTop: 2 },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: -8, marginRight: -8 },
   body: { padding: 18 },
   hello: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, marginBottom: 14 },
   switch: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  privacy: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  privacyText: { fontFamily: fonts.medium, fontSize: 13, color: colors.inkMuted, textDecorationLine: 'underline' },
   switchText: { fontFamily: fonts.body, fontSize: 14, color: colors.inkSoft },
-  switchLink: { fontFamily: fonts.semibold, color: colors.ink, textDecorationLine: 'underline' },
-});
+  switchLink: { fontFamily: fonts.tag, color: colors.ink, textDecorationLine: 'underline' },
+}));

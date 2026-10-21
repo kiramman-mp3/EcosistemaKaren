@@ -35,7 +35,8 @@ function rejectDangerousKeys(req, res, next) {
 }
 
 function normalizeJsonBody(req, res, next) {
-  const hasBody = req.headers['content-length'] !== undefined || req.headers['transfer-encoding'] !== undefined;
+  // Un POST sin datos (cerrar sesión, cancelar) llega con Content-Length: 0 y sin Content-Type: no es un cuerpo.
+  const hasBody = Number(req.headers['content-length']) > 0 || req.headers['transfer-encoding'] !== undefined;
   if (hasBody && ['POST', 'PUT', 'PATCH'].includes(req.method) && !req.is('application/json')) {
     const error = new Error('El cuerpo de la solicitud debe usar Content-Type application/json.');
     error.statusCode = 415;
@@ -75,7 +76,7 @@ function cookieCsrfProtection(allowedOrigins, production) {
 
 const PostgresRateLimitStore = require('./PostgresRateLimitStore');
 
-function limiter({ windowMs, limit, message, store }) {
+function limiter({ windowMs, limit, message, store, skip, skipSuccessfulRequests = false }) {
   return rateLimit({
     windowMs,
     limit,
@@ -83,7 +84,8 @@ function limiter({ windowMs, limit, message, store }) {
     legacyHeaders: false,
     validate: { singleCount: false, default: true },
     ...(store ? { store } : {}),
-    skip: req => req.method === 'OPTIONS',
+    skipSuccessfulRequests,
+    skip: req => req.method === 'OPTIONS' || (skip ? skip(req) : false),
     handler(req, res) {
       res.status(429).json({
         success: false,
@@ -108,6 +110,9 @@ function createSecurityMiddlewares(env = process.env, { pool = null } = {}) {
     windowMs: positiveInteger(env.AUTH_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     limit: positiveInteger(env.AUTH_RATE_LIMIT_MAX, 10),
     message: 'Demasiados intentos de autenticación. Espere antes de volver a intentarlo.',
+    // Solo los intentos fallidos cuentan contra la fuerza bruta; /me se consulta en cada carga de página.
+    skipSuccessfulRequests: true,
+    skip: req => req.path === '/me',
     store: createStore('auth:'),
   });
   const reservations = limiter({

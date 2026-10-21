@@ -2,52 +2,135 @@
 @config "../tailwind.config.js";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Paleta "El pasillo de Karen". Cada color tiene su par oscuro; los componentes
+   usan los nombres (bg-surface, text-ink...) y no necesitan variantes dark:. */
+:root {
+  --c-page: #FBF6EC;
+  --c-surface: #FFFFFF;
+  --c-mora: #2A1D14;
+  --c-shadow: #2A1D14;
+
+  --c-ink: #2A1D14;
+  --c-ink-soft: #54443A;
+  --c-ink-muted: #6E5E50;
+  --c-ink-faint: #9A8A76;
+  --c-rule: #EADFCB;
+  --c-rule-strong: #D4C4A8;
+
+  --c-karen: #D52B1E;
+  --c-karen-deep: #A81E14;
+  --c-karen-tint: #FDE6E3;
+  --c-karen-text: #C42418;
+
+  --c-limon: #FFD400;
+  --c-limon-deep: #E0B800;
+  --c-limon-tint: #FFF3B8;
+
+  --c-aguacate: #0E7A43;
+  --c-aguacate-tint: #DDF5E6;
+  --c-aguacate-bright: #2FBF71;
+  --c-aguacate-solid: #0E7A43;
+
+  --c-naranja: #FF7A1A;
+  --c-naranja-tint: #FFE6D1;
+
+  --c-guayaba: #FF9EB5;
+  --c-guayaba-tint: #FFE3EA;
+
+  color-scheme: light;
+}
+
+:root.dark {
+  --c-page: #1C1612;
+  --c-surface: #2A1D14;
+  --c-shadow: #0D0A07;
+
+  --c-ink: #FBF6EC;
+  --c-ink-soft: #E6DAC6;
+  --c-ink-muted: #BFAF99;
+  --c-ink-faint: #9A8A76;
+  --c-rule: #44382D;
+  --c-rule-strong: #5C4C3C;
+
+  --c-karen-deep: #FF8A80;
+  --c-karen-tint: #4A1620;
+  --c-karen-text: #FF6B5E;
+
+  --c-limon-tint: #4A3A00;
+
+  --c-aguacate: #34D388;
+  --c-aguacate-tint: #0B3A24;
+
+  --c-naranja-tint: #4A2508;
+  --c-guayaba-tint: #4A1A2A;
+
+  color-scheme: dark;
+}
+
 @layer base {
   html {
-    font-family: 'Archivo', system-ui, sans-serif;
-    color: #13284B;
-    background: #EFF1F4;
+    font-family: 'Nunito', system-ui, sans-serif;
+    color: var(--c-ink);
+    background: var(--c-page);
     -webkit-tap-highlight-color: transparent;
   }
 
-  html.dark {
-    color: #E2E8F0;
-    background: #0B1120;
-  }
-
   body {
-    background: #EFF1F4;
+    background: var(--c-page);
   }
 
-  html.dark body {
-    background: #0B1120;
-  }
-
-  /* Ajuste global de legibilidad en modo oscuro para textos del tema Fleje */
-  html.dark .text-ink:not(.bg-sticker *):not([data-keep-dark] *) {
-    color: #F8FAFC;
-  }
-
-  html.dark .text-ink-soft:not(.bg-sticker *):not([data-keep-dark] *) {
-    color: #CBD5E1;
-  }
-
-  html.dark .text-ink-muted:not(.bg-sticker *):not([data-keep-dark] *) {
-    color: #94A3B8;
-  }
-
-  html.dark .text-ink-faint:not(.bg-sticker *):not([data-keep-dark] *) {
-    color: #64748B;
+  /* Titulares y precios con la voz de Bricolage; el ancho condensado ayuda a que el precio quepa grande. */
+  h1, h2, h3 {
+    font-family: 'Bricolage Grotesque', 'Nunito', system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
 
   :focus-visible {
-    outline: 3px solid #FFD400;
+    outline: 3px solid var(--c-limon);
     outline-offset: 2px;
-    border-radius: 4px;
+    box-shadow: 0 0 0 5px var(--c-mora);
+    border-radius: 8px;
   }
 
   button:disabled {
     cursor: not-allowed;
+  }
+}
+
+@layer components {
+  /* Botón pegatina: sombra dura que se achica al presionar. */
+  .press {
+    box-shadow: 3px 3px 0 0 var(--c-shadow);
+    transition: transform 90ms ease-out, box-shadow 90ms ease-out, background-color 150ms;
+  }
+  .press:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 0 var(--c-shadow);
+  }
+  .press:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 0 var(--c-shadow);
+  }
+  .press:disabled {
+    box-shadow: none;
+  }
+
+  /* Bloque de esqueleto de color con brillo suave. */
+  .skeleton {
+    background: linear-gradient(100deg, var(--c-rule) 30%, var(--c-surface) 50%, var(--c-rule) 70%) 0 0 / 300% 100%;
+    animation: shimmer 1.8s linear infinite;
+  }
+
+  /* Cinta que se desliza; se pausa al pasar el cursor o al enfocar. */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  .marquee:hover .marquee-track,
+  .marquee:focus-within .marquee-track {
+    animation-play-state: paused;
   }
 }
 
@@ -56,7 +139,15 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Borde dentado del ticket térmico del pase de retiro */
+/* El papel del ticket no cambia con el tema: sus hijos vuelven a leer la paleta clara. */
+.paper-light {
+  --c-ink: #2A1D14;
+  --c-surface: #FFFFFF;
+  --c-naranja-tint: #FFE6D1;
+  --c-rule-strong: #D4C4A8;
+}
+
+/* Borde dentado del ticket térmico del pase de retiro (el papel es siempre blanco). */
 .ticket-edge {
   --notch: 8px;
   background:
@@ -72,7 +163,7 @@
 }
 
 .rule-dashed {
-  background-image: linear-gradient(to right, #C5CBD4 50%, transparent 50%);
+  background-image: linear-gradient(to right, var(--c-rule-strong) 50%, transparent 50%);
   background-size: 8px 1px;
   background-repeat: repeat-x;
   height: 1px;
@@ -85,11 +176,33 @@
   display: none;
 }
 
+/* Transición circular al cambiar de tema (View Transitions API). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  clip-path: circle(0 at var(--vt-x, 100%) var(--vt-y, 0%));
+  animation: theme-reveal 520ms ease-out forwards;
+}
+@keyframes theme-reveal {
+  to { clip-path: circle(150% at var(--vt-x, 100%) var(--vt-y, 0%)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+  }
+  .marquee-track {
+    animation: none;
+  }
+  ::view-transition-new(root) {
+    animation: none;
+    clip-path: none;
   }
 }

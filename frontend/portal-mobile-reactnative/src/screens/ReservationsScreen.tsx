@@ -4,7 +4,7 @@ import type { BackendReservation } from '../api/client';
 import { Button, Chip, EmptyState, SectionTitle } from '../components/ui';
 import { confirmAction, notify } from '../utils/dialogs';
 import { formatDateTime } from '../utils/dates';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 interface ReservationsScreenProps {
   authenticated: boolean;
@@ -26,11 +26,13 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'CANCELADAS', label: 'Canceladas o vencidas' },
 ];
 
-const STATUS: Record<BackendReservation['estado'], { label: string; bg: string; fg: string }> = {
-  PENDIENTE: { label: 'Por retirar', bg: colors.sticker, fg: colors.ink },
-  CONFIRMADA: { label: 'Retirada', bg: colors.freshTint, fg: colors.fresh },
-  EXPIRADA: { label: 'Venció', bg: colors.aisle, fg: colors.inkMuted },
-  CANCELADA: { label: 'Cancelada', bg: colors.aisle, fg: colors.inkMuted },
+const statusOf = (estado: BackendReservation['estado']): { label: string; bg: string; fg: string } => {
+  switch (estado) {
+    case 'PENDIENTE': return { label: 'Por retirar', bg: colors.sticker, fg: colors.mora };
+    case 'CONFIRMADA': return { label: 'Retirada', bg: colors.freshTint, fg: colors.fresh };
+    case 'EXPIRADA': return { label: 'Venció', bg: colors.aisle, fg: colors.inkMuted };
+    default: return { label: 'Cancelada', bg: colors.aisle, fg: colors.inkMuted };
+  }
 };
 
 export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
@@ -67,7 +69,7 @@ export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
       <View style={[styles.screen, styles.content]}>
         <SectionTitle title="Mis reservas" />
         <EmptyState
-          icon="ticket-outline"
+          illustration="ticket"
           title="Ingresa para ver tus reservas"
           text="Tus códigos de retiro están protegidos por tu cuenta."
           action={<Button label="Ingresar" compact onPress={onLogin} />}
@@ -92,20 +94,20 @@ export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
         </View>
       }
       ListEmptyComponent={reservations.length === 0
-        ? <EmptyState icon="basket-outline" title="Todavía no tienes reservas" text="Agrega productos a tu lista y reserva para recibir tu código." action={<Button label="Ver productos" variant="danger" compact onPress={onExplore} />} />
+        ? <EmptyState illustration="ticket" title="Todavía no tienes reservas" text="Arma tu lista y apártala: aquí aparece tu código de retiro." action={<Button label="Ver productos" variant="danger" compact onPress={onExplore} />} />
         : <EmptyState icon="file-tray-outline" title="Nada en este grupo" />}
       renderItem={({ item: { reservation, status } }) => {
         const pending = status === 'PENDIENTE';
         const total = reservation.detalles.reduce((sum, d) => sum + Number(d.cantidad) * Number(d.precioUnitario), 0);
         const names = reservation.detalles.map(d => d.productoNombre).filter(Boolean).join(', ');
-        const badge = STATUS[status];
+        const badge = statusOf(status);
         return (
           <View style={[styles.card, pending && styles.cardPending]}>
             <View style={styles.cardHead}>
               <View style={styles.flex}>
                 <Text style={styles.code}>{reservation.codigoRetiro}</Text>
                 <Text style={styles.date}>
-                  {pending ? `Retira antes de ${formatDateTime(reservation.fechaExpiracion)}` : `Reservada el ${formatDateTime(reservation.created_at || reservation.fechaExpiracion)}`}
+                  {pending ? `Retira antes de ${formatDateTime(reservation.fechaExpiracion)}` : `Apartada el ${formatDateTime(reservation.created_at || reservation.fechaExpiracion)}`}
                 </Text>
               </View>
               <View style={[styles.status, { backgroundColor: badge.bg }]}><Text style={[styles.statusText, { color: badge.fg }]}>{badge.label}</Text></View>
@@ -126,21 +128,21 @@ export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 24 },
   chips: { gap: 8, paddingBottom: 14 },
-  card: { backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule, padding: 14, marginBottom: 10 },
-  cardPending: { borderColor: colors.ink, borderWidth: 1.5 },
+  card: { backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.rule, padding: 16, marginBottom: 12 },
+  cardPending: { borderColor: colors.mora },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  code: { fontFamily: fonts.tag, fontSize: 26, lineHeight: 28, color: colors.ink, letterSpacing: 1 },
+  code: { fontFamily: fonts.stamp, fontSize: 28, lineHeight: 30, color: colors.ink, letterSpacing: 1 },
   date: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted, marginTop: 2 },
-  status: { borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 4 },
-  statusText: { fontFamily: fonts.bold, fontSize: 12 },
+  status: { borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 },
+  statusText: { fontFamily: fonts.tag, fontSize: 12 },
   dashed: { borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: colors.ruleStrong, marginVertical: 10 },
   names: { fontFamily: fonts.body, fontSize: 14, lineHeight: 19, color: colors.inkSoft },
   total: { fontFamily: fonts.body, fontSize: 14, color: colors.inkSoft, marginTop: 6 },
-  totalValue: { fontFamily: fonts.semibold, color: colors.ink },
+  totalValue: { fontFamily: fonts.tag, color: colors.ink },
   actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
-});
+}));

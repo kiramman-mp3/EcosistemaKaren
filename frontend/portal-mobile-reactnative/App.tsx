@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ActivityIndicator, AppState, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { useFonts, Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold } from '@expo-google-fonts/archivo';
-import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow';
+import { useFonts } from 'expo-font';
+import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
+import { BricolageGrotesque_600SemiBold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque';
+import { Caveat_700Bold } from '@expo-google-fonts/caveat';
 import { Doto_900Black } from '@expo-google-fonts/doto';
 import { NavbarMobile, TabBar } from './src/components/NavbarMobile';
 import { PickupPassModal } from './src/components/PickupPassModal';
 import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
+import { ChatBotModal } from './src/components/ChatBotModal';
+import { PrivacyPolicyModal } from './src/components/PrivacyPolicyModal';
+import { PopPressable } from './src/components/motion';
+import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { CatalogScreen } from './src/screens/CatalogScreen';
 import { OffersScreen } from './src/screens/OffersScreen';
@@ -17,10 +23,10 @@ import { api, BackendReservation, mediaUrl } from './src/api/client';
 import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
 import { formatDate } from './src/utils/dates';
 import { notify } from './src/utils/dialogs';
-import { colors } from './src/theme/tokens';
+import { colors, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
-const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
+const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
 function secondsUntilExpiration(expiration: string | undefined): number {
   if (!expiration) return APPROVED_RESERVATION_TTL_SECONDS;
@@ -34,8 +40,9 @@ const describe = (value?: string) => value?.replace(/\s*·\s*/g, ', ').trim() ||
 
 function PortalAppContent() {
   const [fontsLoaded, fontError] = useFonts({
-    Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold,
-    ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold, Doto_900Black,
+    Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold,
+    BricolageGrotesque_600SemiBold, BricolageGrotesque_800ExtraBold,
+    Caveat_700Bold, Doto_900Black,
   });
   const [activeTab, setActiveTab] = useState<NavTab>('inicio');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Todos');
@@ -58,6 +65,8 @@ function PortalAppContent() {
   const [isPassOpen, setIsPassOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   const syncReservations = useCallback(async (user: { id: string; nombre: string }) => {
     setSyncingReservations(true);
@@ -235,7 +244,7 @@ function PortalAppContent() {
       void syncReservations(currentUser);
       void loadBackendData();
     } catch (err: any) {
-      notify('No se pudo crear la reserva', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+      notify('No pudimos apartar tus productos', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
     } finally {
       setIsSubmitting(false);
     }
@@ -271,7 +280,7 @@ function PortalAppContent() {
       void syncReservations(currentUser);
       void loadBackendData();
     } catch (err: any) {
-      notify('No se pudo reservar la oferta', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+      notify('No pudimos apartar la oferta', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
     } finally {
       setReservingOfferId(null);
     }
@@ -286,8 +295,8 @@ function PortalAppContent() {
 
   if (!fontsLoaded && !fontError) {
     return (
-      <SafeAreaView style={[styles.splash, isDark && { backgroundColor: '#0B1120' }]}>
-        <ActivityIndicator size="large" color={colors.white} />
+      <SafeAreaView style={styles.splash}>
+        <ActivityIndicator size="large" color={colors.sticker} />
       </SafeAreaView>
     );
   }
@@ -297,8 +306,8 @@ function PortalAppContent() {
   const activeCode = pass && pass.remainingSeconds > 0 ? pass.code : undefined;
 
   return (
-    <SafeAreaView style={[styles.safeArea, isDark && { backgroundColor: '#0F172A' }]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? "#0F172A" : colors.white} />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.card} />
       <NavbarMobile
         cartCount={cartCount}
         cartTotal={cartTotal}
@@ -308,7 +317,7 @@ function PortalAppContent() {
         isOnline={isOnline}
       />
 
-      <View style={[styles.body, isDark && { backgroundColor: '#0B1120' }]}>
+      <View style={styles.body}>
           {activeTab === 'inicio' && (
             <HomeScreen
               products={products}
@@ -323,6 +332,8 @@ function PortalAppContent() {
               reservingOfferId={reservingOfferId}
               activePassCode={activeCode}
               onOpenPass={() => setIsPassOpen(true)}
+              userName={currentUser?.nombre.split(' ')[0]}
+              onOpenPrivacy={() => setIsPrivacyOpen(true)}
             />
           )}
           {activeTab === 'productos' && (
@@ -369,9 +380,20 @@ function PortalAppContent() {
               onExplore={() => setActiveTab('productos')}
             />
           )}
+
+          <View style={styles.chatFab} pointerEvents="box-none">
+            <PopPressable
+              onPress={() => setIsChatOpen(true)}
+              backgroundColor={colors.sticker}
+              accessibilityLabel="Abrir chat de ayuda con KarenBot"
+              bodyStyle={styles.chatFabBody}
+            >
+              <Ionicons name="chatbubbles-outline" size={26} color={colors.mora} />
+            </PopPressable>
+          </View>
         </View>
 
-        <SafeAreaView edges={['bottom']} style={[styles.tabs, isDark && { backgroundColor: '#0F172A' }]}>
+        <SafeAreaView edges={['bottom']} style={styles.tabs}>
           <TabBar activeTab={activeTab} onChange={goTo} offersCount={offers.length} hasActivePass={Boolean(activeCode)} />
         </SafeAreaView>
 
@@ -396,6 +418,7 @@ function PortalAppContent() {
             setCurrentUser(user);
             void syncReservations(user);
           }}
+          onOpenPrivacy={() => { setIsLoginOpen(false); setIsPrivacyOpen(true); }}
           onLogout={() => {
             setCurrentUser(null);
             setPass(null);
@@ -403,6 +426,9 @@ function PortalAppContent() {
             setCart([]);
           }}
         />
+
+        <ChatBotModal visible={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        <PrivacyPolicyModal visible={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
       </SafeAreaView>
   );
 }
@@ -417,9 +443,11 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  splash: { flex: 1, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  safeArea: { flex: 1, backgroundColor: colors.white },
+const styles = themed(() => StyleSheet.create({
+  splash: { flex: 1, backgroundColor: colors.mora, alignItems: 'center', justifyContent: 'center' },
+  safeArea: { flex: 1, backgroundColor: colors.card },
   body: { flex: 1, backgroundColor: colors.aisle },
-  tabs: { backgroundColor: colors.white },
-});
+  tabs: { backgroundColor: colors.card },
+  chatFab: { position: 'absolute', right: 14, bottom: 14 },
+  chatFabBody: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
+}));

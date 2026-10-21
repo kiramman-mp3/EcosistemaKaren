@@ -3,7 +3,7 @@ import { Modal, View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Button } from './ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 interface Props {
   visible: boolean;
@@ -54,14 +54,14 @@ export const BarcodeScannerModal: React.FC<Props> = ({ visible, title = 'Escanea
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.ink, padding: 20 },
-  title: { fontFamily: fonts.tag, fontSize: 26, color: colors.white, marginBottom: 16, textAlign: 'center' },
+const styles = themed(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.mora, padding: 20 },
+  title: { fontFamily: fonts.tag, fontSize: 26, color: '#FFFFFF', marginBottom: 16, textAlign: 'center' },
   camera: { flex: 1, borderRadius: radius.tag, overflow: 'hidden' },
   overlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, justifyContent: 'center', padding: 24, gap: 12 },
   frame: { height: 180, borderWidth: 4, borderColor: colors.sticker, borderRadius: radius.tag },
-  frameText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.white, textAlign: 'center' },
+  frameText: { fontFamily: fonts.semibold, fontSize: 15, color: '#FFFFFF', textAlign: 'center' },
   permission: { flex: 1, alignItems: 'stretch', justifyContent: 'center', gap: 18 },
   help: { fontFamily: fonts.body, fontSize: 16, lineHeight: 22, color: 'rgba(255,255,255,0.8)', textAlign: 'center' },
   cancel: { marginTop: 16 },
-});
+}));

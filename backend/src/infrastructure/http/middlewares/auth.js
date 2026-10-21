@@ -31,6 +31,11 @@ function createAuthMiddleware(jwtSecret, tokenBlacklistRepo = null) {
         }
       }
 
+      // Una sesión por cookie es la del portal web, que es solo para clientes.
+      if (sessionToken === req.cookies?.karen_session && String(payload.rol).toUpperCase() !== 'CLIENTE') {
+        return next(new ForbiddenException('Las cuentas del personal de la tienda no pueden usar el portal web.'));
+      }
+
       req.user = {
         id: payload.id,
         nombre: payload.nombre,

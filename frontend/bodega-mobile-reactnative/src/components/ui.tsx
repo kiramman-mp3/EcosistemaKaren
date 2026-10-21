@@ -4,8 +4,10 @@ import {
   TouchableOpacity, View, ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 import { formatDate } from '../utils/dates';
+import { Illustration, IllustrationName } from './Illustration';
+import { PopIn, PopPressable, tap } from './motion';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -33,42 +35,39 @@ interface ButtonProps {
   accessibilityLabel?: string;
 }
 
-const BUTTON_COLORS: Record<ButtonVariant, { bg: string; fg: string; border: string }> = {
-  primary: { bg: colors.ink, fg: colors.white, border: colors.ink },
-  danger: { bg: colors.karen, fg: colors.white, border: colors.karen },
-  outline: { bg: colors.white, fg: colors.ink, border: colors.ink },
-  ghost: { bg: colors.aisle, fg: colors.ink, border: colors.aisle },
-  sticker: { bg: colors.sticker, fg: colors.ink, border: colors.sticker },
-};
+function buttonColors(variant: ButtonVariant): { bg: string; fg: string } {
+  switch (variant) {
+    case 'sticker': return { bg: colors.sticker, fg: colors.mora };
+    case 'outline': return { bg: colors.card, fg: colors.ink };
+    case 'ghost': return { bg: colors.aisle, fg: colors.ink };
+    default: return { bg: colors.karen, fg: '#FFFFFF' };
+  }
+}
 
+/** Botón en píldora con sombra dura; mantiene 52 px de alto para usarlo con guantes. */
 export const Button: React.FC<ButtonProps> = ({
   label, onPress, icon, variant = 'primary', loading = false, disabled = false, compact = false, style, accessibilityLabel,
 }) => {
-  const palette = BUTTON_COLORS[variant];
+  const palette = buttonColors(variant);
   const inactive = disabled || loading;
+  const fg = inactive ? colors.inkMuted : palette.fg;
   return (
-    <TouchableOpacity
+    <PopPressable
       onPress={onPress}
       disabled={inactive}
-      activeOpacity={0.8}
-      accessibilityRole="button"
+      backgroundColor={inactive ? colors.rule : palette.bg}
       accessibilityLabel={accessibilityLabel || label}
       accessibilityState={{ disabled: inactive, busy: loading }}
-      style={[
-        styles.button,
-        compact && styles.buttonCompact,
-        { backgroundColor: palette.bg, borderColor: palette.border },
-        inactive && styles.buttonDisabled,
-        style,
-      ]}
+      style={style}
+      bodyStyle={[styles.button, compact && styles.buttonCompact]}
     >
       {loading
-        ? <ActivityIndicator color={palette.fg} size="small" />
-        : icon ? <Ionicons name={icon} size={compact ? 17 : 20} color={palette.fg} /> : null}
-      <Text style={[styles.buttonText, compact && styles.buttonTextCompact, { color: palette.fg }]} numberOfLines={1}>
+        ? <ActivityIndicator color={fg} size="small" />
+        : icon ? <Ionicons name={icon} size={compact ? 17 : 20} color={fg} /> : null}
+      <Text style={[styles.buttonText, compact && styles.buttonTextCompact, { color: fg }]} numberOfLines={1}>
         {label}
       </Text>
-    </TouchableOpacity>
+    </PopPressable>
   );
 };
 
@@ -92,23 +91,25 @@ export const Field = React.forwardRef<TextInput, FieldProps>(({ label, hint, rig
       />
       {right}
     </View>
-    {hint ? <Text style={[styles.fieldHint, invalid && { color: colors.karenDeep }]}>{hint}</Text> : null}
+    {hint ? <Text style={[styles.fieldHint, invalid && { color: colors.karenText }]}>{hint}</Text> : null}
   </View>
 ));
 Field.displayName = 'Field';
 
 export const Notice: React.FC<{ tone: 'error' | 'success' | 'info'; text: string }> = ({ tone, text }) => {
+  React.useEffect(() => { if (tone === 'success') tap('success'); }, [tone, text]);
   const palette = tone === 'error'
     ? { bg: colors.karenTint, fg: colors.karenDeep, icon: 'alert-circle' as IconName }
     : tone === 'success'
       ? { bg: colors.freshTint, fg: colors.fresh, icon: 'checkmark-circle' as IconName }
       : { bg: colors.stickerTint, fg: colors.ink, icon: 'information-circle' as IconName };
-  return (
+  const body = (
     <View style={[styles.notice, { backgroundColor: palette.bg }]} accessibilityRole="alert">
       <Ionicons name={palette.icon} size={18} color={palette.fg} />
       <Text style={[styles.noticeText, { color: palette.fg }]}>{text}</Text>
     </View>
   );
+  return tone === 'success' ? <PopIn>{body}</PopIn> : body;
 };
 
 export const Chip: React.FC<{ label: string; active: boolean; onPress: () => void; count?: number; accent?: string }> = ({
@@ -129,12 +130,12 @@ export const Chip: React.FC<{ label: string; active: boolean; onPress: () => voi
 /** Fecha de vencimiento con la estética del código impreso en el empaque. */
 export const ExpiryStamp: React.FC<{ date?: string | null; label?: string; style?: StyleProp<TextStyle> }> = ({ date, label = 'Vence', style }) => (
   <Text style={styles.stampLabel}>
-    {`${label} `}
+    {`${label} `}
     <Text style={[styles.stamp, style]}>{formatDate(date)}</Text>
   </Text>
 );
 
-/** Días restantes en tipografía de fleje: el dato que decide qué se mueve primero. */
+/** Días restantes en tipografía de etiqueta: el dato que decide qué se mueve primero. */
 export const DaysCounter: React.FC<{ days: number; color: string }> = ({ days, color }) => {
   const text = days < 0 ? `${Math.abs(days)}` : `${days}`;
   const caption = days < 0 ? (Math.abs(days) === 1 ? 'día vencido' : 'días vencido') : days === 0 ? 'vence hoy' : days === 1 ? 'día' : 'días';
@@ -148,36 +149,37 @@ export const DaysCounter: React.FC<{ days: number; color: string }> = ({ days, c
   );
 };
 
-export const EmptyState: React.FC<{ icon: IconName; title: string; text?: string; action?: React.ReactNode }> = ({ icon, title, text, action }) => (
+export const EmptyState: React.FC<{ icon?: IconName; illustration?: IllustrationName; title: string; text?: string; action?: React.ReactNode }> = ({ icon, illustration, title, text, action }) => (
   <View style={styles.empty}>
-    <Ionicons name={icon} size={40} color={colors.inkFaint} />
+    {illustration
+      ? <Illustration name={illustration} size={110} />
+      : icon ? <Ionicons name={icon} size={40} color={colors.inkFaint} /> : null}
     <Text style={styles.emptyTitle}>{title}</Text>
     {text ? <Text style={styles.emptyText}>{text}</Text> : null}
     {action}
   </View>
 );
 
-export const styles = StyleSheet.create({
+export const styles = themed(() => StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 14 },
   titleText: { flex: 1 },
-  title: { fontFamily: fonts.tag, fontSize: 30, lineHeight: 32, color: colors.ink },
-  subtitle: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.inkSoft, marginTop: 4 },
+  title: { fontFamily: fonts.tag, fontSize: 32, lineHeight: 34, color: colors.ink },
+  subtitle: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21, color: colors.inkSoft, marginTop: 4 },
 
   button: {
-    minHeight: 52, borderRadius: radius.tag, borderWidth: 2, paddingHorizontal: 16,
+    minHeight: 52, paddingHorizontal: 20,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  buttonCompact: { minHeight: 44, paddingHorizontal: 12 },
-  buttonDisabled: { opacity: 0.45 },
-  buttonText: { fontFamily: fonts.semibold, fontSize: 16 },
+  buttonCompact: { minHeight: 46, paddingHorizontal: 14 },
+  buttonText: { fontFamily: fonts.tag, fontSize: 16 },
   buttonTextCompact: { fontSize: 14 },
 
   field: { marginBottom: 14, minWidth: 0 },
   fieldLabel: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, marginBottom: 6 },
   fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   input: {
-    flex: 1, minWidth: 0, width: '100%', minHeight: 50, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
-    backgroundColor: colors.white, paddingHorizontal: 12, fontFamily: fonts.medium, fontSize: 16, color: colors.ink,
+    flex: 1, minWidth: 0, width: '100%', minHeight: 52, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.ruleStrong,
+    backgroundColor: colors.card, paddingHorizontal: 18, fontFamily: fonts.medium, fontSize: 16, color: colors.ink,
   },
   inputInvalid: { borderColor: colors.karen },
   fieldHint: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted, marginTop: 5 },
@@ -186,13 +188,13 @@ export const styles = StyleSheet.create({
   noticeText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
 
   chip: {
-    minHeight: 40, paddingHorizontal: 12, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.rule,
-    backgroundColor: colors.white, flexDirection: 'row', alignItems: 'center', gap: 6,
+    minHeight: 44, paddingHorizontal: 16, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.rule,
+    backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', gap: 6,
   },
-  chipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  chipActive: { backgroundColor: colors.sticker, borderColor: colors.mora },
   chipDot: { width: 10, height: 10, borderRadius: 5 },
   chipText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.inkSoft },
-  chipTextActive: { color: colors.white },
+  chipTextActive: { color: colors.mora },
   chipCount: { fontFamily: fonts.tag, fontSize: 15, color: colors.inkMuted },
 
   stampLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.inkSoft },
@@ -203,7 +205,7 @@ export const styles = StyleSheet.create({
   daysToday: { fontFamily: fonts.tag, fontSize: 30, lineHeight: 46 },
   daysCaption: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted, marginTop: -4 },
 
-  empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24, gap: 8 },
-  emptyTitle: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink, textAlign: 'center' },
-  emptyText: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.inkSoft, textAlign: 'center' },
-});
+  empty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 24, gap: 8 },
+  emptyTitle: { fontFamily: fonts.tag, fontSize: 24, color: colors.ink, textAlign: 'center' },
+  emptyText: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21, color: colors.inkSoft, textAlign: 'center' },
+}));

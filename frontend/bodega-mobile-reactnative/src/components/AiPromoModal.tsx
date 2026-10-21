@@ -3,7 +3,7 @@ import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { BackendPromotion } from '../types';
 import { Button } from './ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 interface AiPromoModalProps {
   visible: boolean;
@@ -63,19 +63,19 @@ export const AiPromoModal: React.FC<AiPromoModalProps> = ({ visible, promotion, 
   );
 };
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.6)', justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: colors.white, borderRadius: radius.tag, padding: 20, maxHeight: '90%', width: '100%', maxWidth: 460, alignSelf: 'center' },
+const styles = themed(() => StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.6)', justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, padding: 20, maxHeight: '90%', width: '100%', maxWidth: 460, alignSelf: 'center' },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   title: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   tag: { backgroundColor: colors.sticker, borderRadius: radius.tag, padding: 16, marginBottom: 14 },
-  discount: { fontFamily: fonts.tag, fontSize: 48, lineHeight: 50, color: colors.karen },
-  phrase: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22, color: colors.ink, marginTop: 6 },
+  discount: { fontFamily: fonts.tag, fontSize: 48, lineHeight: 50, color: '#A81E14' },
+  phrase: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22, color: colors.mora, marginTop: 6 },
   reason: { backgroundColor: colors.aisle, borderRadius: radius.tag, padding: 12, marginBottom: 14 },
   reasonLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, marginBottom: 4 },
   reasonText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.inkSoft },
   pending: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 16 },
   pendingText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: colors.inkSoft },
   secondary: { marginTop: 8 },
-});
+}));

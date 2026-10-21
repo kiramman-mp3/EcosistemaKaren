@@ -34,23 +34,23 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-ink/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-[70] bg-mora/70 flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="terms-title"
     >
-      <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-lift border border-aisle-rule overflow-hidden my-6 animate-scale-up flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-3xl rounded-block bg-surface shadow-pop-lg border-2 border-mora overflow-hidden my-6 animate-scale-up flex flex-col max-h-[90dvh]">
         {/* Encabezado del modal */}
-        <div className="bg-aisle px-6 py-5 border-b border-aisle-rule flex items-center justify-between shrink-0">
+        <div className="bg-limon text-mora px-4 py-3 sm:px-6 sm:py-5 border-b-2 border-mora flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-karen-tint text-karen flex items-center justify-center shrink-0 shadow-xs">
+            <div className="hidden sm:flex w-11 h-11 rounded-full border-2 border-mora bg-surface text-mora items-center justify-center shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="terms-title" className="font-tag font-bold text-xl text-ink leading-tight">
+              <h2 id="terms-title" className="font-display font-extrabold text-lg sm:text-2xl text-mora leading-tight">
                 Términos y Condiciones del Servicio
               </h2>
-              <p className="text-xs text-ink-soft">
+              <p className="text-[11px] sm:text-xs font-semibold text-mora/80">
                 Supermercados Karen S.A. · RUC 0992345678001 · Guayaquil, Ecuador · Actualizado 2026
               </p>
             </div>
@@ -58,30 +58,30 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           <button
             onClick={onClose}
             aria-label="Cerrar términos y condiciones"
-            className="w-9 h-9 rounded-full bg-white border border-aisle-rule text-ink hover:bg-ink hover:text-white flex items-center justify-center transition-colors shrink-0 ml-2"
+            className="w-10 h-10 rounded-full bg-surface border-2 border-mora text-mora hover:bg-mora hover:text-white flex items-center justify-center transition-colors shrink-0 ml-2"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Barra de pestañas / filtro rápido */}
-        <div className="bg-aisle/50 px-6 py-2 border-b border-aisle-rule flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 text-xs">
+        <div className="bg-page px-4 sm:px-6 py-3 border-b-2 border-aisle-rule flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 text-xs">
           <button
             onClick={() => setActiveCategory('todos')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 ${
               activeCategory === 'todos'
-                ? 'bg-ink text-white'
-                : 'bg-white text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             Todas las Políticas
           </button>
           <button
             onClick={() => setActiveCategory('privacidad')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'privacidad'
-                ? 'bg-karen text-white'
-                : 'bg-white text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             <Lock className="w-3 h-3" />
@@ -89,21 +89,21 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('reservas')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'reservas'
-                ? 'bg-karen text-white'
-                : 'bg-white text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             <Clock className="w-3 h-3" />
-            Reservas & TTL (10 min)
+            Reservas & TTL (30 min)
           </button>
           <button
             onClick={() => setActiveCategory('fefo')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'fefo'
-                ? 'bg-karen text-white'
-                : 'bg-white text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             <Sparkles className="w-3 h-3" />
@@ -111,10 +111,10 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('pagos')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'pagos'
-                ? 'bg-karen text-white'
-                : 'bg-white text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             <CreditCard className="w-3 h-3" />
@@ -123,28 +123,28 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Cuerpo con las cláusulas detalladas */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-sm text-ink-soft leading-relaxed flex-1">
+        <div className="p-4 sm:p-8 overflow-y-auto space-y-6 text-sm text-ink-soft leading-relaxed flex-1">
           {/* Bienvenida & Resumen General */}
           <div className="bg-karen-tint/30 rounded-xl p-4 border border-karen/20 flex gap-3 text-ink">
-            <ShieldCheck className="w-5 h-5 text-karen shrink-0 mt-0.5" />
+            <ShieldCheck className="w-5 h-5 text-karen-text shrink-0 mt-0.5" />
             <p className="text-xs sm:text-sm">
               Bienvenido al <strong>Portal Digital de Supermercados Karen</strong>. Este servicio omnicanal le permite reservar productos desde su computadora o teléfono celular y retirarlos presencialmente en el área de <strong>Caja SIACI</strong> de nuestra sucursal.
             </p>
           </div>
 
-          {/* 1. Política de Reserva y TTL 10 Minutos */}
+          {/* 1. Política de Reserva y TTL 30 Minutos */}
           {(activeCategory === 'todos' || activeCategory === 'reservas') && (
             <section className="space-y-2.5 p-4 rounded-xl bg-aisle/40 border border-aisle-rule">
-              <h3 className="font-tag font-bold text-base text-ink flex items-center gap-2">
-                <Clock className="w-4 h-4 text-karen shrink-0" />
-                1. Política de Reserva y Tiempo de Tolerancia (TTL de 10 Minutos)
+              <h3 className="font-display font-extrabold text-base text-ink flex items-center gap-2">
+                <Clock className="w-4 h-4 text-karen-text shrink-0" />
+                1. Política de Reserva y Tiempo de Tolerancia (TTL de 30 Minutos)
               </h3>
               <p>
-                Para garantizar la disponibilidad real y evitar la sobreventa cruzada entre compras digitales y clientes presenciales en percha, cada reserva confirmada aparta el stock físico por un <strong>plazo improrrogable de diez (10) minutos reloj</strong> contados a partir de su emisión en el servidor (ADR-001).
+                Para garantizar la disponibilidad real y evitar la sobreventa cruzada entre compras digitales y clientes presenciales en percha, cada reserva confirmada aparta el stock físico por un <strong>plazo improrrogable de treinta (30) minutos reloj</strong> contados a partir de su emisión en el servidor (ADR-001).
               </p>
               <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-ink-soft">
                 <li>El temporizador regresivo se visualiza en tiempo real en su <em>Pase de Retiro Digital</em>.</li>
-                <li>Si el cliente no se presenta en caja antes del vencimiento del tiempo de tolerancia (10 minutos), el sistema informático sweeper liberará automáticamente el stock reservado, retornándolo de inmediato a la percha física.</li>
+                <li>Si el cliente no se presenta en caja antes del vencimiento del tiempo de tolerancia (30 minutos), el sistema informático sweeper liberará automáticamente el stock reservado, retornándolo de inmediato a la percha física.</li>
                 <li><strong>Cero penalizaciones:</strong> La expiración de una reserva no genera multas, penalizaciones ni cobros al usuario. Podrá realizar una nueva reserva en cualquier momento según disponibilidad.</li>
               </ul>
             </section>
@@ -153,7 +153,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           {/* 2. Protección de Datos y Privacidad */}
           {(activeCategory === 'todos' || activeCategory === 'privacidad') && (
             <section className="space-y-2.5 p-4 rounded-xl bg-aisle/40 border border-aisle-rule">
-              <h3 className="font-tag font-bold text-base text-ink flex items-center gap-2">
+              <h3 className="font-display font-extrabold text-base text-ink flex items-center gap-2">
                 <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
                 2. Política de Privacidad y Protección de Datos Personales (LOPDP Ecuador)
               </h3>
@@ -183,7 +183,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           {/* 3. Sistema FEFO y Semáforo de Caducidad */}
           {(activeCategory === 'todos' || activeCategory === 'fefo') && (
             <section className="space-y-2.5 p-4 rounded-xl bg-aisle/40 border border-aisle-rule">
-              <h3 className="font-tag font-bold text-base text-ink flex items-center gap-2">
+              <h3 className="font-display font-extrabold text-base text-ink flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
                 3. Sistema FEFO y Precios de Oferta Flash
               </h3>
@@ -215,8 +215,8 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           {/* 4. Retiro en Caja SIACI */}
           {(activeCategory === 'todos' || activeCategory === 'pagos') && (
             <section className="space-y-2.5 p-4 rounded-xl bg-aisle/40 border border-aisle-rule">
-              <h3 className="font-tag font-bold text-base text-ink flex items-center gap-2">
-                <Ticket className="w-4 h-4 text-karen shrink-0" />
+              <h3 className="font-display font-extrabold text-base text-ink flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-karen-text shrink-0" />
                 4. Procedimiento de Retiro en Caja SIACI
               </h3>
               <p>
@@ -233,8 +233,8 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           {/* 5. Métodos de Pago e Impuestos SRI */}
           {(activeCategory === 'todos' || activeCategory === 'pagos') && (
             <section className="space-y-2.5 p-4 rounded-xl bg-aisle/40 border border-aisle-rule">
-              <h3 className="font-tag font-bold text-base text-ink flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-karen shrink-0" />
+              <h3 className="font-display font-extrabold text-base text-ink flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-karen-text shrink-0" />
                 5. Métodos de Pago, Precios e Impuestos
               </h3>
               <p>
@@ -253,7 +253,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           {/* 6. Garantía de Calidad y Devoluciones */}
           {(activeCategory === 'todos' || activeCategory === 'pagos') && (
             <section className="space-y-2.5 p-4 rounded-xl bg-aisle/40 border border-aisle-rule">
-              <h3 className="font-tag font-bold text-base text-ink flex items-center gap-2">
+              <h3 className="font-display font-extrabold text-base text-ink flex items-center gap-2">
                 <RotateCcw className="w-4 h-4 text-emerald-600 shrink-0" />
                 6. Garantía de Frescura, Devoluciones y Libro de Reclamaciones
               </h3>
@@ -270,13 +270,13 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Pie del modal con botón de confirmación */}
-        <div className="bg-aisle px-6 py-4 border-t border-aisle-rule flex items-center justify-between gap-4 shrink-0">
+        <div className="bg-aisle px-4 sm:px-6 py-4 border-t border-aisle-rule flex items-center justify-between gap-4 shrink-0">
           <span className="text-xs text-ink-muted hidden sm:inline">
             Presione Escape o haga clic en Entendido para continuar.
           </span>
           <button
             onClick={onClose}
-            className="w-full sm:w-auto h-11 px-8 rounded-tag bg-ink text-white font-semibold hover:bg-ink-soft transition-colors shadow-sm"
+            className="w-full sm:w-auto h-11 px-8 rounded-tag bg-mora text-white font-semibold hover:bg-karen transition-colors shadow-sm"
           >
             Entendido y Acepto
           </button>

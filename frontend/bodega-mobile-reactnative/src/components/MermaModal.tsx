@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, To
 import { Ionicons } from '@expo/vector-icons';
 import { confirmAction } from '../utils/dialogs';
 import { Button, Chip, Field, Notice } from './ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 interface MermaModalProps {
   visible: boolean;
@@ -116,10 +116,10 @@ export const MermaModal: React.FC<MermaModalProps> = ({ visible, lotId, lotNumbe
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.55)', justifyContent: 'flex-end' },
-  sheet: { maxHeight: '92%', backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.55)', justifyContent: 'flex-end' },
+  sheet: { maxHeight: '92%', backgroundColor: colors.card, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
   title: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },
   subtitle: { fontFamily: fonts.body, fontSize: 14, color: colors.inkSoft, marginTop: 2 },
@@ -131,4 +131,4 @@ const styles = StyleSheet.create({
   allText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
   label: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, marginBottom: 8 },
   reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-});
+}));

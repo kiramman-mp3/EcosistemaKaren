@@ -1,0 +1,13 @@
+{
+  "name": "ecosistema-karen",
+  "private": true,
+  "description": "Orquestador de desarrollo del Ecosistema Karen",
+  "scripts": {
+    "start": "node start.js",
+    "setup": "node start.js --setup",
+    "down": "node start.js --down"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

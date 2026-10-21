@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useColorScheme, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { ThemeMode, getThemeColors, lightColors, darkColors } from './tokens';
+import { ThemeMode, getThemeColors, lightColors, darkColors, setThemeMode } from './tokens';
 
 interface ThemeContextType {
   theme: ThemeMode;
@@ -46,8 +46,7 @@ async function saveTheme(mode: ThemeMode): Promise<void> {
 }
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const systemScheme = useColorScheme();
-  const [theme, setThemeState] = useState<ThemeMode>(systemScheme === 'dark' ? 'dark' : 'light');
+  const [theme, setThemeState] = useState<ThemeMode>('light');
 
   useEffect(() => {
     void getStoredTheme().then(stored => {
@@ -70,6 +69,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void saveTheme(mode);
   };
 
+  // Debe ocurrir durante el render: los hijos leen los colores del módulo al renderizarse.
+  setThemeMode(theme);
   const colors = getThemeColors(theme);
   const isDark = theme === 'dark';
 

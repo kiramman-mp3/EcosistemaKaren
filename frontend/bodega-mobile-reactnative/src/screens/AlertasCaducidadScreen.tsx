@@ -5,7 +5,7 @@ import { api } from '../api/client';
 import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, ScreenTitle } from '../components/ui';
 import { LotLabel } from '../components/LotLabel';
-import { colors, levelColors } from '../theme/tokens';
+import { colors, levelColors, themed } from '../theme/tokens';
 
 interface AlertasCaducidadScreenProps {
   alerts: ExpiryAlertItem[];
@@ -177,9 +177,9 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 32 },
   filters: { gap: 8, paddingBottom: 14 },
   action: { flexGrow: 1 },
-});
+}));

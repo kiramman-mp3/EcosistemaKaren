@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { RefreshCw, SearchX, WifiOff } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { DataLoadState, FlashOffer, Product, ProductCategory } from '../types';
 import { ProductTag } from './ProductTag';
+import { Button } from './ui/Button';
+import { Illustration } from './ui/Illustration';
 
 interface ProductCatalogProps {
   products: Product[];
@@ -79,7 +81,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:grid lg:grid-cols-[15rem_1fr] lg:gap-8">
       <nav aria-label="Pasillos" className="hidden lg:block">
         <div className="sticky top-32">
-          <p className="font-tag font-bold text-lg text-ink dark:text-white mb-2">Pasillos</p>
+          <p className="font-display font-extrabold text-lg text-ink mb-2">Pasillos</p>
           <ul className="space-y-0.5">
             {aisles.map(name => {
               const active = selectedCategory === name;
@@ -88,14 +90,14 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                   <button
                     onClick={() => onSelectCategory(name)}
                     aria-current={active ? 'true' : undefined}
-                    className={`w-full flex items-baseline justify-between gap-2 rounded-tag px-3 py-2 text-left text-sm ${
+                    className={`w-full flex items-baseline justify-between gap-2 rounded-full border-2 px-4 py-2 text-left text-sm transition-colors ${
                       active
-                        ? 'bg-ink dark:bg-slate-800 text-white font-semibold'
-                        : 'text-ink-soft dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800/80 hover:text-ink dark:hover:text-white'
+                        ? 'bg-limon text-mora border-mora font-extrabold shadow-pop-sm'
+                        : 'border-transparent text-ink-soft font-semibold hover:bg-surface hover:text-ink'
                     }`}
                   >
                     <span>{name}</span>
-                    <span className={`text-xs tabular ${active ? 'text-white/70' : 'text-ink-faint dark:text-slate-400'}`}>
+                    <span className={`text-xs tabular ${active ? 'text-mora' : 'text-ink-muted'}`}>
                       {name === 'Todos' ? products.length : counts.get(name)}
                     </span>
                   </button>
@@ -114,10 +116,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               role="tab"
               aria-selected={selectedCategory === name}
               onClick={() => onSelectCategory(name)}
-              className={`shrink-0 h-9 px-3.5 rounded-tag text-sm font-semibold ${
+              className={`shrink-0 h-10 px-4 rounded-full border-2 text-sm font-bold transition-colors ${
                 selectedCategory === name
-                  ? 'bg-ink dark:bg-slate-800 text-white'
-                  : 'bg-white dark:bg-slate-800 text-ink-soft dark:text-slate-200 border border-aisle-rule dark:border-slate-700'
+                  ? 'bg-limon text-mora border-mora shadow-pop-sm'
+                  : 'bg-surface text-ink-soft border-aisle-rule'
               }`}
             >
               {name}
@@ -127,18 +129,18 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
-            <h2 className="font-tag font-bold text-3xl sm:text-4xl text-ink dark:text-white leading-tight">{title}</h2>
-            <p className="mt-1 text-sm text-ink-muted dark:text-slate-400 tabular">
+            <h2 className="text-3xl sm:text-5xl text-ink leading-tight">{title}</h2>
+            <p className="mt-1 text-sm text-ink-muted tabular">
               {state === 'ready' || state === 'empty' ? `${visible.length} productos` : ' '}
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <label className="flex items-center gap-2 text-sm text-ink-soft dark:text-slate-300 cursor-pointer select-none">
+            <label className="flex items-center gap-2 w-full min-h-11 sm:w-auto text-sm text-ink-soft cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={onlyInStock}
                 onChange={event => setOnlyInStock(event.target.checked)}
-                className="w-4 h-4 accent-[#13284B] dark:accent-karen"
+                className="w-5 h-5 sm:w-4 sm:h-4 accent-[var(--c-karen)]"
               />
               Solo con stock
             </label>
@@ -147,7 +149,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               id="orden"
               value={sort}
               onChange={event => setSort(event.target.value as SortKey)}
-              className="h-10 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-ink dark:text-slate-100"
+              className="h-11 min-w-0 flex-1 sm:flex-none rounded-full border-2 border-mora bg-surface px-4 text-base sm:text-sm font-semibold text-ink"
             >
               <option value="nombre">Nombre (A–Z)</option>
               <option value="precio-asc">Precio: menor a mayor</option>
@@ -156,7 +158,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                className="h-10 w-10 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 text-ink-muted dark:text-slate-300 hover:text-ink dark:hover:text-white flex items-center justify-center transition-colors"
+                className="press h-11 w-11 rounded-full border-2 border-mora bg-surface text-ink flex items-center justify-center"
                 aria-label="Actualizar existencias"
                 title="Actualizar existencias"
               >
@@ -167,47 +169,44 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         </div>
 
         {state === 'offline' || state === 'error' ? (
-          <div className="rounded-tag bg-white dark:bg-slate-900 border border-aisle-rule dark:border-slate-800 p-10 text-center">
-            <WifiOff className="w-10 h-10 mx-auto text-karen" />
-            <h3 className="mt-3 font-tag font-bold text-2xl text-ink dark:text-white">No pudimos cargar los productos</h3>
-            <p className="mt-1 text-ink-soft dark:text-slate-300 max-w-md mx-auto">
+          <div className="rounded-block bg-surface border-2 border-mora shadow-pop p-10 text-center flex flex-col items-center">
+            <Illustration name="offline" />
+            <h3 className="mt-3 text-2xl text-ink">No pudimos cargar los productos</h3>
+            <p className="mt-1 text-ink-soft max-w-md">
               {errorMessage || 'La tienda no respondió.'} Revisa tu conexión e inténtalo de nuevo.
             </p>
-            {onRefresh && (
-              <button onClick={onRefresh} className="mt-5 h-11 px-5 rounded-tag bg-ink dark:bg-slate-800 text-white font-semibold hover:bg-ink-soft">
-                Intentar de nuevo
-              </button>
-            )}
+            {onRefresh && <Button onClick={onRefresh} className="mt-5">Intentar de nuevo</Button>}
           </div>
         ) : loading && products.length === 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" aria-busy="true">
             {Array.from({ length: 8 }, (_, index) => (
-              <div key={index} className="aspect-[3/4] rounded-tag bg-white dark:bg-slate-800/80 border border-aisle-rule dark:border-slate-700 animate-pulse" />
+              <div key={index} className="aspect-[3/4] rounded-block skeleton" />
             ))}
           </div>
         ) : visible.length === 0 ? (
-          <div className="rounded-tag bg-white dark:bg-slate-900 border border-aisle-rule dark:border-slate-800 p-10 text-center">
-            <SearchX className="w-10 h-10 mx-auto text-ink-faint dark:text-slate-500" />
-            <h3 className="mt-3 font-tag font-bold text-2xl text-ink dark:text-white">
+          <div className="rounded-block bg-surface border-2 border-mora shadow-pop p-10 text-center flex flex-col items-center">
+            <Illustration name="search" />
+            <h3 className="mt-3 text-2xl text-ink">
               {products.length === 0 ? 'Aún no hay productos publicados' : 'No encontramos ese producto'}
             </h3>
-            <p className="mt-1 text-ink-soft dark:text-slate-300">
+            <p className="mt-1 text-ink-soft max-w-md">
               {products.length === 0
                 ? 'Vuelve en unos minutos: la tienda está cargando su catálogo.'
-                : 'Prueba con otra palabra o revisa todos los pasillos.'}
+                : 'Prueba con otra palabra o date una vuelta por todos los pasillos.'}
             </p>
             {products.length > 0 && (
-              <button
+              <Button
                 onClick={() => { onSearch?.(''); setOnlyInStock(false); onSelectCategory('Todos'); }}
-                className="mt-5 h-11 px-5 rounded-tag border-2 border-ink dark:border-slate-500 text-ink dark:text-white font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"
+                variant="surface"
+                className="mt-5"
               >
                 Ver todos los productos
-              </button>
+              </Button>
             )}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
               {visible.map(product => (
                 <ProductTag
                   key={product.id}
@@ -221,24 +220,24 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             </div>
 
             {totalProducts !== undefined && onPageChange && Math.ceil(totalProducts / (pageSize || 24)) > 1 && (
-              <nav aria-label="Paginación de catálogo" className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-aisle-rule dark:border-slate-800 pt-4 text-sm">
-                <p className="text-ink-soft dark:text-slate-300">
-                  Página <span className="font-semibold text-ink dark:text-white">{(currentPage || 0) + 1}</span> de{' '}
-                  <span className="font-semibold text-ink dark:text-white">{Math.ceil(totalProducts / (pageSize || 24))}</span>{' '}
-                  <span className="text-ink-muted dark:text-slate-400">({totalProducts} productos en total)</span>
+              <nav aria-label="Paginación de catálogo" className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-aisle-rule pt-4 text-sm">
+                <p className="text-ink-soft">
+                  Página <span className="font-semibold text-ink">{(currentPage || 0) + 1}</span> de{' '}
+                  <span className="font-semibold text-ink">{Math.ceil(totalProducts / (pageSize || 24))}</span>{' '}
+                  <span className="text-ink-muted">({totalProducts} productos en total)</span>
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onPageChange((currentPage || 0) - 1)}
                     disabled={(currentPage || 0) <= 0 || loading}
-                    className="h-9 px-4 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-ink dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="press h-10 px-5 rounded-full border-2 border-mora bg-surface font-bold text-ink disabled:opacity-40"
                   >
                     Anterior
                   </button>
                   <button
                     onClick={() => onPageChange((currentPage || 0) + 1)}
                     disabled={(currentPage || 0) >= Math.ceil(totalProducts / (pageSize || 24)) - 1 || loading}
-                    className="h-9 px-4 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-ink dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="press h-10 px-5 rounded-full border-2 border-mora bg-surface font-bold text-ink disabled:opacity-40"
                   >
                     Siguiente
                   </button>

@@ -15,7 +15,7 @@ describe('Nuevas funcionalidades en rama fix/arreglos', () => {
 
     rerender(<TermsModal isOpen={true} onClose={handleClose} />);
     expect(screen.getByText(/Términos y Condiciones del Servicio/i)).toBeInTheDocument();
-    expect(screen.getByText(/TTL de 10 Minutos/i)).toBeInTheDocument();
+    expect(screen.getByText(/TTL de 30 Minutos/i)).toBeInTheDocument();
     expect(screen.getByText(/Sistema FEFO/i)).toBeInTheDocument();
 
     const acceptBtn = screen.getByRole('button', { name: /Entendido y Acepto/i });
@@ -71,7 +71,7 @@ describe('Nuevas funcionalidades en rama fix/arreglos', () => {
     );
 
     expect(screen.getByText(/\(04\) 2-987654/i)).toBeInTheDocument();
-    expect(screen.getByText(/\+593 99 876 5432/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+593 98 355 3724/i)).toBeInTheDocument();
     expect(screen.getByText(/atencion@karen\.com\.ec/i)).toBeInTheDocument();
     expect(screen.getByText(/Lunes a Sábado: 07:00 – 21:00/i)).toBeInTheDocument();
 

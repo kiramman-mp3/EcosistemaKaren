@@ -11,6 +11,10 @@
 incluya otro rol. `POST /auth/login` entrega un JWT HS256 válido durante 24 horas. Los
 endpoints protegidos requieren `Authorization: Bearer <token>`.
 
+El portal web usa una sesión por cookie HttpOnly (`X-Session-Mode: cookie`) y es solo para
+clientes: ese login responde `403` para `BODEGUERO`, `PERCHERO` y `ADMIN`, que ingresan por
+la app de bodega con Bearer.
+
 | Operación | Roles permitidos |
 | --- | --- |
 | Crear categorías o productos | `ADMIN` |
@@ -145,7 +149,7 @@ costo total y vínculo al movimiento que modificó el inventario.
 ## 3. Reservaciones de Stock Anti-Overbooking (`/reservations`)
 
 ### `POST /reservations`
-Crea una reserva de stock temporal con temporizador TTL (10 minutos) usando asignación FEFO.
+Crea una reserva de stock temporal con temporizador TTL (30 minutos) usando asignación FEFO.
 La identidad se obtiene del JWT: el cliente no puede indicar `usuarioId` ni reservar a
 nombre de otra persona.
 * **Body Payload**:

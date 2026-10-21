@@ -8,7 +8,7 @@ import { classifyExpiryDays } from '../config/businessRules';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { Button, DaysCounter, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
-import { colors, fonts, levelColors, radius } from '../theme/tokens';
+import { colors, fonts, levelColors, radius, themed } from '../theme/tokens';
 
 type BarcodeLookupState = 'idle' | 'loading' | 'found' | 'invalid' | 'not-found' | 'error';
 
@@ -265,7 +265,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
                 accessibilityRole="radio"
                 accessibilityState={{ checked: active }}
               >
-                <Ionicons name={option === 'BODEGA' ? 'cube-outline' : 'storefront-outline'} size={22} color={active ? colors.white : colors.ink} />
+                <Ionicons name={option === 'BODEGA' ? 'cube-outline' : 'storefront-outline'} size={22} color={active ? colors.card : colors.ink} />
                 <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{option === 'BODEGA' ? 'Bodega' : 'Percha'}</Text>
               </TouchableOpacity>
             );
@@ -294,15 +294,15 @@ const Section: React.FC<{ step: number; title: string; children: React.ReactNode
   </View>
 );
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 40 },
   section: {
-    backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule,
+    backgroundColor: colors.card, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule,
     padding: 16, marginBottom: 14,
   },
   sectionHead: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginBottom: 14 },
-  step: { fontFamily: fonts.tag, fontSize: 26, color: colors.karen },
+  step: { fontFamily: fonts.tag, fontSize: 26, color: colors.karenText },
   sectionTitle: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink },
   gap: { height: 14 },
   clear: { width: 48, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: radius.tag, backgroundColor: colors.aisle },
@@ -327,9 +327,9 @@ const styles = StyleSheet.create({
   label: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, marginBottom: 6 },
   toggle: {
     flex: 1, minHeight: 56, borderRadius: radius.tag, borderWidth: 2, borderColor: colors.ink,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.white,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.card,
   },
   toggleActive: { backgroundColor: colors.ink },
   toggleText: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
-  toggleTextActive: { color: colors.white },
-});
+  toggleTextActive: { color: '#FFFFFF' },
+}));

@@ -46,6 +46,12 @@ test('rechaza JSON excesivo, content-type incorrecto y claves peligrosas', async
   assert.equal(dangerous.status, 400);
 });
 
+test('acepta un POST sin cuerpo ni Content-Type (p. ej. cerrar sesión)', async () => {
+  const response = await request(securityApp()).post('/api/test').set('Content-Length', '0');
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.body, {});
+});
+
 test('limita solicitudes y devuelve metadatos RateLimit estándar', async () => {
   const app = securityApp();
   assert.equal((await request(app).post('/api/test').send({ n: 1 })).status, 200);
@@ -54,6 +60,26 @@ test('limita solicitudes y devuelve metadatos RateLimit estándar', async () => 
   assert.equal(blocked.status, 429);
   assert.equal(blocked.body.error, 'TooManyRequests');
   assert.ok(blocked.headers['ratelimit']);
+});
+
+test('el limitador de auth cuenta solo logins fallidos y no /me', async () => {
+  const app = express();
+  const security = createSecurityMiddlewares({
+    AUTH_RATE_LIMIT_WINDOW_MS: '60000',
+    AUTH_RATE_LIMIT_MAX: '2',
+  });
+  app.use('/api/auth', security.auth);
+  app.post('/api/auth/login', (req, res) => res.status(req.query.ok ? 200 : 401).json({}));
+  app.get('/api/auth/me', (req, res) => res.status(401).json({}));
+  app.use(errorHandler);
+
+  for (let i = 0; i < 5; i += 1) {
+    assert.equal((await request(app).get('/api/auth/me')).status, 401);
+    assert.equal((await request(app).post('/api/auth/login?ok=1')).status, 200);
+  }
+  assert.equal((await request(app).post('/api/auth/login')).status, 401);
+  assert.equal((await request(app).post('/api/auth/login')).status, 401);
+  assert.equal((await request(app).post('/api/auth/login')).status, 429);
 });
 
 test('Swagger exige Basic Auth con comparación segura', async () => {
@@ -101,4 +127,39 @@ test('múltiples limitadores en cascada no arrojan error de conteo doble', async
   const res = await request(app).post('/api/auth/login');
   assert.equal(res.status, 200);
   assert.equal(res.body.ok, true);
+});
+
+test('un cliente que cierra la conexión no se registra como error 500 del servidor', () => {
+  for (const err of [
+    Object.assign(new Error('stream is not readable'), { type: 'stream.not.readable', status: 500, statusCode: 500 }),
+    Object.assign(new Error('request aborted'), { type: 'request.aborted', status: 400, statusCode: 400 }),
+  ]) {
+    const logged = [];
+    const originalError = console.error;
+    console.error = (...args) => logged.push(args);
+    let responded = null;
+    const res = { destroyed: true, headersSent: false, status() { return this; }, json(body) { responded = body; } };
+    try {
+      errorHandler(err, { id: 'req-1', destroyed: true }, res, () => {});
+    } finally {
+      console.error = originalError;
+    }
+    assert.deepEqual(logged, [], `no debe registrar ${err.type} como error`);
+    assert.equal(responded, null, 'no hay a quién responder');
+  }
+});
+
+test('un fallo real sigue registrándose y respondiendo 500', () => {
+  const logged = [];
+  const originalError = console.error;
+  console.error = (...args) => logged.push(args);
+  let status = null;
+  const res = { destroyed: false, headersSent: false, status(code) { status = code; return this; }, json() {} };
+  try {
+    errorHandler(new Error('fallo inesperado'), { id: 'req-2', destroyed: false }, res, () => {});
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(status, 500);
+  assert.equal(logged.length, 1);
 });
