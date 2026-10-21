@@ -59,7 +59,7 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
             <View style={[styles.timer, expired ? styles.timerExpired : urgent ? styles.timerUrgent : null]} accessibilityLiveRegion="polite">
               {expired ? (
                 <>
-                  <Illustration name="expired" size={80} />
+                  <Illustration name="expired" size={80} light />
                   <Text style={styles.expiredTitle}>Este código venció.</Text>
                   <Text style={styles.expiredText}>Liberamos tus productos; puedes volver a apartarlos.</Text>
                 </>

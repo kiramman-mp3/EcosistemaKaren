@@ -87,7 +87,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
         </button>
 
         {/* El papel del ticket es siempre blanco con tinta mora: se imprime y se escanea igual en modo oscuro. */}
-        <div ref={ticketRef} className="bg-white text-mora animate-print-down">
+        <div ref={ticketRef} className="paper-light bg-white text-mora animate-print-down">
           <div className="ticket-edge bg-transparent" aria-hidden="true" />
           <div className="relative px-6 pt-4 pb-6">
             {!expired && (
