@@ -10,7 +10,7 @@ import { BackendCategory, BackendProduct } from '../types';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, Field, Notice, ScreenTitle } from '../components/ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 const PAGE_SIZE = 30;
 const EMPTY_FORM = { categoriaId: '', nombre: '', descripcion: '', precioVenta: '', impuestoPorcentaje: '15', minStockAlerta: '10' };
@@ -275,23 +275,23 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
   </View>;
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.aisle },
   list: { padding: 16, paddingBottom: 32 },
   flex: { flex: 1, minWidth: 0 },
   adminActions: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 50, paddingLeft: 12,
-    backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
+    backgroundColor: colors.card, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
   },
   searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.ink, paddingVertical: 10 },
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   filters: { gap: 8, paddingVertical: 12 },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.white,
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card,
     borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule, padding: 10, marginBottom: 8,
   },
-  thumb: { width: 60, height: 60, borderRadius: radius.tag, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  thumb: { width: 60, height: 60, borderRadius: radius.tag, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   thumbImage: { width: 60, height: 60 },
   rowInfo: { flex: 1, minWidth: 0 },
   name: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
@@ -301,13 +301,13 @@ const styles = StyleSheet.create({
   price: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink },
   tax: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
   loader: { padding: 24 },
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.55)', justifyContent: 'flex-end' },
-  sheet: { maxHeight: '92%', backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
-  centerBackdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.55)', justifyContent: 'center', padding: 20 },
-  dialog: { backgroundColor: colors.white, borderRadius: radius.tag, padding: 20, width: '100%', maxWidth: 460, alignSelf: 'center' },
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.55)', justifyContent: 'flex-end' },
+  sheet: { maxHeight: '92%', backgroundColor: colors.card, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
+  centerBackdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.55)', justifyContent: 'center', padding: 20 },
+  dialog: { backgroundColor: colors.card, borderRadius: radius.tag, padding: 20, width: '100%', maxWidth: 460, alignSelf: 'center' },
   sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   sheetTitle: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   label: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, marginBottom: -4 },
   cols: { flexDirection: 'row', gap: 10 },
-});
+}));

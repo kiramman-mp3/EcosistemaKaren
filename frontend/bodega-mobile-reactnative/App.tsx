@@ -34,8 +34,8 @@ import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-goo
 import { BricolageGrotesque_600SemiBold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque';
 import { Caveat_700Bold } from '@expo-google-fonts/caveat';
 import { Doto_900Black } from '@expo-google-fonts/doto';
-import { colors, fonts } from './src/theme/tokens';
-import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
+import { colors, fonts, themed } from './src/theme/tokens';
+import { ThemeProvider } from './src/theme/ThemeContext';
 
 function BodegaAppContent() {
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol: string } | null>(null);
@@ -184,13 +184,11 @@ function BodegaAppContent() {
     (a) => a.nivel === 'ROJO' || a.nivel === 'VENCIDO'
   ).length;
 
-  const { isDark } = useTheme();
-
   // Sin fuentes la app sigue funcionando con las del sistema (fontError).
   if (restoringSession || (!fontsLoaded && !fontError)) {
     return (
-      <SafeAreaView style={[styles.loadingSession, isDark && { backgroundColor: '#0B1120' }]}>
-        <ActivityIndicator size="large" color={colors.white} />
+      <SafeAreaView style={styles.loadingSession}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
         <Text style={[styles.loadingSessionText, fontsLoaded && { fontFamily: fonts.medium }]}>Abriendo Bodega Karen…</Text>
       </SafeAreaView>
     );
@@ -206,8 +204,8 @@ function BodegaAppContent() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, isDark && { backgroundColor: '#0F172A' }]}>
-      <StatusBar barStyle="light-content" backgroundColor={isDark ? '#0F172A' : colors.ink} />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.mora} />
 
       {/* Header Bodega */}
       <HeaderBodega
@@ -319,15 +317,15 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  loadingSession: { flex: 1, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', gap: 12 },
+const styles = themed(() => StyleSheet.create({
+  loadingSession: { flex: 1, backgroundColor: colors.mora, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingSessionText: { color: 'rgba(255,255,255,0.8)', fontSize: 15 },
   safeArea: {
     flex: 1,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.mora,
   },
   body: {
     flex: 1,
     backgroundColor: colors.aisle,
   },
-});
+}));

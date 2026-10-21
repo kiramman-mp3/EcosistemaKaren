@@ -8,7 +8,7 @@ import { classifyExpiryDays } from '../config/businessRules';
 import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, ScreenTitle } from '../components/ui';
 import { LotLabel } from '../components/LotLabel';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 interface InventarioLotesScreenProps {
   lots: BackendLot[];
@@ -132,16 +132,16 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({ lo
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 32 },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 50, paddingLeft: 12,
-    backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
+    backgroundColor: colors.card, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
   },
   searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.ink, paddingVertical: 10 },
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   filters: { flexDirection: 'row', gap: 8, marginTop: 12, marginBottom: 14 },
   detail: { width: '100%', fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted },
   action: { flexGrow: 1 },
-});
+}));

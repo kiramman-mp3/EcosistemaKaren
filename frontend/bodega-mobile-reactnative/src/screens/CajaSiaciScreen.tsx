@@ -6,7 +6,7 @@ import { api } from '../api/client';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { formatDateTime, formatTime } from '../utils/dates';
 import { Button, Notice, ScreenTitle } from '../components/ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 interface CajaSiaciScreenProps {
   onReservationUpdated?: () => void;
@@ -23,7 +23,7 @@ function statusOf(reservation: BackendReservation) {
   }
   switch (reservation.estado) {
     case 'PENDIENTE':
-      return { label: 'Por cobrar', text: `Cobrar antes de las ${formatTime(reservation.fechaExpiracion)}.`, bg: colors.sticker, fg: colors.ink };
+      return { label: 'Por cobrar', text: `Cobrar antes de las ${formatTime(reservation.fechaExpiracion)}.`, bg: colors.sticker, fg: colors.mora };
     case 'CONFIRMADA':
       return { label: 'Ya cobrada', text: 'Esta reserva ya pasó por caja.', bg: colors.freshTint, fg: colors.fresh };
     default:
@@ -176,16 +176,16 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({ onReservationU
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 40 },
   manual: { flexDirection: 'row', gap: 10, marginTop: 12, marginBottom: 14 },
   codeInput: {
     flex: 1, minHeight: 52, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,
-    backgroundColor: colors.white, paddingHorizontal: 12, fontFamily: fonts.tag, fontSize: 22, color: colors.ink, letterSpacing: 1,
+    backgroundColor: colors.card, paddingHorizontal: 12, fontFamily: fonts.tag, fontSize: 22, color: colors.ink, letterSpacing: 1,
   },
   searchBtn: { minWidth: 110 },
-  ticket: { backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule, padding: 16 },
+  ticket: { backgroundColor: colors.card, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule, padding: 16 },
   ticketHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   ticketHeadText: { flex: 1 },
   code: { fontFamily: fonts.tag, fontSize: 32, lineHeight: 34, color: colors.ink, letterSpacing: 1 },
@@ -207,4 +207,4 @@ const styles = StyleSheet.create({
   charge: { marginTop: 16 },
   next: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 48, marginTop: 8 },
   nextText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.inkSoft },
-});
+}));

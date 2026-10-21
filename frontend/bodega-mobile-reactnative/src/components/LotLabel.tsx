@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DaysCounter, ExpiryStamp } from './ui';
-import { colors, fonts, levelColors, radius } from '../theme/tokens';
+import { colors, fonts, levelColors, radius, themed } from '../theme/tokens';
 
 interface LotLabelProps {
   productName: string;
@@ -64,9 +64,9 @@ const Stock: React.FC<{ label: string; value: number; strong?: boolean }> = ({ l
   </View>
 );
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: {
-    flexDirection: 'row', backgroundColor: colors.white, borderRadius: radius.tag,
+    flexDirection: 'row', backgroundColor: colors.card, borderRadius: radius.tag,
     borderWidth: 1, borderColor: colors.rule, overflow: 'hidden', marginBottom: 10,
   },
   band: { width: 8 },
@@ -91,4 +91,4 @@ const styles = StyleSheet.create({
   levelTag: { marginLeft: 'auto', borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 4 },
   levelText: { fontFamily: fonts.bold, fontSize: 12 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-});
+}));

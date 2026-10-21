@@ -8,7 +8,7 @@ import { api } from '../api/client';
 import { BackendPromotion } from '../types';
 import { confirmAction, notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { colors, fonts, radius, themed } from '../theme/tokens';
 
 type Filter = 'PENDIENTES' | 'ACTIVAS' | 'FINALIZADAS' | 'RECHAZADAS' | 'TODAS';
 
@@ -25,7 +25,7 @@ function statusOf(item: BackendPromotion) {
   if (item.estado === 'APROBADA') return item.activa
     ? { label: 'Publicada', bg: colors.freshTint, fg: colors.fresh }
     : { label: 'Finalizada', bg: colors.aisle, fg: colors.inkSoft };
-  return { label: 'Por revisar', bg: colors.sticker, fg: colors.ink };
+  return { label: 'Por revisar', bg: colors.sticker, fg: colors.mora };
 }
 
 export const AprobacionesScreen: React.FC = () => {
@@ -214,26 +214,26 @@ export const AprobacionesScreen: React.FC = () => {
   </View>;
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 32 },
   flex: { flex: 1 },
   filters: { gap: 8, paddingBottom: 14 },
   loader: { margin: 30 },
   card: {
-    flexDirection: 'row', backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1,
+    flexDirection: 'row', backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2,
     borderColor: colors.rule, marginBottom: 10, overflow: 'hidden',
   },
   discount: { width: 76, backgroundColor: colors.sticker, alignItems: 'center', justifyContent: 'center' },
-  discountText: { fontFamily: fonts.tag, fontSize: 26, color: colors.karen },
+  discountText: { fontFamily: fonts.tag, fontSize: 26, color: '#A81E14' },
   cardBody: { flex: 1, padding: 12, gap: 4 },
   product: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
   phrase: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.inkSoft },
   cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4, flexWrap: 'wrap' },
   status: { borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 3 },
   statusText: { fontFamily: fonts.bold, fontSize: 12 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(19,40,75,0.55)', justifyContent: 'flex-end' },
-  sheet: { maxHeight: '92%', backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.55)', justifyContent: 'flex-end' },
+  sheet: { maxHeight: '92%', backgroundColor: colors.card, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
   sheetHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
   sheetTitle: { fontFamily: fonts.tag, fontSize: 24, lineHeight: 26, color: colors.ink },
   sheetSub: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted, marginTop: 4 },
@@ -245,6 +245,6 @@ const styles = StyleSheet.create({
   cols: { flexDirection: 'row', gap: 10, marginTop: 10 },
   divider: { height: 1, backgroundColor: colors.rule, marginVertical: 18 },
   readOnly: { backgroundColor: colors.sticker, borderRadius: radius.tag, padding: 16, marginBottom: 14 },
-  readOnlyDiscount: { fontFamily: fonts.tag, fontSize: 40, lineHeight: 42, color: colors.karen },
-  readOnlyPhrase: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 21, color: colors.ink, marginTop: 6 },
-});
+  readOnlyDiscount: { fontFamily: fonts.tag, fontSize: 40, lineHeight: 42, color: '#A81E14' },
+  readOnlyPhrase: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 21, color: colors.mora, marginTop: 6 },
+}));
