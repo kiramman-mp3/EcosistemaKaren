@@ -12,6 +12,7 @@
  *
  * Solo usa módulos nativos de Node (>= 20). Ctrl+C detiene backend y frontends;
  * los contenedores de Docker se dejan corriendo (usar --down para pararlos).
+ * Cada Expo se abre en su propia terminal (Windows/macOS) para mostrar el QR; se cierran a mano.
  */
 const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
@@ -137,6 +138,23 @@ function start(name, color, cwd, cmd, cmdArgs, { interactive = true } = {}) {
   children.push(child);
 }
 
+// Abre el comando en una terminal propia (con TTY, así Expo imprime el QR). Devuelve false si no hay forma de hacerlo.
+function openTerminal(title, cwd, command) {
+  let child;
+  if (IS_WIN) {
+    child = spawn('cmd.exe', ['/c', 'start', `"${title}"`, '/D', `"${cwd}"`, 'cmd', '/k', `"${command}"`],
+      { windowsVerbatimArguments: true, detached: true, stdio: 'ignore' });
+  } else if (process.platform === 'darwin') {
+    const script = `tell application "Terminal" to do script "cd '${cwd}' && ${command}"`;
+    child = spawn('osascript', ['-e', script, '-e', 'tell application "Terminal" to activate'], { detached: true, stdio: 'ignore' });
+  } else {
+    return false;
+  }
+  child.on('error', () => {});
+  child.unref();
+  return true;
+}
+
 function stopAll() {
   for (const child of children) {
     if (child.exitCode !== null || !child.pid) continue;
@@ -177,18 +195,26 @@ async function main() {
   start('web', '35', path.join(FRONT, 'portal-web-react'), 'npm', ['run', 'dev']);
 
   const mobile = args['no-mobile'] ? 'none' : (args.mobile === undefined || args.mobile === true ? 'all' : args.mobile);
-  // Puertos fijos y sin stdin: dos Expo no pueden compartir el 8081 ni el teclado de esta terminal.
-  if (mobile === 'portal' || mobile === 'all') start('portal-mobile', '33', PROJECTS[2], 'npm', ['start', '--', '--port', '8081'], { interactive: false });
-  if (mobile === 'bodega' || mobile === 'all') start('bodega-mobile', '34', PROJECTS[3], 'npm', ['start', '--', '--port', '8082'], { interactive: false });
-  if (mobile !== 'none') {
-    // Sin stdin Expo no imprime el QR; se muestra la URL para pegarla en Expo Go ("Enter URL manually").
+  // Cada Expo va en su propia terminal para que muestre el QR; puertos fijos porque no pueden compartir el 8081.
+  const expos = [
+    ['portal', 'portal-mobile', '33', PROJECTS[2], 8081],
+    ['bodega', 'bodega-mobile', '34', PROJECTS[3], 8082],
+  ].filter(([key]) => mobile === key || mobile === 'all');
+  const inline = [];
+  for (const expo of expos) {
+    const [, name, , cwd, expoPort] = expo;
+    if (openTerminal(name, cwd, `npm start -- --port ${expoPort}`)) log(`${name}: Expo abierto en otra terminal`);
+    else inline.push(expo);
+  }
+  // Sin terminal externa (p. ej. Linux) Expo corre aquí sin stdin y no imprime el QR; se muestra la URL para pegarla en Expo Go ("Enter URL manually").
+  for (const [, name, color, cwd, expoPort] of inline) start(name, color, cwd, 'npm', ['start', '--', '--port', String(expoPort)], { interactive: false });
+  if (inline.length) {
     const lan = Object.entries(os.networkInterfaces())
       .filter(([name]) => !/vEthernet|WSL|VirtualBox|VMware|Docker|Hyper-V/i.test(name))
       .flatMap(([, list]) => list)
       .find(i => i.family === 'IPv4' && !i.internal);
     const host = lan ? lan.address : 'localhost';
-    if (mobile === 'portal' || mobile === 'all') log(`Expo portal: exp://${host}:8081`);
-    if (mobile === 'bodega' || mobile === 'all') log(`Expo bodega: exp://${host}:8082`);
+    for (const [, name, , , expoPort] of inline) log(`${name}: exp://${host}:${expoPort}`);
   }
 
   log('Todo en marcha. Ctrl+C para detener. Accesos demo: admin|bodega|percha|cliente@demo.karen.ec / Karen2026*');
