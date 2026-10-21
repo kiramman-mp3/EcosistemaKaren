@@ -10,6 +10,10 @@ import { NavbarMobile, TabBar } from './src/components/NavbarMobile';
 import { PickupPassModal } from './src/components/PickupPassModal';
 import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
+import { ChatBotModal } from './src/components/ChatBotModal';
+import { PrivacyPolicyModal } from './src/components/PrivacyPolicyModal';
+import { PopPressable } from './src/components/motion';
+import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { CatalogScreen } from './src/screens/CatalogScreen';
 import { OffersScreen } from './src/screens/OffersScreen';
@@ -61,6 +65,8 @@ function PortalAppContent() {
   const [isPassOpen, setIsPassOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   const syncReservations = useCallback(async (user: { id: string; nombre: string }) => {
     setSyncingReservations(true);
@@ -327,6 +333,7 @@ function PortalAppContent() {
               activePassCode={activeCode}
               onOpenPass={() => setIsPassOpen(true)}
               userName={currentUser?.nombre.split(' ')[0]}
+              onOpenPrivacy={() => setIsPrivacyOpen(true)}
             />
           )}
           {activeTab === 'productos' && (
@@ -373,6 +380,17 @@ function PortalAppContent() {
               onExplore={() => setActiveTab('productos')}
             />
           )}
+
+          <View style={styles.chatFab} pointerEvents="box-none">
+            <PopPressable
+              onPress={() => setIsChatOpen(true)}
+              backgroundColor={colors.sticker}
+              accessibilityLabel="Abrir chat de ayuda con KarenBot"
+              bodyStyle={styles.chatFabBody}
+            >
+              <Ionicons name="chatbubbles-outline" size={26} color={colors.mora} />
+            </PopPressable>
+          </View>
         </View>
 
         <SafeAreaView edges={['bottom']} style={styles.tabs}>
@@ -400,6 +418,7 @@ function PortalAppContent() {
             setCurrentUser(user);
             void syncReservations(user);
           }}
+          onOpenPrivacy={() => { setIsLoginOpen(false); setIsPrivacyOpen(true); }}
           onLogout={() => {
             setCurrentUser(null);
             setPass(null);
@@ -407,6 +426,9 @@ function PortalAppContent() {
             setCart([]);
           }}
         />
+
+        <ChatBotModal visible={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        <PrivacyPolicyModal visible={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
       </SafeAreaView>
   );
 }
@@ -426,4 +448,6 @@ const styles = themed(() => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.card },
   body: { flex: 1, backgroundColor: colors.aisle },
   tabs: { backgroundColor: colors.card },
+  chatFab: { position: 'absolute', right: 14, bottom: 14 },
+  chatFabBody: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
 }));

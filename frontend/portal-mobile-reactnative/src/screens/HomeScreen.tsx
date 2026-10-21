@@ -23,6 +23,7 @@ interface HomeScreenProps {
   activePassCode?: string;
   onOpenPass: () => void;
   userName?: string;
+  onOpenPrivacy: () => void;
 }
 
 const STEPS = [
@@ -40,7 +41,7 @@ const STICKERS = [
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   products, categories, offers, state, refreshing, onRefresh, onNavigate, onSelectCategory,
-  onReserveOffer, reservingOfferId, activePassCode, onOpenPass, userName,
+  onReserveOffer, reservingOfferId, activePassCode, onOpenPass, userName, onOpenPrivacy,
 }) => {
   const stickers = useMemo(() => offers.slice(0, 3), [offers]);
 
@@ -179,6 +180,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </View>
         ))}
       </View>
+
+      <TouchableOpacity style={styles.privacyLink} onPress={onOpenPrivacy} accessibilityRole="link">
+        <Text style={styles.privacyLinkText}>Política de privacidad</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -186,7 +191,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: colors.aisle },
-  content: { paddingBottom: 24 },
+  // El espacio inferior deja libre el botón flotante del chat.
+  content: { paddingBottom: 84 },
   hero: { backgroundColor: colors.sticker, padding: 20, paddingTop: 22, borderBottomWidth: 2, borderBottomColor: colors.mora },
   pass: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.mora, borderRadius: radius.pill, paddingHorizontal: 14, minHeight: 46, marginBottom: 16 },
   passText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: '#FFFFFF' },
@@ -209,6 +215,8 @@ const styles = themed(() => StyleSheet.create({
   discountText: { fontFamily: fonts.tag, fontSize: 16, color: '#FFFFFF' },
   section: { paddingHorizontal: 16, paddingTop: 28 },
   link: { minHeight: 44, justifyContent: 'center' },
+  privacyLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  privacyLinkText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.inkSoft, textDecorationLine: 'underline' },
   linkText: { fontFamily: fonts.tag, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
   offerRow: { gap: 14, paddingRight: 16, paddingBottom: 4 },
   aisles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
