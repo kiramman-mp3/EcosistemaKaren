@@ -28,12 +28,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
+          <div className="space-y-4 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <div className="shrink-0 w-40">
                 <Logo alt="Supermercado Karen Logo" className="w-full" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="block font-display font-extrabold text-xl leading-tight">Supermercado Karen</span>
                 <span className="text-sm text-ink-muted">Apártalo hoy, retíralo en caja</span>
               </div>
@@ -129,7 +129,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
         </div>
       </div>
 
-      <div className="border-t-2 border-aisle-rule py-4">
+      <div className="border-t-2 border-aisle-rule pt-4 pb-20 sm:pb-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ink-muted">
           <p>© {new Date().getFullYear()} Supermercado Karen S.A. · RUC 0992345678001</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
