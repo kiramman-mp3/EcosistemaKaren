@@ -2,8 +2,9 @@
 /**
  * Levanta todo el ecosistema en desarrollo con un solo comando.
  *
- *   node start.js                 # deps + .env + PostgreSQL + seed (si está vacía) + backend + portal web
- *   node start.js --mobile=portal # además Expo del portal mobile (también: bodega, all)
+ *   node start.js                 # deps + .env + PostgreSQL + seed (si está vacía) + backend + portal web + ambos Expo
+ *   node start.js --mobile=portal # solo el Expo del portal mobile (también: bodega, all, none)
+ *   node start.js --no-mobile     # sin Expo (equivale a --mobile=none)
  *   node start.js --setup         # solo prepara (deps, .env, base de datos) y termina
  *   node start.js --no-seed       # no siembra datos aunque la base esté vacía
  *   node start.js --skip-images   # el seed no descarga imágenes de productos
@@ -17,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const http = require('http');
+const os = require('os');
 
 const ROOT = __dirname;
 const BACKEND = path.join(ROOT, 'backend');
@@ -120,8 +122,8 @@ function seedIfNeeded() {
   if (run('npm', seedArgs, BACKEND).status !== 0) fail('El seed falló');
 }
 
-function start(name, color, cwd, cmd, cmdArgs) {
-  const child = spawn(cmd, cmdArgs, { cwd, shell: IS_WIN && cmd === 'npm', stdio: ['inherit', 'pipe', 'pipe'] });
+function start(name, color, cwd, cmd, cmdArgs, { interactive = true } = {}) {
+  const child = spawn(cmd, cmdArgs, { cwd, shell: IS_WIN && cmd === 'npm', stdio: [interactive ? 'inherit' : 'ignore', 'pipe', 'pipe'] });
   const prefix = `\x1b[${color}m[${name}]\x1b[0m `;
   for (const stream of [child.stdout, child.stderr]) {
     let pending = '';
@@ -174,9 +176,20 @@ async function main() {
   if (!(await waitForBackend(port))) log(`El backend no respondió en :${port}; revisa sus logs`);
   start('web', '35', path.join(FRONT, 'portal-web-react'), 'npm', ['run', 'dev']);
 
-  const mobile = args.mobile === true ? 'all' : args.mobile;
-  if (mobile === 'portal' || mobile === 'all') start('portal-mobile', '33', PROJECTS[2], 'npm', ['start']);
-  if (mobile === 'bodega' || mobile === 'all') start('bodega-mobile', '34', PROJECTS[3], 'npm', ['start']);
+  const mobile = args['no-mobile'] ? 'none' : (args.mobile === undefined || args.mobile === true ? 'all' : args.mobile);
+  // Puertos fijos y sin stdin: dos Expo no pueden compartir el 8081 ni el teclado de esta terminal.
+  if (mobile === 'portal' || mobile === 'all') start('portal-mobile', '33', PROJECTS[2], 'npm', ['start', '--', '--port', '8081'], { interactive: false });
+  if (mobile === 'bodega' || mobile === 'all') start('bodega-mobile', '34', PROJECTS[3], 'npm', ['start', '--', '--port', '8082'], { interactive: false });
+  if (mobile !== 'none') {
+    // Sin stdin Expo no imprime el QR; se muestra la URL para pegarla en Expo Go ("Enter URL manually").
+    const lan = Object.entries(os.networkInterfaces())
+      .filter(([name]) => !/vEthernet|WSL|VirtualBox|VMware|Docker|Hyper-V/i.test(name))
+      .flatMap(([, list]) => list)
+      .find(i => i.family === 'IPv4' && !i.internal);
+    const host = lan ? lan.address : 'localhost';
+    if (mobile === 'portal' || mobile === 'all') log(`Expo portal: exp://${host}:8081`);
+    if (mobile === 'bodega' || mobile === 'all') log(`Expo bodega: exp://${host}:8082`);
+  }
 
   log('Todo en marcha. Ctrl+C para detener. Accesos demo: admin|bodega|percha|cliente@demo.karen.ec / Karen2026*');
 }
