@@ -135,12 +135,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <label className="flex items-center gap-2 text-sm text-ink-soft cursor-pointer select-none">
+            <label className="flex items-center gap-2 w-full min-h-11 sm:w-auto text-sm text-ink-soft cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={onlyInStock}
                 onChange={event => setOnlyInStock(event.target.checked)}
-                className="w-4 h-4 accent-[var(--c-karen)]"
+                className="w-5 h-5 sm:w-4 sm:h-4 accent-[var(--c-karen)]"
               />
               Solo con stock
             </label>
@@ -149,7 +149,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               id="orden"
               value={sort}
               onChange={event => setSort(event.target.value as SortKey)}
-              className="h-11 rounded-full border-2 border-mora bg-surface px-4 text-sm font-semibold text-ink"
+              className="h-11 min-w-0 flex-1 sm:flex-none rounded-full border-2 border-mora bg-surface px-4 text-base sm:text-sm font-semibold text-ink"
             >
               <option value="nombre">Nombre (A–Z)</option>
               <option value="precio-asc">Precio: menor a mayor</option>

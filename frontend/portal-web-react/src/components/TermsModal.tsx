@@ -39,18 +39,18 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
       aria-modal="true"
       aria-labelledby="terms-title"
     >
-      <div className="relative w-full max-w-3xl rounded-block bg-surface shadow-pop-lg border-2 border-mora overflow-hidden my-6 animate-scale-up flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-3xl rounded-block bg-surface shadow-pop-lg border-2 border-mora overflow-hidden my-6 animate-scale-up flex flex-col max-h-[90dvh]">
         {/* Encabezado del modal */}
-        <div className="bg-limon text-mora px-6 py-5 border-b-2 border-mora flex items-center justify-between shrink-0">
+        <div className="bg-limon text-mora px-4 py-3 sm:px-6 sm:py-5 border-b-2 border-mora flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full border-2 border-mora bg-surface text-mora flex items-center justify-center shrink-0">
+            <div className="hidden sm:flex w-11 h-11 rounded-full border-2 border-mora bg-surface text-mora items-center justify-center shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="terms-title" className="font-display font-extrabold text-2xl text-mora leading-tight">
+              <h2 id="terms-title" className="font-display font-extrabold text-lg sm:text-2xl text-mora leading-tight">
                 Términos y Condiciones del Servicio
               </h2>
-              <p className="text-xs font-semibold text-mora/80">
+              <p className="text-[11px] sm:text-xs font-semibold text-mora/80">
                 Supermercados Karen S.A. · RUC 0992345678001 · Guayaquil, Ecuador · Actualizado 2026
               </p>
             </div>
@@ -65,10 +65,10 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Barra de pestañas / filtro rápido */}
-        <div className="bg-page px-6 py-3 border-b-2 border-aisle-rule flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 text-xs">
+        <div className="bg-page px-4 sm:px-6 py-3 border-b-2 border-aisle-rule flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 text-xs">
           <button
             onClick={() => setActiveCategory('todos')}
-            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 ${
               activeCategory === 'todos'
                 ? 'bg-limon text-mora border-2 border-mora'
                 : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
@@ -78,7 +78,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('privacidad')}
-            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'privacidad'
                 ? 'bg-limon text-mora border-2 border-mora'
                 : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
@@ -89,7 +89,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('reservas')}
-            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'reservas'
                 ? 'bg-limon text-mora border-2 border-mora'
                 : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
@@ -100,7 +100,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('fefo')}
-            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'fefo'
                 ? 'bg-limon text-mora border-2 border-mora'
                 : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
@@ -111,7 +111,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('pagos')}
-            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-2 sm:py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'pagos'
                 ? 'bg-limon text-mora border-2 border-mora'
                 : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
@@ -123,7 +123,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Cuerpo con las cláusulas detalladas */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-sm text-ink-soft leading-relaxed flex-1">
+        <div className="p-4 sm:p-8 overflow-y-auto space-y-6 text-sm text-ink-soft leading-relaxed flex-1">
           {/* Bienvenida & Resumen General */}
           <div className="bg-karen-tint/30 rounded-xl p-4 border border-karen/20 flex gap-3 text-ink">
             <ShieldCheck className="w-5 h-5 text-karen-text shrink-0 mt-0.5" />
@@ -270,7 +270,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Pie del modal con botón de confirmación */}
-        <div className="bg-aisle px-6 py-4 border-t border-aisle-rule flex items-center justify-between gap-4 shrink-0">
+        <div className="bg-aisle px-4 sm:px-6 py-4 border-t border-aisle-rule flex items-center justify-between gap-4 shrink-0">
           <span className="text-xs text-ink-muted hidden sm:inline">
             Presione Escape o haga clic en Entendido para continuar.
           </span>

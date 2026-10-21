@@ -120,18 +120,18 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
             <span className="hidden sm:inline text-ink-muted">Ofertas programadas por fecha</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-ink-muted font-semibold tabular">{currentIndex + 1} de {totalSlides}</span>
+            <span className="text-ink-muted font-semibold tabular whitespace-nowrap">{currentIndex + 1} de {totalSlides}</span>
             <button
               onClick={handlePrev}
               aria-label="Oferta anterior"
-              className="w-9 h-9 rounded-full border-2 border-mora bg-surface text-ink flex items-center justify-center hover:bg-limon hover:text-mora transition-colors"
+              className="w-11 h-11 sm:w-9 sm:h-9 rounded-full border-2 border-mora bg-surface text-ink flex items-center justify-center hover:bg-limon hover:text-mora transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={handleNext}
               aria-label="Siguiente oferta"
-              className="w-9 h-9 rounded-full border-2 border-mora bg-surface text-ink flex items-center justify-center hover:bg-limon hover:text-mora transition-colors"
+              className="w-11 h-11 sm:w-9 sm:h-9 rounded-full border-2 border-mora bg-surface text-ink flex items-center justify-center hover:bg-limon hover:text-mora transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

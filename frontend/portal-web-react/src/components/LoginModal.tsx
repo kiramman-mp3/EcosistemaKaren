@@ -59,7 +59,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               {isRegister ? 'Con una cuenta puedes apartar y ver tus códigos de retiro.' : 'Ingresa para apartar y ver tus códigos de retiro.'}
             </p>
           </div>
-          <button onClick={onClose} className="w-9 h-9 -mr-2 -mt-1 rounded-full flex items-center justify-center hover:bg-mora/10" aria-label="Cerrar inicio de sesión">
+          <button onClick={onClose} className="w-11 h-11 -mr-3 -mt-2 rounded-full flex items-center justify-center hover:bg-mora/10" aria-label="Cerrar inicio de sesión">
             <X className="w-5 h-5" />
           </button>
         </div>

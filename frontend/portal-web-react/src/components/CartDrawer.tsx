@@ -52,7 +52,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           <h2 id="mi-lista" className="text-3xl">
             Mi lista <span className="text-xl tabular">({units})</span>
           </h2>
-          <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-mora/10" aria-label="Cerrar lista">
+          <button onClick={onClose} className="w-11 h-11 rounded-full flex items-center justify-center hover:bg-mora/10" aria-label="Cerrar lista">
             <X className="w-5 h-5" />
           </button>
         </header>
@@ -83,7 +83,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         <div className="flex items-center rounded-full border-2 border-mora">
                           <button
                             onClick={() => onUpdateQuantity(product.id, -1)}
-                            className="w-9 h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora"
+                            className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora"
                             aria-label={`Quitar una unidad de ${product.name}`}
                           >
                             <Minus className="w-4 h-4" />
@@ -92,7 +92,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                           <button
                             onClick={() => onUpdateQuantity(product.id, 1)}
                             disabled={quantity >= product.stock}
-                            className="w-9 h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora disabled:text-ink-faint disabled:hover:bg-transparent"
+                            className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora disabled:text-ink-faint disabled:hover:bg-transparent"
                             aria-label={`Agregar una unidad de ${product.name}`}
                           >
                             <Plus className="w-4 h-4" />
