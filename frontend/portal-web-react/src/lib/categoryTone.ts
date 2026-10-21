@@ -27,6 +27,6 @@ export const TONE_SOLID: Record<Tone, string> = {
   limon: 'bg-limon text-mora',
   naranja: 'bg-naranja text-mora',
   guayaba: 'bg-guayaba text-mora',
-  aguacate: 'bg-aguacate text-white',
+  aguacate: 'bg-aguacate-solid text-white',
   karen: 'bg-karen text-white',
 };
