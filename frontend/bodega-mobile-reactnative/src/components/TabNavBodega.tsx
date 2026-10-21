@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { BodegaTab } from '../types';
 import { colors, fonts } from '../theme/tokens';
 
+import { useTheme } from '../theme/ThemeContext';
+
 interface TabNavBodegaProps {
   activeTab: BodegaTab;
   onTabChange: (tab: BodegaTab) => void;
@@ -22,44 +24,56 @@ const TABS: { id: BodegaTab; icon: IconName; label: string; roles: string[] }[] 
   { id: 'promociones', icon: 'megaphone-outline', label: 'Ofertas', roles: ['ADMIN'] },
 ];
 
-export const TabNavBodega: React.FC<TabNavBodegaProps> = ({ activeTab, onTabChange, role, criticalAlertsCount }) => (
-  <View style={styles.container} accessibilityRole="tablist">
-    {TABS.filter(tab => tab.roles.includes(role)).map(tab => {
-      const active = activeTab === tab.id;
-      const badge = tab.id === 'alertas' && criticalAlertsCount > 0;
-      return (
-        <TouchableOpacity
-          key={tab.id}
-          style={styles.tab}
-          onPress={() => onTabChange(tab.id)}
-          activeOpacity={0.7}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: active }}
-          accessibilityLabel={badge ? `${tab.label}, ${criticalAlertsCount} lotes críticos` : tab.label}
-        >
-          <View style={[styles.indicator, active && styles.indicatorActive]} />
-          <View>
-            <Ionicons name={tab.icon} size={24} color={active ? colors.ink : colors.inkMuted} />
-            {badge && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{criticalAlertsCount > 99 ? '99+' : criticalAlertsCount}</Text>
-              </View>
-            )}
-          </View>
-          <Text
-            style={[styles.label, active && styles.labelActive]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.8}
-            maxFontSizeMultiplier={1.2}
+export const TabNavBodega: React.FC<TabNavBodegaProps> = ({ activeTab, onTabChange, role, criticalAlertsCount }) => {
+  const { isDark, colors: themeColors } = useTheme();
+
+  return (
+    <View style={[styles.container, isDark && { backgroundColor: '#0F172A', borderTopColor: '#1E293B' }]} accessibilityRole="tablist">
+      {TABS.filter(tab => tab.roles.includes(role)).map(tab => {
+        const active = activeTab === tab.id;
+        const badge = tab.id === 'alertas' && criticalAlertsCount > 0;
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            style={styles.tab}
+            onPress={() => onTabChange(tab.id)}
+            activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={badge ? `${tab.label}, ${criticalAlertsCount} lotes críticos` : tab.label}
           >
-            {tab.label}
-          </Text>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-);
+            <View style={[styles.indicator, active && styles.indicatorActive]} />
+            <View>
+              <Ionicons
+                name={tab.icon}
+                size={24}
+                color={active ? (isDark ? '#F8FAFC' : colors.ink) : (isDark ? '#94A3B8' : colors.inkMuted)}
+              />
+              {badge && (
+                <View style={[styles.badge, isDark && { borderColor: '#0F172A' }]}>
+                  <Text style={styles.badgeText}>{criticalAlertsCount > 99 ? '99+' : criticalAlertsCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.label,
+                isDark && { color: '#94A3B8' },
+                active && (isDark ? { color: '#F8FAFC', fontFamily: fonts.bold } : styles.labelActive),
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              maxFontSizeMultiplier={1.2}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

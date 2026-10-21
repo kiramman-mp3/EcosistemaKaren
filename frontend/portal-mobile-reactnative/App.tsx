@@ -18,6 +18,7 @@ import { reservationToPass, selectActiveReservation } from './src/reservations/r
 import { formatDate } from './src/utils/dates';
 import { notify } from './src/utils/dialogs';
 import { colors } from './src/theme/tokens';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
 
@@ -31,7 +32,7 @@ function secondsUntilExpiration(expiration: string | undefined): number {
 // Las descripciones del catálogo vienen como "Marca · contenido".
 const describe = (value?: string) => value?.replace(/\s*·\s*/g, ', ').trim() || undefined;
 
-export default function App() {
+function PortalAppContent() {
   const [fontsLoaded, fontError] = useFonts({
     Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold,
     ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold, Doto_900Black,
@@ -281,13 +282,13 @@ export default function App() {
     if (tab === 'reservas' && currentUser) void syncReservations(currentUser);
   };
 
+  const { isDark } = useTheme();
+
   if (!fontsLoaded && !fontError) {
     return (
-      <SafeAreaProvider>
-        <SafeAreaView style={styles.splash}>
-          <ActivityIndicator size="large" color={colors.white} />
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <SafeAreaView style={[styles.splash, isDark && { backgroundColor: '#0B1120' }]}>
+        <ActivityIndicator size="large" color={colors.white} />
+      </SafeAreaView>
     );
   }
 
@@ -296,19 +297,18 @@ export default function App() {
   const activeCode = pass && pass.remainingSeconds > 0 ? pass.code : undefined;
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-        <NavbarMobile
-          cartCount={cartCount}
-          cartTotal={cartTotal}
-          onOpenCart={() => setIsCartOpen(true)}
-          onOpenAccount={() => setIsLoginOpen(true)}
-          userName={currentUser?.nombre}
-          isOnline={isOnline}
-        />
+    <SafeAreaView style={[styles.safeArea, isDark && { backgroundColor: '#0F172A' }]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? "#0F172A" : colors.white} />
+      <NavbarMobile
+        cartCount={cartCount}
+        cartTotal={cartTotal}
+        onOpenCart={() => setIsCartOpen(true)}
+        onOpenAccount={() => setIsLoginOpen(true)}
+        userName={currentUser?.nombre}
+        isOnline={isOnline}
+      />
 
-        <View style={styles.body}>
+      <View style={[styles.body, isDark && { backgroundColor: '#0B1120' }]}>
           {activeTab === 'inicio' && (
             <HomeScreen
               products={products}
@@ -371,7 +371,7 @@ export default function App() {
           )}
         </View>
 
-        <SafeAreaView edges={['bottom']} style={styles.tabs}>
+        <SafeAreaView edges={['bottom']} style={[styles.tabs, isDark && { backgroundColor: '#0F172A' }]}>
           <TabBar activeTab={activeTab} onChange={goTo} offersCount={offers.length} hasActivePass={Boolean(activeCode)} />
         </SafeAreaView>
 
@@ -404,6 +404,15 @@ export default function App() {
           }}
         />
       </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <PortalAppContent />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

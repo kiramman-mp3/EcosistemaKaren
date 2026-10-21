@@ -33,8 +33,9 @@ import { useFonts, Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, A
 import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow';
 import { Doto_900Black } from '@expo-google-fonts/doto';
 import { colors, fonts } from './src/theme/tokens';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
-export default function App() {
+function BodegaAppContent() {
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol: string } | null>(null);
   const [activeTab, setActiveTab] = useState<BodegaTab>('ingreso');
   const [isOnline, setIsOnline] = useState<boolean>(false);
@@ -180,29 +181,30 @@ export default function App() {
     (a) => a.nivel === 'ROJO' || a.nivel === 'VENCIDO'
   ).length;
 
+  const { isDark } = useTheme();
+
   // Sin fuentes la app sigue funcionando con las del sistema (fontError).
   if (restoringSession || (!fontsLoaded && !fontError)) {
-    return <SafeAreaProvider>
-      <SafeAreaView style={styles.loadingSession}>
+    return (
+      <SafeAreaView style={[styles.loadingSession, isDark && { backgroundColor: '#0B1120' }]}>
         <ActivityIndicator size="large" color={colors.white} />
         <Text style={[styles.loadingSessionText, fontsLoaded && { fontFamily: fonts.medium }]}>Abriendo Bodega Karen…</Text>
       </SafeAreaView>
-    </SafeAreaProvider>;
+    );
   }
 
   if (!currentUser) {
-    return <SafeAreaProvider>
+    return (
       <BodegaLoginScreen onLogin={({ user }) => {
         setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
         setCurrentUser(user);
       }} />
-    </SafeAreaProvider>;
+    );
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.ink} />
+    <SafeAreaView style={[styles.safeArea, isDark && { backgroundColor: '#0F172A' }]}>
+      <StatusBar barStyle="light-content" backgroundColor={isDark ? '#0F172A' : colors.ink} />
 
       {/* Header Bodega */}
       <HeaderBodega
@@ -301,6 +303,15 @@ export default function App() {
         />
       )}
       </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <BodegaAppContent />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

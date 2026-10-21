@@ -79,7 +79,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:grid lg:grid-cols-[15rem_1fr] lg:gap-8">
       <nav aria-label="Pasillos" className="hidden lg:block">
         <div className="sticky top-32">
-          <p className="font-tag font-bold text-lg text-ink mb-2">Pasillos</p>
+          <p className="font-tag font-bold text-lg text-ink dark:text-white mb-2">Pasillos</p>
           <ul className="space-y-0.5">
             {aisles.map(name => {
               const active = selectedCategory === name;
@@ -89,11 +89,13 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                     onClick={() => onSelectCategory(name)}
                     aria-current={active ? 'true' : undefined}
                     className={`w-full flex items-baseline justify-between gap-2 rounded-tag px-3 py-2 text-left text-sm ${
-                      active ? 'bg-ink text-white font-semibold' : 'text-ink-soft hover:bg-white hover:text-ink'
+                      active
+                        ? 'bg-ink dark:bg-slate-800 text-white font-semibold'
+                        : 'text-ink-soft dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800/80 hover:text-ink dark:hover:text-white'
                     }`}
                   >
                     <span>{name}</span>
-                    <span className={`text-xs tabular ${active ? 'text-white/70' : 'text-ink-faint'}`}>
+                    <span className={`text-xs tabular ${active ? 'text-white/70' : 'text-ink-faint dark:text-slate-400'}`}>
                       {name === 'Todos' ? products.length : counts.get(name)}
                     </span>
                   </button>
@@ -113,7 +115,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               aria-selected={selectedCategory === name}
               onClick={() => onSelectCategory(name)}
               className={`shrink-0 h-9 px-3.5 rounded-tag text-sm font-semibold ${
-                selectedCategory === name ? 'bg-ink text-white' : 'bg-white text-ink-soft border border-aisle-rule'
+                selectedCategory === name
+                  ? 'bg-ink dark:bg-slate-800 text-white'
+                  : 'bg-white dark:bg-slate-800 text-ink-soft dark:text-slate-200 border border-aisle-rule dark:border-slate-700'
               }`}
             >
               {name}
@@ -123,18 +127,18 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
-            <h2 className="font-tag font-bold text-3xl sm:text-4xl text-ink leading-tight">{title}</h2>
-            <p className="mt-1 text-sm text-ink-muted tabular">
+            <h2 className="font-tag font-bold text-3xl sm:text-4xl text-ink dark:text-white leading-tight">{title}</h2>
+            <p className="mt-1 text-sm text-ink-muted dark:text-slate-400 tabular">
               {state === 'ready' || state === 'empty' ? `${visible.length} productos` : ' '}
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <label className="flex items-center gap-2 text-sm text-ink-soft cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-sm text-ink-soft dark:text-slate-300 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={onlyInStock}
                 onChange={event => setOnlyInStock(event.target.checked)}
-                className="w-4 h-4 accent-[#13284B]"
+                className="w-4 h-4 accent-[#13284B] dark:accent-karen"
               />
               Solo con stock
             </label>
@@ -143,7 +147,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               id="orden"
               value={sort}
               onChange={event => setSort(event.target.value as SortKey)}
-              className="h-10 rounded-tag border border-aisle-rule bg-white px-3 text-sm text-ink"
+              className="h-10 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-ink dark:text-slate-100"
             >
               <option value="nombre">Nombre (A–Z)</option>
               <option value="precio-asc">Precio: menor a mayor</option>
@@ -152,7 +156,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                className="h-10 w-10 rounded-tag border border-aisle-rule bg-white text-ink-muted hover:text-ink flex items-center justify-center"
+                className="h-10 w-10 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 text-ink-muted dark:text-slate-300 hover:text-ink dark:hover:text-white flex items-center justify-center transition-colors"
                 aria-label="Actualizar existencias"
                 title="Actualizar existencias"
               >
@@ -163,14 +167,14 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         </div>
 
         {state === 'offline' || state === 'error' ? (
-          <div className="rounded-tag bg-white border border-aisle-rule p-10 text-center">
+          <div className="rounded-tag bg-white dark:bg-slate-900 border border-aisle-rule dark:border-slate-800 p-10 text-center">
             <WifiOff className="w-10 h-10 mx-auto text-karen" />
-            <h3 className="mt-3 font-tag font-bold text-2xl text-ink">No pudimos cargar los productos</h3>
-            <p className="mt-1 text-ink-soft max-w-md mx-auto">
+            <h3 className="mt-3 font-tag font-bold text-2xl text-ink dark:text-white">No pudimos cargar los productos</h3>
+            <p className="mt-1 text-ink-soft dark:text-slate-300 max-w-md mx-auto">
               {errorMessage || 'La tienda no respondió.'} Revisa tu conexión e inténtalo de nuevo.
             </p>
             {onRefresh && (
-              <button onClick={onRefresh} className="mt-5 h-11 px-5 rounded-tag bg-ink text-white font-semibold">
+              <button onClick={onRefresh} className="mt-5 h-11 px-5 rounded-tag bg-ink dark:bg-slate-800 text-white font-semibold hover:bg-ink-soft">
                 Intentar de nuevo
               </button>
             )}
@@ -178,16 +182,16 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         ) : loading && products.length === 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" aria-busy="true">
             {Array.from({ length: 8 }, (_, index) => (
-              <div key={index} className="aspect-[3/4] rounded-tag bg-white border border-aisle-rule animate-pulse" />
+              <div key={index} className="aspect-[3/4] rounded-tag bg-white dark:bg-slate-800/80 border border-aisle-rule dark:border-slate-700 animate-pulse" />
             ))}
           </div>
         ) : visible.length === 0 ? (
-          <div className="rounded-tag bg-white border border-aisle-rule p-10 text-center">
-            <SearchX className="w-10 h-10 mx-auto text-ink-faint" />
-            <h3 className="mt-3 font-tag font-bold text-2xl text-ink">
+          <div className="rounded-tag bg-white dark:bg-slate-900 border border-aisle-rule dark:border-slate-800 p-10 text-center">
+            <SearchX className="w-10 h-10 mx-auto text-ink-faint dark:text-slate-500" />
+            <h3 className="mt-3 font-tag font-bold text-2xl text-ink dark:text-white">
               {products.length === 0 ? 'Aún no hay productos publicados' : 'No encontramos ese producto'}
             </h3>
-            <p className="mt-1 text-ink-soft">
+            <p className="mt-1 text-ink-soft dark:text-slate-300">
               {products.length === 0
                 ? 'Vuelve en unos minutos: la tienda está cargando su catálogo.'
                 : 'Prueba con otra palabra o revisa todos los pasillos.'}
@@ -195,7 +199,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             {products.length > 0 && (
               <button
                 onClick={() => { onSearch?.(''); setOnlyInStock(false); onSelectCategory('Todos'); }}
-                className="mt-5 h-11 px-5 rounded-tag border-2 border-ink text-ink font-semibold"
+                className="mt-5 h-11 px-5 rounded-tag border-2 border-ink dark:border-slate-500 text-ink dark:text-white font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 Ver todos los productos
               </button>
@@ -217,24 +221,24 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             </div>
 
             {totalProducts !== undefined && onPageChange && Math.ceil(totalProducts / (pageSize || 24)) > 1 && (
-              <nav aria-label="Paginación de catálogo" className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-aisle-rule pt-4 text-sm">
-                <p className="text-ink-soft">
-                  Página <span className="font-semibold text-ink">{(currentPage || 0) + 1}</span> de{' '}
-                  <span className="font-semibold text-ink">{Math.ceil(totalProducts / (pageSize || 24))}</span>{' '}
-                  <span className="text-ink-muted">({totalProducts} productos en total)</span>
+              <nav aria-label="Paginación de catálogo" className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-aisle-rule dark:border-slate-800 pt-4 text-sm">
+                <p className="text-ink-soft dark:text-slate-300">
+                  Página <span className="font-semibold text-ink dark:text-white">{(currentPage || 0) + 1}</span> de{' '}
+                  <span className="font-semibold text-ink dark:text-white">{Math.ceil(totalProducts / (pageSize || 24))}</span>{' '}
+                  <span className="text-ink-muted dark:text-slate-400">({totalProducts} productos en total)</span>
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onPageChange((currentPage || 0) - 1)}
                     disabled={(currentPage || 0) <= 0 || loading}
-                    className="h-9 px-4 rounded-tag border border-aisle-rule bg-white font-medium text-ink hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="h-9 px-4 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-ink dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Anterior
                   </button>
                   <button
                     onClick={() => onPageChange((currentPage || 0) + 1)}
                     disabled={(currentPage || 0) >= Math.ceil(totalProducts / (pageSize || 24)) - 1 || loading}
-                    className="h-9 px-4 rounded-tag border border-aisle-rule bg-white font-medium text-ink hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="h-9 px-4 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-ink dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Siguiente
                   </button>

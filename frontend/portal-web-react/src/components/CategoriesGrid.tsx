@@ -26,27 +26,27 @@ export const CategoriesGrid: React.FC<CategoriesGridProps> = ({ categories, prod
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12" aria-labelledby="pasillos-title">
       <div className="flex items-end justify-between gap-4 mb-6">
-        <h2 id="pasillos-title" className="font-tag font-bold text-3xl sm:text-4xl text-ink">Pasillos</h2>
+        <h2 id="pasillos-title" className="font-tag font-bold text-3xl sm:text-4xl text-ink dark:text-white">Pasillos</h2>
         {state === 'ready' && (
-          <p className="text-sm text-ink-muted tabular">{products.length} productos en {aisles.length} pasillos</p>
+          <p className="text-sm text-ink-muted dark:text-slate-400 tabular">{products.length} productos en {aisles.length} pasillos</p>
         )}
       </div>
 
       {state === 'loading' ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" aria-busy="true">
           {Array.from({ length: 8 }, (_, index) => (
-            <div key={index} className="h-44 rounded-tag bg-white border border-aisle-rule animate-pulse" />
+            <div key={index} className="h-44 rounded-tag bg-white dark:bg-slate-800/80 border border-aisle-rule dark:border-slate-700 animate-pulse" />
           ))}
         </div>
       ) : aisles.length === 0 ? (
-        <p className="text-ink-muted">Los pasillos aparecerán cuando la tienda publique su catálogo.</p>
+        <p className="text-ink-muted dark:text-slate-400">Los pasillos aparecerán cuando la tienda publique su catálogo.</p>
       ) : (
         <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {aisles.map(aisle => (
             <li key={aisle.name}>
               <button
                 onClick={() => onSelectCategory(aisle.name)}
-                className="group w-full text-left rounded-tag overflow-hidden bg-white border border-aisle-rule hover:border-ink focus-visible:border-ink"
+                className="group w-full text-left rounded-tag overflow-hidden bg-white dark:bg-slate-800/90 border border-aisle-rule dark:border-slate-700 hover:border-ink dark:hover:border-slate-500 focus-visible:border-ink transition-colors"
               >
                 <span className="flex items-baseline justify-between gap-2 bg-ink px-3.5 py-2.5">
                   <span className="font-tag font-bold text-white text-lg leading-tight">{aisle.name}</span>
