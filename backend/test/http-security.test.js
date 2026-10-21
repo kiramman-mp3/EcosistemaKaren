@@ -56,6 +56,26 @@ test('limita solicitudes y devuelve metadatos RateLimit estándar', async () => 
   assert.ok(blocked.headers['ratelimit']);
 });
 
+test('el limitador de auth cuenta solo logins fallidos y no /me', async () => {
+  const app = express();
+  const security = createSecurityMiddlewares({
+    AUTH_RATE_LIMIT_WINDOW_MS: '60000',
+    AUTH_RATE_LIMIT_MAX: '2',
+  });
+  app.use('/api/auth', security.auth);
+  app.post('/api/auth/login', (req, res) => res.status(req.query.ok ? 200 : 401).json({}));
+  app.get('/api/auth/me', (req, res) => res.status(401).json({}));
+  app.use(errorHandler);
+
+  for (let i = 0; i < 5; i += 1) {
+    assert.equal((await request(app).get('/api/auth/me')).status, 401);
+    assert.equal((await request(app).post('/api/auth/login?ok=1')).status, 200);
+  }
+  assert.equal((await request(app).post('/api/auth/login')).status, 401);
+  assert.equal((await request(app).post('/api/auth/login')).status, 401);
+  assert.equal((await request(app).post('/api/auth/login')).status, 429);
+});
+
 test('Swagger exige Basic Auth con comparación segura', async () => {
   const app = express();
   app.use('/docs', swaggerBasicAuth('admin', 'secret'), (req, res) => res.sendStatus(204));
