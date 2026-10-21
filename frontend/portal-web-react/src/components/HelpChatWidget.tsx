@@ -132,7 +132,7 @@ export const HelpChatWidget: React.FC = () => {
   };
 
   return (
-    <aside aria-label="Asistente de ayuda KarenBot" className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[45]">
+    <aside aria-label="Asistente de ayuda KarenBot" className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 sm:bottom-5 sm:right-5 z-[45]">
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -145,7 +145,7 @@ export const HelpChatWidget: React.FC = () => {
       )}
 
       {isOpen && (
-        <div className="w-[360px] sm:w-[400px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100dvh-6rem)] rounded-block bg-surface shadow-pop-lg border-2 border-mora flex flex-col overflow-hidden animate-scale-up">
+        <div className="w-[360px] sm:w-[400px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100dvh-9rem)] sm:max-h-[calc(100dvh-6rem)] rounded-block bg-surface shadow-pop-lg border-2 border-mora flex flex-col overflow-hidden animate-scale-up">
           {/* Cabecera del chat */}
           <div className="bg-limon text-mora border-b-2 border-mora px-5 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">

@@ -129,7 +129,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
         </div>
       </div>
 
-      <div className="border-t-2 border-aisle-rule pt-4 pb-20 sm:pb-4">
+      <div className="border-t-2 border-aisle-rule pt-4 pb-16 sm:pb-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ink-muted">
           <p>© {new Date().getFullYear()} Supermercado Karen S.A. · RUC 0992345678001</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
