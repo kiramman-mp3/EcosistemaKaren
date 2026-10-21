@@ -8,7 +8,7 @@ export type IllustrationName = 'basket' | 'ticket' | 'offline' | 'search' | 'exp
 export const Illustration: React.FC<{ name: IllustrationName; size?: number }> = ({ name, size = 120 }) => {
   const stroke = { stroke: colors.mora, strokeWidth: 3, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   return (
-    <Svg width={size} height={size} viewBox="0 0 120 120" fill="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <Svg width={size} height={size} viewBox="0 0 120 120" fill="none" aria-hidden>
       <Ellipse cx="60" cy="108" rx="34" ry="5" fill={colors.mora} opacity={0.12} />
       {name === 'basket' && (
         <G {...stroke}>
