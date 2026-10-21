@@ -3,6 +3,8 @@ import { Check, Copy, Download, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
 import { ReservationPass } from '../types';
+import { Button } from './ui/Button';
+import { Illustration } from './ui/Illustration';
 
 interface ReservationModalProps {
   pass: ReservationPass;
@@ -41,6 +43,8 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
 
   const expired = secondsLeft <= 0;
   const urgent = !expired && secondsLeft <= 120;
+  const initial = pass.initialSeconds || 600;
+  const remainingPercent = Math.max(0, Math.min(100, (secondsLeft / initial) * 100));
 
   const handleCopyCode = () => {
     void navigator.clipboard?.writeText(pass.code);
@@ -71,57 +75,77 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/70 p-3 sm:p-6 flex items-start sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-mora/75 p-3 sm:p-6 flex items-start sm:items-center justify-center">
       <div role="dialog" aria-modal="true" aria-labelledby="pase-titulo" className="relative w-full max-w-sm animate-slide-up">
         <button
           onClick={onClose}
-          className="absolute -top-1 right-0 sm:-right-12 sm:top-0 z-10 w-10 h-10 rounded-full bg-white text-ink flex items-center justify-center"
+          className="absolute -top-1 right-0 sm:-right-12 sm:top-0 z-10 w-10 h-10 rounded-full bg-limon text-mora border-2 border-mora flex items-center justify-center"
           aria-label="Cerrar pase"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div ref={ticketRef} className="bg-white text-ink">
+        {/* El papel del ticket es siempre blanco con tinta mora: se imprime y se escanea igual en modo oscuro. */}
+        <div ref={ticketRef} className="bg-white text-mora animate-print-down">
           <div className="ticket-edge bg-transparent" aria-hidden="true" />
-          <div className="px-6 pt-4 pb-6">
+          <div className="relative px-6 pt-4 pb-6">
+            {!expired && (
+              <span
+                className="absolute right-4 top-3 rounded-tag border-[3px] border-aguacate-solid px-2.5 py-1 font-display text-lg font-extrabold uppercase leading-none text-aguacate-solid animate-stamp"
+                data-export-ignore="true"
+              >
+                ¡Apartado!
+              </span>
+            )}
             <div className="text-center">
-              <p className="font-tag font-bold text-2xl leading-none">Supermercado Karen</p>
-              <p className="mt-1 text-xs text-ink-muted">{pass.storeLocation}</p>
+              <p className="font-display font-extrabold text-2xl leading-none">Supermercado Karen</p>
+              <p className="mt-1 text-xs text-mora/70">{pass.storeLocation}</p>
             </div>
 
             <div className="rule-dashed my-4" aria-hidden="true" />
 
-            <h2 id="pase-titulo" className="text-center text-sm text-ink-soft">Pase de retiro de</h2>
-            <p className="text-center font-semibold">{pass.customerName}</p>
+            <h2 id="pase-titulo" className="text-center text-sm text-mora/80 font-semibold">Pase de retiro de</h2>
+            <p className="text-center font-display font-extrabold text-lg">{pass.customerName}</p>
 
             <div className="mt-4 flex flex-col items-center">
-              <div className="p-2 border border-aisle-rule rounded-tag">
-                <QRCodeSVG value={pass.code} size={148} level="M" fgColor="#13284B" />
+              <div className="p-2 border-2 border-mora rounded-tag">
+                <QRCodeSVG value={pass.code} size={148} level="M" fgColor="#2A1148" />
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <span className="font-tag font-bold text-4xl tracking-wider tabular">{pass.code}</span>
+                <span className="font-stamp font-black text-4xl tracking-wider tabular">{pass.code}</span>
                 <button
                   onClick={handleCopyCode}
                   data-export-ignore="true"
-                  className="p-2 rounded-tag text-ink-muted hover:text-ink hover:bg-aisle"
+                  className="p-2 rounded-full text-mora/70 hover:text-mora hover:bg-limon"
                   aria-label="Copiar código"
                 >
-                  {copied ? <Check className="w-4 h-4 text-fresh" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-aguacate-solid" /> : <Copy className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             <div
-              className={`mt-4 rounded-tag px-4 py-3 text-center ${expired ? 'bg-aisle' : urgent ? 'bg-karen text-white' : 'bg-sticker'}`}
+              className={`mt-4 rounded-tag border-2 border-mora px-4 py-3 text-center ${expired ? 'bg-[#EFEAF5]' : urgent ? 'bg-naranja' : 'bg-limon'}`}
               role="timer"
               aria-live="off"
             >
               {expired ? (
-                <p className="font-semibold">Este código venció. Las unidades volvieron a la percha.</p>
+                <div className="flex flex-col items-center">
+                  <Illustration name="expired" className="w-20 h-20" />
+                  <p className="font-display font-extrabold">Este código venció.</p>
+                  <p className="text-sm">Liberamos tus productos; puedes volver a apartarlos.</p>
+                </div>
               ) : (
                 <>
-                  <p className="font-tag font-bold text-5xl leading-none tabular">{formatCountdown(secondsLeft)}</p>
-                  <p className={`mt-1 text-sm ${urgent ? 'text-white' : 'text-ink-soft'}`}>para retirar y pagar en caja</p>
+                  <p className={`font-display font-extrabold text-5xl leading-none tabular ${urgent ? 'animate-tick-pulse' : ''}`}>
+                    {formatCountdown(secondsLeft)}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {urgent ? 'Se acaba el tiempo: pasa a caja ya' : 'para retirar y pagar en caja'}
+                  </p>
+                  <div className="mt-2 h-2.5 rounded-full bg-mora/20 overflow-hidden" aria-hidden="true">
+                    <div className="h-full rounded-full bg-mora transition-[width] duration-1000 ease-linear" style={{ width: `${remainingPercent}%` }} />
+                  </div>
                 </>
               )}
             </div>
@@ -133,7 +157,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
                   {pass.items.map((item, index) => (
                     <li key={`${item.productName}-${index}`} className="flex justify-between gap-3">
                       <span className="min-w-0">
-                        <span className="tabular">{item.quantity} × </span>{item.productName}
+                        <span className="tabular font-bold">{item.quantity} × </span>{item.productName}
                       </span>
                       <span className="shrink-0 tabular">${(item.quantity * item.price).toFixed(2)}</span>
                     </li>
@@ -141,34 +165,33 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
                 </ul>
                 <div className="rule-dashed my-3" aria-hidden="true" />
                 <div className="flex justify-between items-baseline">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-tag font-bold text-2xl tabular">${pass.total.toFixed(2)}</span>
+                  <span className="font-bold">Total</span>
+                  <span className="font-display font-extrabold text-3xl tabular">${pass.total.toFixed(2)}</span>
                 </div>
               </>
             )}
 
-            <p className="mt-4 text-xs text-ink-muted text-center leading-relaxed">
+            <p className="mt-4 text-xs text-mora/70 text-center leading-relaxed">
               Muestra este código en caja. Pagas ahí mismo.
             </p>
           </div>
           <div className="ticket-edge-bottom" aria-hidden="true" />
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <Button
             onClick={() => void handleSaveImage()}
             disabled={savingImage}
             aria-label="Guardar comprobante como imagen"
-            className="h-12 rounded-tag bg-white text-ink font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+            variant="surface"
+            size="lg"
           >
             <Download className="w-4 h-4" />
             {savingImage ? 'Guardando…' : 'Guardar imagen'}
-          </button>
-          <button onClick={onClose} className="h-12 rounded-tag bg-sticker text-ink font-semibold">
-            Listo
-          </button>
+          </Button>
+          <Button onClick={onClose} variant="limon" size="lg">Listo</Button>
         </div>
-        {saveError && <p role="alert" className="mt-2 text-center text-sm text-white">{saveError}</p>}
+        {saveError && <p role="alert" className="mt-2 text-center text-sm font-semibold text-white">{saveError}</p>}
       </div>
     </div>
   );
