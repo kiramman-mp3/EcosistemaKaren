@@ -28,11 +28,11 @@ export const NavbarMobile: React.FC<HeaderProps> = ({ cartCount, cartTotal, onOp
     <View>
       <View style={styles.header}>
         <View style={styles.brand}>
-          {/* El logo siempre va sobre blanco para conservar su rojo y su texto carbón. */}
+          {/* Logo transparente: en modo oscuro va sobre una placa blanca para no perder el texto carbón. */}
           <View style={styles.logoPlate} accessible accessibilityLabel="Supermercado Karen">
             <Image
-              source={require('../../assets/supermercado_karen.jpeg')}
-              style={{ position: 'absolute', width: LOGO_WIDTH - 6, height: LOGO_WIDTH - 6, left: 1, top: (LOGO_HEIGHT - 4 - (LOGO_WIDTH - 6)) / 2 }}
+              source={require('../../assets/supermercado_karen.png')}
+              style={{ width: '100%', height: '100%' }}
               resizeMode="contain"
             />
           </View>
@@ -120,8 +120,7 @@ const styles = themed(() => StyleSheet.create({
   },
   brand: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   logoPlate: {
-    width: LOGO_WIDTH, height: LOGO_HEIGHT, borderRadius: radius.tag, backgroundColor: '#FFFFFF',
-    borderWidth: 2, borderColor: colors.mora, overflow: 'hidden',
+    width: LOGO_WIDTH, height: LOGO_HEIGHT, borderRadius: radius.tag, backgroundColor: colors.logoPlate, padding: 3,
   },
   iconButton: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   account: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 4, maxWidth: 96 },

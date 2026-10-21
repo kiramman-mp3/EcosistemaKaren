@@ -9,6 +9,7 @@
   --c-surface: #FFFFFF;
   --c-mora: #2A1D14;
   --c-shadow: #2A1D14;
+  --c-logo-plate: transparent;
 
   --c-ink: #2A1D14;
   --c-ink-soft: #54443A;
@@ -44,6 +45,7 @@
   --c-page: #1C1612;
   --c-surface: #2A1D14;
   --c-shadow: #0D0A07;
+  --c-logo-plate: #FFFFFF;
 
   --c-ink: #FBF6EC;
   --c-ink-soft: #E6DAC6;

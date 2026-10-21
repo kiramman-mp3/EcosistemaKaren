@@ -29,8 +29,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="relative bg-white rounded-tag shrink-0 border-2 border-mora overflow-hidden w-40 aspect-[2.7/1]">
-                <img src="/supermercado_karen.jpeg" alt="Supermercado Karen Logo" className="absolute left-1/2 top-1/2 w-[102%] max-w-none -translate-x-1/2 -translate-y-1/2" />
+              <div className="bg-logo-plate rounded-tag shrink-0 p-1.5 w-40">
+                <img src="/supermercado_karen.png" alt="Supermercado Karen Logo" className="block w-full h-auto" />
               </div>
               <div>
                 <span className="block font-display font-extrabold text-xl leading-tight">Supermercado Karen</span>
