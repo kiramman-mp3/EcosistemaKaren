@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LogOut, Moon, Search, ShoppingBasket, Sun, Ticket, User, X } from 'lucide-react';
 import { NavTab } from '../types';
 import { useTheme } from '../context/ThemeContext';
@@ -34,23 +34,53 @@ export const Navbar: React.FC<NavbarProps> = ({
   const firstName = user?.nombre.split(' ')[0];
   const { theme, toggleTheme } = useTheme();
 
+  const headerRef = useRef<HTMLElement>(null);
+  const tabsRef = useRef<HTMLElement>(null);
+  const [hidden, setHidden] = useState(false);
+
+  // En pantallas angostas la barra de pestañas se desplaza: la activa debe quedar a la vista.
+  useEffect(() => {
+    const nav = tabsRef.current;
+    const tab = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !tab) return;
+    nav.scrollTo({ left: tab.offsetLeft - (nav.clientWidth - tab.offsetWidth) / 2, behavior: 'smooth' });
+  }, [activeTab]);
+  useEffect(() => {
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - last) < 8) return;
+      // No se esconde mientras la persona escribe en la búsqueda.
+      const busy = headerRef.current?.contains(document.activeElement) ?? false;
+      setHidden(y > last && y > 120 && !busy);
+      last = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 bg-surface border-b-2 border-mora/90">
+    // En móvil el encabezado ocupa casi 190px: se esconde al bajar y reaparece al subir (o al enfocar la búsqueda).
+    <header
+      ref={headerRef}
+      className={`sticky top-0 z-40 bg-surface border-b-2 border-mora/90 transition-transform duration-200 sm:translate-y-0 ${hidden ? '-translate-y-full' : ''}`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-2.5 sm:gap-4 h-20 sm:h-24">
+        {/* En móvil: logo y acciones arriba y la búsqueda a todo el ancho debajo; desde sm, una sola fila. */}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 py-2.5 sm:flex-nowrap sm:gap-4 sm:h-24 sm:py-0">
           <button
             onClick={() => onTabChange('inicio')}
-            className="flex items-center shrink-0 group rounded-tag"
+            className="order-1 flex items-center shrink-0 group rounded-tag"
             aria-label="Supermercado Karen, ir al inicio"
           >
-            <div className="p-1.5 w-40 sm:w-56 transition-transform group-hover:-rotate-2 group-hover:scale-105">
+            <div className="p-1 sm:p-1.5 w-32 sm:w-56 transition-transform group-hover:-rotate-2 group-hover:scale-105">
               <Logo alt="Supermercado Karen" className="w-full" />
             </div>
           </button>
 
           <form
             role="search"
-            className="relative flex-1 min-w-0"
+            className="relative order-last basis-full min-w-0 sm:order-2 sm:basis-auto sm:flex-1"
             onSubmit={(event) => { event.preventDefault(); onTabChange('productos'); }}
           >
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" aria-hidden="true" />
@@ -63,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               placeholder="¿Qué buscas hoy? Leche, atún, pan…"
               aria-label="Buscar productos"
-              className="w-full h-12 pl-10 pr-10 rounded-full bg-page border-2 border-transparent text-sm font-semibold text-ink placeholder:text-ink-muted placeholder:font-normal focus:bg-surface focus:border-mora focus:outline-none transition-colors"
+              className="w-full h-12 pl-10 pr-10 rounded-full bg-page border-2 border-transparent text-base sm:text-sm font-semibold text-ink placeholder:text-ink-muted placeholder:font-normal focus:bg-surface focus:border-mora focus:outline-none transition-colors"
             />
             {searchQuery && (
               <button
@@ -82,13 +112,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={(event) => toggleTheme({ x: event.clientX, y: event.clientY })}
             aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
-            className="shrink-0 w-11 h-11 rounded-full text-ink hover:bg-limon hover:text-mora flex items-center justify-center transition-colors"
+            className="order-2 ml-auto sm:ml-0 sm:order-3 shrink-0 w-11 h-11 rounded-full text-ink hover:bg-limon hover:text-mora flex items-center justify-center transition-colors"
           >
             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
 
           {user ? (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="order-3 sm:order-4 flex items-center gap-1 shrink-0">
               <span className="hidden sm:inline text-sm text-ink-soft">Hola, <strong className="font-display font-extrabold text-ink">{firstName}</strong></span>
               <button
                 onClick={onLogout}
@@ -103,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onOpenLogin}
               aria-label="Ingresar"
-              className="shrink-0 h-11 px-3 sm:px-4 rounded-full text-sm font-bold text-ink hover:bg-limon hover:text-mora flex items-center gap-2 transition-colors"
+              className="order-3 sm:order-4 shrink-0 h-11 px-3 sm:px-4 rounded-full text-sm font-bold text-ink hover:bg-limon hover:text-mora flex items-center gap-2 transition-colors"
             >
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Ingresar</span>
@@ -113,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onOpenCart}
             data-cart-target
-            className="press shrink-0 h-12 pl-3.5 pr-4 rounded-full bg-karen text-white border-2 border-mora flex items-center gap-2.5"
+            className="order-4 sm:order-5 press shrink-0 h-12 pl-3.5 pr-4 rounded-full bg-karen text-white border-2 border-mora flex items-center gap-2.5"
             aria-label={`Abrir mi lista, ${cartCount} productos`}
           >
             <ShoppingBasket className="w-5 h-5" />
@@ -127,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="flex items-center justify-between gap-4 pb-3">
-          <nav className="flex gap-1.5 overflow-x-auto no-scrollbar py-1" aria-label="Secciones">
+          <nav ref={tabsRef} className="relative flex gap-1.5 overflow-x-auto no-scrollbar py-1" aria-label="Secciones">
             {TABS.map(tab => {
               const active = activeTab === tab.id;
               return (
