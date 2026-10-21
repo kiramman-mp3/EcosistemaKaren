@@ -29,8 +29,10 @@ import {
 import { api } from './src/api/client';
 import { classifyExpiryDays } from './src/config/businessRules';
 import { daysUntil } from './src/utils/dates';
-import { useFonts, Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold } from '@expo-google-fonts/archivo';
-import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow';
+import { useFonts } from 'expo-font';
+import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
+import { BricolageGrotesque_600SemiBold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque';
+import { Caveat_700Bold } from '@expo-google-fonts/caveat';
 import { Doto_900Black } from '@expo-google-fonts/doto';
 import { colors, fonts } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
@@ -42,8 +44,9 @@ function BodegaAppContent() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [restoringSession, setRestoringSession] = useState(true);
   const [fontsLoaded, fontError] = useFonts({
-    Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold,
-    ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold, Doto_900Black,
+    Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold,
+    BricolageGrotesque_600SemiBold, BricolageGrotesque_800ExtraBold,
+    Caveat_700Bold, Doto_900Black,
   });
 
   // Core data states
