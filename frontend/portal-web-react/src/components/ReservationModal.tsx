@@ -90,13 +90,13 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
         <div ref={ticketRef} className="paper-light bg-white text-mora animate-print-down">
           <div className="ticket-edge bg-transparent" aria-hidden="true" />
           <div className="relative px-6 pt-4 pb-6">
+            {/* En el flujo y no flotando: pegado a la esquina se montaba sobre el nombre de la tienda. */}
             {!expired && (
-              <span
-                className="absolute right-4 top-3 rounded-tag border-[3px] border-aguacate-solid px-2.5 py-1 font-display text-lg font-extrabold uppercase leading-none text-aguacate-solid animate-stamp"
-                data-export-ignore="true"
-              >
-                ¡Apartado!
-              </span>
+              <div className="mb-3 flex justify-center" data-export-ignore="true">
+                <span className="rounded-tag border-[3px] border-aguacate-solid px-2.5 py-1 font-display text-lg font-extrabold uppercase leading-none text-aguacate-solid animate-stamp">
+                  ¡Apartado!
+                </span>
+              </div>
             )}
             <div className="text-center">
               <p className="font-display font-extrabold text-2xl leading-none">Supermercado Karen</p>
