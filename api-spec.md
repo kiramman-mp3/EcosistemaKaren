@@ -11,6 +11,10 @@
 incluya otro rol. `POST /auth/login` entrega un JWT HS256 válido durante 24 horas. Los
 endpoints protegidos requieren `Authorization: Bearer <token>`.
 
+El portal web usa una sesión por cookie HttpOnly (`X-Session-Mode: cookie`) y es solo para
+clientes: ese login responde `403` para `BODEGUERO`, `PERCHERO` y `ADMIN`, que ingresan por
+la app de bodega con Bearer.
+
 | Operación | Roles permitidos |
 | --- | --- |
 | Crear categorías o productos | `ADMIN` |
