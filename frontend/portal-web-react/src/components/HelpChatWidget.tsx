@@ -107,7 +107,7 @@ export const HelpChatWidget: React.FC = () => {
       } else if (lower.includes('humano') || lower.includes('asesor') || lower.includes('whatsapp') || lower.includes('telefono')) {
         replyText = 'Con gusto te comunicamos con nuestro equipo de atención humana en WhatsApp:';
         actionUrl = 'https://wa.me/593998765432?text=Hola%20Supermercado%20Karen,%20necesito%20asistencia%20personalizada';
-        actionLabel: 'Contactar a Asesor por WhatsApp';
+        actionLabel = 'Contactar a Asesor por WhatsApp';
       }
 
       const botMsg: ChatMessage = {
