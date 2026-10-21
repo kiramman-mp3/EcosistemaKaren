@@ -10,6 +10,8 @@ interface HeroSectionProps {
   onNavigate: (tab: NavTab) => void;
   /** Las ofertas que vencen primero: las tres primeras se pegan como pegatinas. */
   offers?: FlashOffer[];
+  /** Reserva el espacio de las pegatinas mientras llegan las ofertas. */
+  loadingOffers?: boolean;
   userName?: string;
   onReserveOffer?: (offer: FlashOffer) => void;
   activePassCode?: string;
@@ -32,7 +34,7 @@ const STICKER_STYLE = [
 ];
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
-  onNavigate, offers = [], userName, onReserveOffer, activePassCode, onOpenPass,
+  onNavigate, offers = [], loadingOffers = false, userName, onReserveOffer, activePassCode, onOpenPass,
 }) => {
   const stickers = offers.slice(0, 3);
   const greeting = userName ? `${greetingFor()}, ${userName}.` : `${greetingFor()}.`;
@@ -121,6 +123,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               })}
             </ul>
           </div>
+        ) : loadingOffers ? (
+          <ul className="grid sm:grid-cols-2 gap-5 pt-2" aria-hidden="true">
+            {STICKER_STYLE.map((style, index) => (
+              <li key={index} className={style.span}>
+                <div className="skeleton h-32 rounded-tag border-2 border-mora/30" />
+              </li>
+            ))}
+          </ul>
         ) : (
           <div className="hidden lg:block" aria-hidden="true" />
         )}

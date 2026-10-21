@@ -447,13 +447,21 @@ export const App: React.FC = () => {
             <HeroSection
               onNavigate={goTo}
               offers={offersByExpiry}
+              loadingOffers={dataState === 'loading'}
               userName={currentUser?.nombre.split(' ')[0]}
               onReserveOffer={offer => void handleReserveOffer(offer)}
               activePassCode={activeCode}
               onOpenPass={() => setIsPassModalOpen(true)}
             />
 
-            <OffersMarquee offers={offersByExpiry} onSelect={() => goTo('ofertas')} />
+            <OffersMarquee offers={offersByExpiry} loading={dataState === 'loading'} onSelect={() => goTo('ofertas')} />
+
+            <SpecialOffersSlider
+              realOffers={offers}
+              onReserveFlashOffer={offer => void handleReserveOffer(offer)}
+              onExploreProducts={() => goTo('productos')}
+              onExploreOffers={() => goTo('ofertas')}
+            />
 
             {offersByExpiry.length > 3 && (
               <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-14" aria-labelledby="por-vencer">
@@ -475,13 +483,6 @@ export const App: React.FC = () => {
                 </div>
               </section>
             )}
-
-            <SpecialOffersSlider
-              realOffers={offers}
-              onReserveFlashOffer={offer => void handleReserveOffer(offer)}
-              onExploreProducts={() => goTo('productos')}
-              onExploreOffers={() => goTo('ofertas')}
-            />
 
             <CategoriesGrid
               categories={categoriesList.filter(category => category !== 'Todos')}
