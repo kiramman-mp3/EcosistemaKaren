@@ -99,17 +99,17 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
   );
 };
 
-const INK = '#2A1148';
+const INK = '#2A1D14';
 
 const styles = themed(() => StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.78)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.78)' },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
   ticket: { backgroundColor: '#FFFFFF', padding: 20, borderRadius: 6, width: '100%', maxWidth: 420, alignSelf: 'center' },
   stamp: { position: 'absolute', right: 14, top: 12, zIndex: 2 },
   stampText: { fontFamily: fonts.tag, fontSize: 15, color: '#0E7A43', borderWidth: 3, borderColor: '#0E7A43', borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 3 },
   store: { fontFamily: fonts.tag, fontSize: 26, color: INK, textAlign: 'center', marginTop: 18 },
-  branch: { fontFamily: fonts.body, fontSize: 13, color: 'rgba(42,17,72,0.7)', textAlign: 'center' },
-  dashed: { borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: '#CBBBE0', marginVertical: 14 },
+  branch: { fontFamily: fonts.body, fontSize: 13, color: 'rgba(42,29,20,0.7)', textAlign: 'center' },
+  dashed: { borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: '#D4C4A8', marginVertical: 14 },
   customer: { fontFamily: fonts.medium, fontSize: 14, color: INK, textAlign: 'center', marginBottom: 12 },
   customerName: { fontFamily: fonts.tag },
   qr: { alignSelf: 'center', padding: 8, borderWidth: 2, borderColor: INK, borderRadius: radius.tag },
@@ -119,7 +119,7 @@ const styles = themed(() => StyleSheet.create({
   timerExpired: { backgroundColor: '#EFEAF5' },
   countdown: { fontFamily: fonts.tag, fontSize: 52, lineHeight: 56, color: INK },
   timerCaption: { fontFamily: fonts.semibold, fontSize: 14, color: INK },
-  bar: { alignSelf: 'stretch', height: 10, borderRadius: 5, backgroundColor: 'rgba(42,17,72,0.2)', marginTop: 8, overflow: 'hidden' },
+  bar: { alignSelf: 'stretch', height: 10, borderRadius: 5, backgroundColor: 'rgba(42,29,20,0.2)', marginTop: 8, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: INK, borderRadius: 5 },
   expiredTitle: { fontFamily: fonts.tag, fontSize: 18, color: INK, textAlign: 'center' },
   expiredText: { fontFamily: fonts.body, fontSize: 14, color: INK, textAlign: 'center' },
@@ -129,6 +129,6 @@ const styles = themed(() => StyleSheet.create({
   lineTotal: { fontFamily: fonts.medium, fontSize: 14, color: INK },
   totalLabel: { fontFamily: fonts.bold, fontSize: 16, color: INK },
   total: { fontFamily: fonts.tag, fontSize: 28, color: INK },
-  note: { fontFamily: fonts.body, fontSize: 13, color: 'rgba(42,17,72,0.7)', textAlign: 'center', marginTop: 12 },
+  note: { fontFamily: fonts.body, fontSize: 13, color: 'rgba(42,29,20,0.7)', textAlign: 'center', marginTop: 12 },
   done: { marginTop: 14, width: '100%', maxWidth: 420, alignSelf: 'center' },
 }));

@@ -33,12 +33,12 @@ describe('themed', () => {
     const styles = themed(factory);
 
     setThemeMode('light');
-    expect(styles.page.backgroundColor).toBe('#F6F1FB');
-    expect(styles.page.backgroundColor).toBe('#F6F1FB');
+    expect(styles.page.backgroundColor).toBe('#FBF6EC');
+    expect(styles.page.backgroundColor).toBe('#FBF6EC');
     expect(factory).toHaveBeenCalledTimes(1);
 
     setThemeMode('dark');
-    expect(styles.page.backgroundColor).toBe('#1B0B2E');
+    expect(styles.page.backgroundColor).toBe('#1C1612');
     expect(factory).toHaveBeenCalledTimes(2);
   });
 });

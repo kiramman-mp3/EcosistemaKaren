@@ -118,7 +118,7 @@ export const MermaModal: React.FC<MermaModalProps> = ({ visible, lotId, lotNumbe
 
 const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,17,72,0.55)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.55)', justifyContent: 'flex-end' },
   sheet: { maxHeight: '92%', backgroundColor: colors.card, borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 20 },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
   title: { fontFamily: fonts.tag, fontSize: 26, color: colors.ink },

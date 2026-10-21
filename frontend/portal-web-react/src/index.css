@@ -5,17 +5,17 @@
 /* Paleta "El pasillo de Karen". Cada color tiene su par oscuro; los componentes
    usan los nombres (bg-surface, text-ink...) y no necesitan variantes dark:. */
 :root {
-  --c-page: #F6F1FB;
+  --c-page: #FBF6EC;
   --c-surface: #FFFFFF;
-  --c-mora: #2A1148;
-  --c-shadow: #2A1148;
+  --c-mora: #2A1D14;
+  --c-shadow: #2A1D14;
 
-  --c-ink: #2A1148;
-  --c-ink-soft: #4A3566;
-  --c-ink-muted: #6B5A86;
-  --c-ink-faint: #8E7FA6;
-  --c-rule: #E2D8EE;
-  --c-rule-strong: #CBBBE0;
+  --c-ink: #2A1D14;
+  --c-ink-soft: #54443A;
+  --c-ink-muted: #6E5E50;
+  --c-ink-faint: #9A8A76;
+  --c-rule: #EADFCB;
+  --c-rule-strong: #D4C4A8;
 
   --c-karen: #D52B1E;
   --c-karen-deep: #A81E14;
@@ -41,16 +41,16 @@
 }
 
 :root.dark {
-  --c-page: #1B0B2E;
-  --c-surface: #2A1148;
-  --c-shadow: #0C0516;
+  --c-page: #1C1612;
+  --c-surface: #2A1D14;
+  --c-shadow: #0D0A07;
 
-  --c-ink: #F6F1FB;
-  --c-ink-soft: #D9CCEB;
-  --c-ink-muted: #B5A5CC;
-  --c-ink-faint: #8E7FA6;
-  --c-rule: #43275F;
-  --c-rule-strong: #5B3A7C;
+  --c-ink: #FBF6EC;
+  --c-ink-soft: #E6DAC6;
+  --c-ink-muted: #BFAF99;
+  --c-ink-faint: #9A8A76;
+  --c-rule: #44382D;
+  --c-rule-strong: #5C4C3C;
 
   --c-karen-deep: #FF8A80;
   --c-karen-tint: #4A1620;

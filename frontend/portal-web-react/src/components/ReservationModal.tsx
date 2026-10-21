@@ -109,7 +109,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
 
             <div className="mt-4 flex flex-col items-center">
               <div className="p-2 border-2 border-mora rounded-tag">
-                <QRCodeSVG value={pass.code} size={148} level="M" fgColor="#2A1148" />
+                <QRCodeSVG value={pass.code} size={148} level="M" fgColor="#2A1D14" />
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <span className="font-stamp font-black text-4xl tracking-wider tabular">{pass.code}</span>
