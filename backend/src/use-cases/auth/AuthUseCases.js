@@ -2,6 +2,7 @@ const { ValidationException, UnauthorizedException } = require('../../domain/exc
 const User = require('../../domain/entities/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('node:crypto');
 
 // Hash bcrypt (cost 10) de una contraseña aleatoria que nadie conoce.
 const DUMMY_PASSWORD_HASH = '$2a$10$veVfRmIrMq4Ua1XLpCiKnO2Jvbwn54u2sVtAxdts9kZ8MC8Cnd476';
@@ -27,7 +28,7 @@ class RegisterUser {
     const savedUser = await this.userRepository.save(user);
 
     const token = jwt.sign(
-      { id: savedUser.id, nombre: savedUser.nombre, email: savedUser.email, rol: savedUser.rol },
+      { id: savedUser.id, nombre: savedUser.nombre, email: savedUser.email, rol: savedUser.rol, jti: crypto.randomUUID() },
       this.jwtSecret,
       { expiresIn: '24h' }
     );
@@ -63,7 +64,7 @@ class LoginUser {
     }
 
     const token = jwt.sign(
-      { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol },
+      { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, jti: crypto.randomUUID() },
       this.jwtSecret,
       { expiresIn: '24h' }
     );

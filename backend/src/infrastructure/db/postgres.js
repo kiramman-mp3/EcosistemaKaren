@@ -41,7 +41,16 @@ async function testConnection() {
   }
 }
 
+async function closePool() {
+  if (pool) {
+    const currentPool = pool;
+    pool = null;
+    await currentPool.end();
+  }
+}
+
 module.exports = {
   getPool,
-  testConnection
+  testConnection,
+  closePool
 };

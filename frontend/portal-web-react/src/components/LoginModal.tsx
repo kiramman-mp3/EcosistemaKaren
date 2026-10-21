@@ -99,6 +99,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
           >
             {loading ? 'Un momento…' : isRegister ? 'Crear cuenta' : 'Ingresar'}
           </button>
+          {isRegister && (
+            <p className="text-[11px] text-ink-muted text-center leading-normal">
+              Al registrarte aceptas los <strong>Términos y Condiciones</strong> y la <strong>Política de Privacidad</strong> (LOPDP Ecuador).
+            </p>
+          )}
           <p className="text-center text-sm text-ink-soft">
             {isRegister ? '¿Ya tienes cuenta?' : '¿Primera vez aquí?'}{' '}
             <button

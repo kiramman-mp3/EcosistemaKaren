@@ -345,9 +345,29 @@ const swaggerDocument = {
       get: {
         tags: ['Alertas y SSE'],
         summary: 'Obtener alertas: VENCIDO ≤0d, ROJO 1–6d y AMARILLO 7–14d',
+        parameters: [
+          { name: 'atendida', in: 'query', schema: { type: 'boolean' }, description: 'Filtrar por estado atendida (true/false)' },
+          { name: 'nivel', in: 'query', schema: { type: 'string', enum: ['AMARILLO', 'ROJO', 'VENCIDO'] }, description: 'Filtrar por nivel de alerta' },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 100 } },
+          { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } }
+        ],
         security: [{ bearerAuth: [] }],
         responses: {
           '200': { description: 'Lista de alertas de vencimiento' }
+        }
+      }
+    },
+    '/alerts/{id}/atender': {
+      patch: {
+        tags: ['Alertas y SSE'],
+        summary: 'Marcar alerta de caducidad como atendida',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'UUID o ID de la alerta' }
+        ],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Alerta marcada como atendida exitosamente' },
+          '404': { description: 'Alerta no encontrada' }
         }
       }
     },

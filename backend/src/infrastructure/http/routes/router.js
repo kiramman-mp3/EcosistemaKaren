@@ -16,6 +16,16 @@ function createApiRouter(controllers, security) {
     heartbeatController
   } = controllers;
 
+  // Raíz de la API (/api/v1)
+  router.get('/', (req, res) => {
+    res.json({
+      name: 'Ecosistema Karen - Backend Server API v1',
+      version: '1.0.0',
+      status: 'ONLINE',
+      docs: '/api-docs',
+    });
+  });
+
   // Categorías
   router.get('/categories', (req, res, next) => categoryController.getCategories(req, res, next));
   router.post('/categories', authenticate, authorize('ADMIN'), validate({ body: schemas.categoryBody }), (req, res, next) => categoryController.createCategory(req, res, next));
@@ -42,7 +52,8 @@ function createApiRouter(controllers, security) {
   router.post('/reservations/:id/cancel', authenticate, authorize('CLIENTE', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => reservationController.cancel(req, res, next));
 
   // Alertas y SSE Stream
-  router.get('/alerts', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), (req, res, next) => alertController.getAlerts(req, res, next));
+  router.get('/alerts', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.alertQuery }), (req, res, next) => alertController.getAlerts(req, res, next));
+  router.patch('/alerts/:id/atender', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ params: schemas.idParams }), (req, res, next) => alertController.markAsAttended(req, res, next));
   router.get('/alerts/stream', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), (req, res) => alertController.subscribeStream(req, res));
 
   // Promociones e IA Gemini

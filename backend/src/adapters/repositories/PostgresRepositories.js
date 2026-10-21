@@ -1002,6 +1002,101 @@ class PostgresAlertRepository {
     );
     return new Alert(res.rows[0]);
   }
+
+  async findAll({ atendida, nivel, loteId, limit, offset } = {}) {
+    let sql = `
+      SELECT
+        a.id,
+        a.lote_id as "loteId",
+        a.dias_para_vencer as "diasParaVencer",
+        a.nivel,
+        a.atendida,
+        a.created_at,
+        l.numero_lote as "numeroLote",
+        TO_CHAR(l.fecha_caducidad, 'YYYY-MM-DD') as "fechaCaducidad",
+        l.cantidad_disponible as "cantidadDisponible",
+        l.cantidad_reservada as "cantidadReservada",
+        l.ubicacion,
+        l.estado as "loteEstado",
+        p.nombre as "productoNombre",
+        p.codigo_barras as "codigoBarras"
+      FROM alertas_caducidad a
+      JOIN lotes l ON l.id = a.lote_id
+      JOIN productos p ON p.id = l.producto_id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (atendida !== undefined && atendida !== null && atendida !== '') {
+      const isAtendida = typeof atendida === 'string' ? atendida.toLowerCase() === 'true' : Boolean(atendida);
+      params.push(isAtendida);
+      sql += ` AND a.atendida = $${params.length}`;
+    }
+
+    if (nivel) {
+      params.push(String(nivel).toUpperCase());
+      sql += ` AND a.nivel = $${params.length}`;
+    }
+
+    if (loteId) {
+      params.push(loteId);
+      sql += ` AND a.lote_id = $${params.length}`;
+    }
+
+    sql += ' ORDER BY a.atendida ASC, a.dias_para_vencer ASC, a.created_at DESC';
+
+    if (limit && Number.isInteger(Number(limit)) && Number(limit) > 0) {
+      params.push(Number(limit));
+      sql += ` LIMIT $${params.length}`;
+    }
+
+    if (offset && Number.isInteger(Number(offset)) && Number(offset) >= 0) {
+      params.push(Number(offset));
+      sql += ` OFFSET $${params.length}`;
+    }
+
+    const res = await this.pool.query(sql, params);
+    return res.rows.map(row => new Alert(row));
+  }
+
+  async findById(id) {
+    const res = await this.pool.query(
+      `SELECT
+        a.id,
+        a.lote_id as "loteId",
+        a.dias_para_vencer as "diasParaVencer",
+        a.nivel,
+        a.atendida,
+        a.created_at,
+        l.numero_lote as "numeroLote",
+        TO_CHAR(l.fecha_caducidad, 'YYYY-MM-DD') as "fechaCaducidad",
+        l.cantidad_disponible as "cantidadDisponible",
+        l.cantidad_reservada as "cantidadReservada",
+        l.ubicacion,
+        l.estado as "loteEstado",
+        p.nombre as "productoNombre",
+        p.codigo_barras as "codigoBarras"
+      FROM alertas_caducidad a
+      JOIN lotes l ON l.id = a.lote_id
+      JOIN productos p ON p.id = l.producto_id
+      WHERE a.id = $1`,
+      [id]
+    );
+    if (!res.rows[0]) return null;
+    return new Alert(res.rows[0]);
+  }
+
+  async markAsAttended(id) {
+    const res = await this.pool.query(
+      `UPDATE alertas_caducidad
+       SET atendida = TRUE
+       WHERE id = $1
+       RETURNING id`,
+      [id]
+    );
+    if (res.rowCount === 0) return null;
+    return await this.findById(id);
+  }
 }
 
 class PostgresPromotionRepository {
@@ -1273,6 +1368,33 @@ class PostgresPromotionRepository {
   }
 }
 
+class PostgresTokenBlacklistRepository {
+  constructor(pool) {
+    this.pool = pool;
+  }
+
+  async revoke(jti, usuarioId, expiraEn) {
+    await this.pool.query(
+      `INSERT INTO tokens_revocados (jti, usuario_id, expira_en)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (jti) DO NOTHING`,
+      [jti, usuarioId, expiraEn]
+    );
+  }
+
+  async isRevoked(jti) {
+    const res = await this.pool.query(
+      'SELECT 1 FROM tokens_revocados WHERE jti = $1',
+      [jti]
+    );
+    return res.rowCount > 0;
+  }
+
+  async cleanExpired() {
+    await this.pool.query('DELETE FROM tokens_revocados WHERE expira_en <= CURRENT_TIMESTAMP');
+  }
+}
+
 module.exports = {
   PostgresCategoryRepository,
   PostgresProductRepository,
@@ -1280,5 +1402,6 @@ module.exports = {
   PostgresReservationRepository,
   PostgresUserRepository,
   PostgresAlertRepository,
-  PostgresPromotionRepository
+  PostgresPromotionRepository,
+  PostgresTokenBlacklistRepository
 };

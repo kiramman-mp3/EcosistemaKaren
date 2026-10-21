@@ -10,9 +10,14 @@ import { ReservationModal } from './components/ReservationModal';
 import { MyReservationsPage } from './components/MyReservationsPage';
 import { CartDrawer } from './components/CartDrawer';
 import { LoginModal } from './components/LoginModal';
+import { SpecialOffersSlider } from './components/SpecialOffersSlider';
+import { TermsModal } from './components/TermsModal';
+import { HelpChatWidget } from './components/HelpChatWidget';
+import { Footer } from './components/Footer';
+import { ThemeProvider } from './context/ThemeContext';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './types';
 import { AlertTriangle } from 'lucide-react';
-import { api, BackendReservation } from './api/client';
+import { api, BackendCategory, BackendReservation } from './api/client';
 import { reservationToPass, selectActiveReservation } from './reservations/recovery';
 import { daysUntil, formatDate } from './utils/dates';
 
@@ -42,6 +47,10 @@ export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [offers, setOffers] = useState<FlashOffer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [backendCategories, setBackendCategories] = useState<BackendCategory[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [totalProducts, setTotalProducts] = useState<number>(0);
+  const [stockByProduct, setStockByProduct] = useState<Map<string, number>>(new Map());
 
   const [currentPass, setCurrentPass] = useState<ReservationPass | null>(null);
   const [reservations, setReservations] = useState<BackendReservation[]>([]);
@@ -58,6 +67,7 @@ export const App: React.FC = () => {
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Un solo temporizador: un toast nuevo no debe cerrarse por el temporizador del anterior.
@@ -103,26 +113,29 @@ export const App: React.FC = () => {
     setDataError(null);
     try {
       await checkHeartbeat();
-      const [backendCats, backendProds, backendLots, backendPromos] = await Promise.all([
-        api.getCategories(), api.getProducts(), api.getLots(), api.getPromotions(),
+      const [backendCats, pageRes, backendLots, backendPromos] = await Promise.all([
+        api.getCategories(), api.getProductsPage({ limit: 24, offset: 0 }), api.getLots(), api.getPromotions(),
       ]);
+      setBackendCategories(backendCats);
+      setTotalProducts(pageRes.total);
       const categoryById = new Map(backendCats.map(category => [category.id, category.nombre]));
       setCategoriesList(Array.from(new Set(['Todos', ...backendCats.map(category => category.nombre)])));
 
-      const stockByProduct = new Map<string, number>();
+      const stockMap = new Map<string, number>();
       for (const lot of backendLots) {
         if (lot.estado !== 'ACTIVO') continue;
-        stockByProduct.set(lot.productoId, (stockByProduct.get(lot.productoId) || 0) + (lot.cantidadDisponible || 0));
+        stockMap.set(lot.productoId, (stockMap.get(lot.productoId) || 0) + (lot.cantidadDisponible || 0));
       }
+      setStockByProduct(stockMap);
 
-      const mappedProducts: Product[] = backendProds.map(bp => {
+      const mappedProducts: Product[] = pageRes.items.map(bp => {
         const catName = categoryById.get(bp.categoriaId) || 'Sin categoría';
         return {
           id: bp.id,
           name: bp.nombre,
           category: catName,
           price: Number(bp.precioVenta),
-          stock: stockByProduct.get(bp.id) || 0,
+          stock: stockMap.get(bp.id) || 0,
           image: bp.imagenUrl || FALLBACK_IMAGE,
           badge: catName,
           unit: 'Unidad',
@@ -132,7 +145,7 @@ export const App: React.FC = () => {
       });
       setProducts(mappedProducts);
 
-      const productById = new Map(backendProds.map(product => [product.id, product]));
+      const productById = new Map(pageRes.items.map(product => [product.id, product]));
       const mappedOffers: FlashOffer[] = backendPromos.flatMap(promo => {
         const lot = backendLots.find(l => l.id === promo.loteId);
         const product = lot && productById.get(lot.productoId);
@@ -183,6 +196,66 @@ export const App: React.FC = () => {
     const hbInterval = setInterval(() => { void checkHeartbeat(); }, 20000);
     return () => clearInterval(hbInterval);
   }, [loadBackendData, checkHeartbeat, syncReservations]);
+
+  // Debounce para búsqueda en servidor
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Al cambiar búsqueda o categoría, reiniciar paginación
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [debouncedSearch, selectedCategory]);
+
+  // Consultar productos del servidor ante cambios de filtro o página
+  const fetchProductsPage = useCallback(async (q: string, category: string, page: number) => {
+    if (backendCategories.length === 0) return;
+    setLoadingProducts(true);
+    try {
+      const selectedCat = backendCategories.find(c => c.nombre === category);
+      const categoriaId = category !== 'Todos' && selectedCat ? selectedCat.id : undefined;
+      const pageSize = 24;
+      const res = await api.getProductsPage({
+        q: q.trim() || undefined,
+        categoriaId,
+        limit: pageSize,
+        offset: page * pageSize,
+      });
+      setTotalProducts(res.total);
+      const categoryById = new Map(backendCategories.map(c => [c.id, c.nombre]));
+      const mappedProducts: Product[] = res.items.map(bp => {
+        const catName = categoryById.get(bp.categoriaId) || 'Sin categoría';
+        return {
+          id: bp.id,
+          name: bp.nombre,
+          category: catName,
+          price: Number(bp.precioVenta),
+          stock: stockByProduct.get(bp.id) || 0,
+          image: bp.imagenUrl || FALLBACK_IMAGE,
+          badge: catName,
+          unit: 'Unidad',
+          description: describe(bp.descripcion),
+          barcode: bp.codigoBarras,
+        };
+      });
+      setProducts(mappedProducts);
+      setDataState(mappedProducts.length === 0 ? 'empty' : 'ready');
+    } catch {
+      // Ignorar fallo transitorio
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [backendCategories, stockByProduct]);
+
+  useEffect(() => {
+    if (backendCategories.length > 0 && activeTab === 'productos') {
+      void fetchProductsPage(debouncedSearch, selectedCategory, currentPage);
+    }
+  }, [debouncedSearch, selectedCategory, currentPage, activeTab, fetchProductsPage, backendCategories.length]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -340,8 +413,9 @@ export const App: React.FC = () => {
   const activeCode = currentPass && currentPass.remainingSeconds > 0 ? currentPass.code : undefined;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {!isOnline && (
+    <ThemeProvider>
+      <div className="min-h-screen flex flex-col bg-aisle dark:bg-[#0B1120] text-ink dark:text-slate-100 transition-colors duration-200">
+        {!isOnline && (
         <div className="bg-karen text-white text-sm" role="alert">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
             <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -379,14 +453,21 @@ export const App: React.FC = () => {
               onOpenPass={() => setIsPassModalOpen(true)}
             />
 
+            <SpecialOffersSlider
+              realOffers={offers}
+              onReserveFlashOffer={offer => void handleReserveOffer(offer)}
+              onExploreProducts={() => goTo('productos')}
+              onExploreOffers={() => goTo('ofertas')}
+            />
+
             {offersByExpiry.length > 0 && (
               <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12" aria-labelledby="por-vencer">
                 <div className="flex items-end justify-between gap-4 mb-6">
                   <div>
-                    <h2 id="por-vencer" className="font-tag font-bold text-3xl sm:text-4xl text-ink">Por vencer, con descuento</h2>
-                    <p className="mt-1 text-ink-soft">Lo que vence primero, primero.</p>
+                    <h2 id="por-vencer" className="font-tag font-bold text-3xl sm:text-4xl text-ink dark:text-white">Por vencer, con descuento</h2>
+                    <p className="mt-1 text-ink-soft dark:text-slate-300">Lo que vence primero, primero.</p>
                   </div>
-                  <button onClick={() => goTo('ofertas')} className="shrink-0 text-sm font-semibold text-ink underline underline-offset-4">
+                  <button onClick={() => goTo('ofertas')} className="shrink-0 text-sm font-semibold text-ink dark:text-slate-200 hover:text-karen dark:hover:text-sticker underline underline-offset-4">
                     Ver las {offers.length} ofertas
                   </button>
                 </div>
@@ -416,7 +497,7 @@ export const App: React.FC = () => {
             products={products}
             categories={categoriesList}
             selectedCategory={selectedCategory}
-            onSelectCategory={category => { setSelectedCategory(category); setSearchQuery(''); }}
+            onSelectCategory={category => { setSelectedCategory(category); setSearchQuery(''); setCurrentPage(0); }}
             onAddToCart={handleAddToCart}
             onOpenCart={() => setIsCartOpen(true)}
             cartCount={totalCartCount}
@@ -428,6 +509,10 @@ export const App: React.FC = () => {
             onReserveOffer={handleReserveOffer}
             searchQuery={searchQuery}
             onSearch={setSearchQuery}
+            currentPage={currentPage}
+            totalProducts={totalProducts}
+            pageSize={24}
+            onPageChange={page => setCurrentPage(page)}
           />
         )}
 
@@ -464,18 +549,14 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="bg-white border-t border-aisle-rule mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between text-sm text-ink-muted">
-          <div className="flex items-center gap-3">
-            <span className="w-8 h-8 rounded-tag bg-karen text-white font-tag font-bold text-xl leading-none flex items-center justify-center">K</span>
-            <span>
-              <span className="block font-semibold text-ink">Supermercado Karen</span>
-              Sucursal Matriz, retiro en caja
-            </span>
-          </div>
-          <p>© {new Date().getFullYear()} Supermercado Karen</p>
-        </div>
-      </footer>
+      <Footer
+        onNavigate={goTo}
+        onOpenTerms={() => setIsTermsOpen(true)}
+        onOpenChat={() => {
+          const chatBtn = document.querySelector('button[aria-label="Abrir chat de ayuda en línea"]') as HTMLButtonElement | null;
+          chatBtn?.click();
+        }}
+      />
 
       {toastMessage && (
         <div
@@ -489,6 +570,13 @@ export const App: React.FC = () => {
       {currentPass && (
         <ReservationModal pass={currentPass} isOpen={isPassModalOpen} onClose={() => setIsPassModalOpen(false)} />
       )}
+
+      <TermsModal
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+      />
+
+      <HelpChatWidget />
 
       <CartDrawer
         isOpen={isCartOpen}
@@ -511,6 +599,7 @@ export const App: React.FC = () => {
           showToast(`Hola, ${user.nombre.split(' ')[0]}.`);
         }}
       />
-    </div>
+      </div>
+    </ThemeProvider>
   );
 };

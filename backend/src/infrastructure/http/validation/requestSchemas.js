@@ -29,6 +29,8 @@ const location = z.enum(['BODEGA', 'PERCHA']);
 const emptyBody = z.strictObject({});
 const idParams = z.strictObject({ id: entityId });
 
+const emptyToUndefined = (schema) => z.preprocess(val => (val === '' ? undefined : val), schema);
+
 const schemas = {
   categoryBody: z.strictObject({
     nombre: text(2, 100, 'El nombre'),
@@ -44,8 +46,8 @@ const schemas = {
     minStockAlerta: z.coerce.number().int().min(0).max(10_000_000).optional()
   }),
   productQuery: z.strictObject({
-    q: z.string().trim().max(120).optional(),
-    categoriaId: entityId.optional(),
+    q: emptyToUndefined(z.string().trim().max(120).optional()),
+    categoriaId: emptyToUndefined(entityId.optional()),
     limit: z.coerce.number().int().min(1).max(100).default(30),
     offset: z.coerce.number().int().min(0).max(1_000_000).default(0)
   }),
@@ -70,13 +72,20 @@ const schemas = {
     razon: text(3, 500, 'La razón')
   }),
   movementQuery: z.strictObject({
-    loteId: z.string().uuid('El filtro loteId debe ser un UUID válido.').optional(),
-    tipo: z.enum(['INGRESO', 'TRASLADO', 'MERMA', 'RESERVA', 'LIBERACION', 'VENTA', 'VENCIMIENTO', 'AJUSTE']).optional(),
+    loteId: emptyToUndefined(z.string().uuid('El filtro loteId debe ser un UUID válido.').optional()),
+    tipo: emptyToUndefined(z.enum(['INGRESO', 'TRASLADO', 'MERMA', 'RESERVA', 'LIBERACION', 'VENTA', 'VENCIMIENTO', 'AJUSTE']).optional()),
     limit: z.coerce.number().int().min(1).max(500).default(100)
   }),
   wasteQuery: z.strictObject({
-    loteId: z.string().uuid('El filtro loteId debe ser un UUID válido.').optional(),
+    loteId: emptyToUndefined(z.string().uuid('El filtro loteId debe ser un UUID válido.').optional()),
     limit: z.coerce.number().int().min(1).max(500).default(100)
+  }),
+  alertQuery: z.strictObject({
+    atendida: emptyToUndefined(z.enum(['true', 'false']).transform(val => val === 'true').optional()),
+    nivel: emptyToUndefined(z.enum(['AMARILLO', 'ROJO', 'VENCIDO']).optional()),
+    loteId: emptyToUndefined(z.string().uuid('El filtro loteId debe ser un UUID válido.').optional()),
+    limit: z.coerce.number().int().min(1).max(500).default(100),
+    offset: z.coerce.number().int().min(0).max(100_000).default(0)
   }),
   reservationBody: z.strictObject({
     usuarioId: entityId.optional(),
