@@ -1,9 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashOffer, Product } from '../types';
 import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui';
-import { colors, fonts, radius } from '../theme/tokens';
+import { Bump, PopPressable } from './motion';
+import { colors, fonts, radius, themed } from '../theme/tokens';
+import { categoryTone } from '../theme/categoryTone';
 
 const LOW_STOCK = 5;
 
@@ -13,13 +15,14 @@ interface ProductTagProps {
   onAdd: (product: Product) => void;
 }
 
-/** Producto en percha: foto arriba y fleje de precio en el borde. */
+/** Producto en percha: foto sobre el color de su pasillo y el precio en una etiqueta. */
 export const ProductTag: React.FC<ProductTagProps> = ({ product, inCart, onAdd }) => {
   const soldOut = product.stock <= 0;
   const maxed = inCart >= product.stock;
+  const disabled = soldOut || maxed;
   return (
     <View style={styles.card}>
-      <ProductImage uri={product.image} style={[styles.image, soldOut && styles.faded]} />
+      <ProductImage uri={product.image} tone={categoryTone(product.category)} style={[styles.image, soldOut && styles.faded]} />
       <View style={styles.label}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         {product.description ? <Text style={styles.desc} numberOfLines={1}>{product.description}</Text> : <View style={styles.descSpacer} />}
@@ -29,18 +32,21 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, inCart, onAdd }
             {soldOut ? 'Agotado' : product.stock <= LOW_STOCK ? `Quedan ${product.stock}` : `${product.stock} disp.`}
           </Text>
         </View>
-        <TouchableOpacity
-          style={[styles.add, inCart > 0 && styles.addActive, (soldOut || maxed) && styles.addDisabled]}
-          onPress={() => onAdd(product)}
-          disabled={soldOut || maxed}
-          accessibilityRole="button"
-          accessibilityLabel={soldOut ? `${product.name}, agotado` : `Agregar ${product.name} a mi lista`}
-        >
-          <Ionicons name={inCart > 0 ? 'checkmark' : 'add'} size={18} color={soldOut || maxed ? colors.inkFaint : colors.white} />
-          <Text style={[styles.addText, (soldOut || maxed) && styles.addTextDisabled]}>
-            {soldOut ? 'Agotado' : inCart > 0 ? `En tu lista (${inCart})` : 'Agregar'}
-          </Text>
-        </TouchableOpacity>
+        <Bump trigger={inCart}>
+          <PopPressable
+            onPress={() => onAdd(product)}
+            disabled={disabled}
+            backgroundColor={disabled ? colors.rule : inCart > 0 ? colors.sticker : colors.card}
+            accessibilityLabel={soldOut ? `${product.name}, agotado` : `Agregar ${product.name} a mi lista`}
+            style={styles.addWrap}
+            bodyStyle={styles.add}
+          >
+            <Ionicons name={inCart > 0 ? 'checkmark' : 'add'} size={18} color={disabled ? colors.inkMuted : inCart > 0 ? colors.mora : colors.ink} />
+            <Text style={[styles.addText, disabled && styles.addTextDisabled, inCart > 0 && !disabled && { color: colors.mora }]}>
+              {soldOut ? 'Agotado' : inCart > 0 ? `En tu lista (${inCart})` : 'Agregar'}
+            </Text>
+          </PopPressable>
+        </Bump>
       </View>
     </View>
   );
@@ -53,64 +59,63 @@ interface OfferTagProps {
   compact?: boolean;
 }
 
-/** Oferta por vencer: etiqueta amarilla, precio rebajado y la fecha impresa. */
+/** Oferta por vencer: pegatina limón con el precio rebajado y la fecha impresa. */
 export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve, busy = false, compact = false }) => (
   <View style={[styles.offer, compact && styles.offerCompact]}>
     <View>
-      <ProductImage uri={offer.image} style={styles.offerImage} />
+      <ProductImage uri={offer.image} tone={categoryTone(offer.category)} style={styles.offerImage} />
       <View style={styles.discount}><Text style={styles.discountText}>{offer.discountBadge}</Text></View>
     </View>
     <View style={styles.offerBody}>
-      <Text style={styles.name} numberOfLines={2}>{offer.productName || offer.title}</Text>
+      <Text style={styles.offerName} numberOfLines={2}>{offer.productName || offer.title}</Text>
+      <Text style={styles.note} numberOfLines={2}>{offer.title}</Text>
       <View style={styles.offerPrice}>
-        <Price value={offer.price} color={colors.karen} />
-        <OldPrice value={offer.originalPrice} />
+        <Price value={offer.price} color={colors.mora} />
+        <OldPrice value={offer.originalPrice} color={colors.mora} />
       </View>
       <View style={styles.offerMeta}>
-        <ExpiryStamp date={offer.expiresOn} />
+        <ExpiryStamp date={offer.expiresOn} color={colors.mora} />
         <Text style={styles.left}>Quedan {offer.stockAvailable}</Text>
       </View>
-      <TouchableOpacity
-        style={[styles.reserve, busy && styles.addDisabled]}
+      <PopPressable
         onPress={() => onReserve(offer)}
         disabled={busy}
-        accessibilityRole="button"
-        accessibilityLabel={`Reservar ${offer.productName || 'oferta'} a ${offer.price.toFixed(2)} dólares`}
+        backgroundColor={busy ? colors.rule : colors.karen}
+        accessibilityLabel={`Apartar ${offer.productName || 'oferta'} a ${offer.price.toFixed(2)} dólares`}
+        bodyStyle={styles.reserve}
       >
-        <Text style={styles.reserveText}>{busy ? 'Reservando…' : 'Reservar esta oferta'}</Text>
-      </TouchableOpacity>
+        <Text style={[styles.reserveText, busy && { color: colors.inkMuted }]}>{busy ? 'Apartando…' : `Apartar por $${offer.price.toFixed(2)}`}</Text>
+      </PopPressable>
     </View>
   </View>
 );
 
-const styles = StyleSheet.create({
-  card: { flex: 1, backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule, overflow: 'hidden' },
-  image: { aspectRatio: 1, padding: 10 },
+const styles = themed(() => StyleSheet.create({
+  card: { flex: 1, backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, padding: 8 },
+  image: { aspectRatio: 1 },
   faded: { opacity: 0.4 },
-  label: { borderTopWidth: 4, borderTopColor: colors.ink, padding: 10, flex: 1 },
-  name: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 19, color: colors.ink, minHeight: 38 },
+  label: { padding: 6, paddingTop: 10, flex: 1 },
+  name: { fontFamily: fonts.tag, fontSize: 15, lineHeight: 19, color: colors.ink, minHeight: 38 },
   desc: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted, marginTop: 1 },
   descSpacer: { height: 16 },
   priceRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 6, gap: 4 },
   stock: { fontFamily: fonts.medium, fontSize: 12, color: colors.fresh, marginBottom: 3 },
-  stockLow: { color: colors.karen, fontFamily: fonts.semibold },
-  add: {
-    marginTop: 10, minHeight: 44, borderRadius: radius.tag, backgroundColor: colors.ink,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-  },
-  addActive: { backgroundColor: colors.fresh },
-  addDisabled: { backgroundColor: colors.aisle },
-  addText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.white },
-  addTextDisabled: { color: colors.inkFaint },
-  offer: { backgroundColor: colors.white, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.stickerDeep, overflow: 'hidden' },
-  offerCompact: { width: 260 },
-  offerImage: { height: 150, padding: 12 },
-  discount: { position: 'absolute', left: 0, top: 10, backgroundColor: colors.karen, paddingHorizontal: 10, paddingVertical: 5, borderTopRightRadius: radius.tag, borderBottomRightRadius: radius.tag },
-  discountText: { fontFamily: fonts.tag, fontSize: 20, color: colors.white },
-  offerBody: { backgroundColor: colors.sticker, padding: 12, gap: 6 },
+  stockLow: { color: colors.karenText, fontFamily: fonts.semibold },
+  addWrap: { marginTop: 10 },
+  add: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10 },
+  addText: { fontFamily: fonts.tag, fontSize: 14, color: colors.ink },
+  addTextDisabled: { color: colors.inkMuted },
+  offer: { backgroundColor: colors.sticker, borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, padding: 8, overflow: 'hidden' },
+  offerCompact: { width: 268 },
+  offerImage: { height: 150 },
+  discount: { position: 'absolute', left: -2, top: 10, backgroundColor: colors.karen, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.tag, borderWidth: 2, borderColor: colors.mora, transform: [{ rotate: '-3deg' }] },
+  discountText: { fontFamily: fonts.tag, fontSize: 20, color: '#FFFFFF' },
+  offerBody: { padding: 6, paddingTop: 10, gap: 6 },
+  offerName: { fontFamily: fonts.tag, fontSize: 17, lineHeight: 21, color: colors.mora },
+  note: { fontFamily: fonts.hand, fontSize: 20, lineHeight: 22, color: colors.mora, transform: [{ rotate: '-1deg' }] },
   offerPrice: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   offerMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 },
-  left: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  reserve: { marginTop: 4, minHeight: 46, borderRadius: radius.tag, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  reserveText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.white },
-});
+  left: { fontFamily: fonts.semibold, fontSize: 13, color: colors.mora },
+  reserve: { minHeight: 46, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  reserveText: { fontFamily: fonts.tag, fontSize: 15, color: '#FFFFFF' },
+}));
