@@ -19,7 +19,7 @@ import { api, BackendReservation, mediaUrl } from './src/api/client';
 import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
 import { formatDate } from './src/utils/dates';
 import { notify } from './src/utils/dialogs';
-import { colors } from './src/theme/tokens';
+import { colors, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 10 * 60;
@@ -238,7 +238,7 @@ function PortalAppContent() {
       void syncReservations(currentUser);
       void loadBackendData();
     } catch (err: any) {
-      notify('No se pudo crear la reserva', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+      notify('No pudimos apartar tus productos', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
     } finally {
       setIsSubmitting(false);
     }
@@ -274,7 +274,7 @@ function PortalAppContent() {
       void syncReservations(currentUser);
       void loadBackendData();
     } catch (err: any) {
-      notify('No se pudo reservar la oferta', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+      notify('No pudimos apartar la oferta', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
     } finally {
       setReservingOfferId(null);
     }
@@ -289,8 +289,8 @@ function PortalAppContent() {
 
   if (!fontsLoaded && !fontError) {
     return (
-      <SafeAreaView style={[styles.splash, isDark && { backgroundColor: '#0B1120' }]}>
-        <ActivityIndicator size="large" color={colors.white} />
+      <SafeAreaView style={styles.splash}>
+        <ActivityIndicator size="large" color={colors.sticker} />
       </SafeAreaView>
     );
   }
@@ -300,8 +300,8 @@ function PortalAppContent() {
   const activeCode = pass && pass.remainingSeconds > 0 ? pass.code : undefined;
 
   return (
-    <SafeAreaView style={[styles.safeArea, isDark && { backgroundColor: '#0F172A' }]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? "#0F172A" : colors.white} />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.card} />
       <NavbarMobile
         cartCount={cartCount}
         cartTotal={cartTotal}
@@ -311,7 +311,7 @@ function PortalAppContent() {
         isOnline={isOnline}
       />
 
-      <View style={[styles.body, isDark && { backgroundColor: '#0B1120' }]}>
+      <View style={styles.body}>
           {activeTab === 'inicio' && (
             <HomeScreen
               products={products}
@@ -326,6 +326,7 @@ function PortalAppContent() {
               reservingOfferId={reservingOfferId}
               activePassCode={activeCode}
               onOpenPass={() => setIsPassOpen(true)}
+              userName={currentUser?.nombre.split(' ')[0]}
             />
           )}
           {activeTab === 'productos' && (
@@ -374,7 +375,7 @@ function PortalAppContent() {
           )}
         </View>
 
-        <SafeAreaView edges={['bottom']} style={[styles.tabs, isDark && { backgroundColor: '#0F172A' }]}>
+        <SafeAreaView edges={['bottom']} style={styles.tabs}>
           <TabBar activeTab={activeTab} onChange={goTo} offersCount={offers.length} hasActivePass={Boolean(activeCode)} />
         </SafeAreaView>
 
@@ -420,9 +421,9 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  splash: { flex: 1, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  safeArea: { flex: 1, backgroundColor: colors.white },
+const styles = themed(() => StyleSheet.create({
+  splash: { flex: 1, backgroundColor: colors.mora, alignItems: 'center', justifyContent: 'center' },
+  safeArea: { flex: 1, backgroundColor: colors.card },
   body: { flex: 1, backgroundColor: colors.aisle },
-  tabs: { backgroundColor: colors.white },
-});
+  tabs: { backgroundColor: colors.card },
+}));
