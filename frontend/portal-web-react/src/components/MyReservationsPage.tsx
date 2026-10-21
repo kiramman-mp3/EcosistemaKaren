@@ -31,7 +31,7 @@ const statusLabel: Record<BackendReservation['estado'], string> = {
 };
 
 const statusClass: Record<BackendReservation['estado'], string> = {
-  PENDIENTE: 'bg-sticker text-ink',
+  PENDIENTE: 'bg-limon text-ink',
   CONFIRMADA: 'bg-fresh-tint text-fresh',
   EXPIRADA: 'bg-aisle text-ink-muted',
   CANCELADA: 'bg-aisle text-ink-muted',
@@ -74,14 +74,14 @@ export const MyReservationsPage: React.FC<Props> = ({
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 min-h-[60vh]">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-tag font-bold text-4xl sm:text-5xl text-ink dark:text-white leading-none">Mis reservas</h1>
-          <p className="mt-2 text-ink-soft dark:text-slate-300">Tus códigos de retiro y lo que ya pasó por caja.</p>
+          <h1 className="font-display font-extrabold text-4xl sm:text-5xl text-ink leading-none">Mis reservas</h1>
+          <p className="mt-2 text-ink-soft">Tus códigos de retiro y lo que ya pasó por caja.</p>
         </div>
         {authenticated && (
           <button
             onClick={() => void onRefresh()}
             disabled={syncing}
-            className="h-10 px-4 rounded-tag border border-aisle-rule dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-semibold text-ink dark:text-white flex items-center gap-2 disabled:opacity-60 transition-colors"
+            className="h-10 px-4 rounded-tag border border-aisle-rule bg-surface text-sm font-semibold text-ink flex items-center gap-2 disabled:opacity-60 transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Actualizando…' : 'Actualizar'}
@@ -90,10 +90,10 @@ export const MyReservationsPage: React.FC<Props> = ({
       </div>
 
       {!authenticated ? (
-        <div className="max-w-lg rounded-tag bg-white dark:bg-slate-800/95 border border-aisle-rule dark:border-slate-700 p-8">
-          <h2 className="font-tag font-bold text-2xl text-ink dark:text-white">Ingresa para ver tus reservas</h2>
-          <p className="mt-2 text-ink-soft dark:text-slate-300">Tus códigos de retiro están protegidos por tu cuenta.</p>
-          <button onClick={onLogin} className="mt-5 h-11 px-5 rounded-tag bg-ink text-white font-semibold">Ingresar</button>
+        <div className="max-w-lg rounded-tag bg-surface border border-aisle-rule p-8">
+          <h2 className="font-display font-extrabold text-2xl text-ink">Ingresa para ver tus reservas</h2>
+          <p className="mt-2 text-ink-soft">Tus códigos de retiro están protegidos por tu cuenta.</p>
+          <button onClick={onLogin} className="mt-5 h-11 px-5 rounded-tag bg-mora text-white font-semibold">Ingresar</button>
         </div>
       ) : (
         <>
@@ -112,8 +112,8 @@ export const MyReservationsPage: React.FC<Props> = ({
                 onClick={() => setFilter(option.id)}
                 className={`shrink-0 h-9 px-3.5 rounded-tag text-sm font-semibold ${
                   filter === option.id
-                    ? 'bg-ink dark:bg-slate-800 text-white'
-                    : 'bg-white dark:bg-slate-800 text-ink-soft dark:text-slate-200 border border-aisle-rule dark:border-slate-700'
+                    ? 'bg-mora text-white'
+                    : 'bg-surface text-ink-soft border border-aisle-rule'
                 }`}
               >
                 {option.label}
@@ -122,13 +122,13 @@ export const MyReservationsPage: React.FC<Props> = ({
           </div>
 
           {!syncing && reservations.length === 0 ? (
-            <div className="max-w-lg rounded-tag bg-white dark:bg-slate-800/95 border border-aisle-rule dark:border-slate-700 p-8">
-              <h2 className="font-tag font-bold text-2xl text-ink dark:text-white">Todavía no tienes reservas</h2>
-              <p className="mt-2 text-ink-soft dark:text-slate-300">Agrega productos a tu lista y reserva para recibir tu código de retiro.</p>
+            <div className="max-w-lg rounded-tag bg-surface border border-aisle-rule p-8">
+              <h2 className="font-display font-extrabold text-2xl text-ink">Todavía no tienes reservas</h2>
+              <p className="mt-2 text-ink-soft">Agrega productos a tu lista y reserva para recibir tu código de retiro.</p>
               <button onClick={onExplore} className="mt-5 h-11 px-5 rounded-tag bg-karen text-white font-semibold">Ver productos</button>
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-ink-muted dark:text-slate-400">No tienes reservas en este grupo.</p>
+            <p className="text-ink-muted">No tienes reservas en este grupo.</p>
           ) : (
             <ul className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map(({ reservation, effectiveStatus }) => {
@@ -136,11 +136,11 @@ export const MyReservationsPage: React.FC<Props> = ({
                 const total = reservation.detalles.reduce((sum, item) => sum + Number(item.cantidad) * Number(item.precioUnitario), 0);
                 const names = reservation.detalles.map(detail => detail.productoNombre).filter(Boolean) as string[];
                 return (
-                  <li key={reservation.id} className={`flex flex-col rounded-tag bg-white dark:bg-slate-800/90 border ${pending ? 'border-ink dark:border-slate-500' : 'border-aisle-rule dark:border-slate-700'}`}>
+                  <li key={reservation.id} className={`flex flex-col rounded-tag bg-surface border ${pending ? 'border-ink' : 'border-aisle-rule'}`}>
                     <div className="flex items-start justify-between gap-3 p-4">
                       <div className="min-w-0">
-                        <p className="font-tag font-bold text-2xl text-ink dark:text-white tracking-wide leading-none">{reservation.codigoRetiro}</p>
-                        <p className="mt-1.5 text-xs text-ink-muted dark:text-slate-400">
+                        <p className="font-display font-extrabold text-2xl text-ink tracking-wide leading-none">{reservation.codigoRetiro}</p>
+                        <p className="mt-1.5 text-xs text-ink-muted">
                           {pending
                             ? `Retira antes de ${formatDateTime(reservation.fechaExpiracion)}`
                             : `Reservada el ${formatDateTime(reservation.created_at || reservation.fechaExpiracion)}`}
@@ -153,21 +153,21 @@ export const MyReservationsPage: React.FC<Props> = ({
                     <div className="rule-dashed mx-4" aria-hidden="true" />
                     <div className="p-4 flex-1">
                       {names.length > 0 && (
-                        <p className="text-sm text-ink-soft dark:text-slate-300 line-clamp-2">{names.join(', ')}</p>
+                        <p className="text-sm text-ink-soft line-clamp-2">{names.join(', ')}</p>
                       )}
-                      <p className="mt-2 text-sm text-ink-soft dark:text-slate-300">
-                        Total reservado: <strong className="text-ink dark:text-white tabular">${total.toFixed(2)}</strong>
+                      <p className="mt-2 text-sm text-ink-soft">
+                        Total reservado: <strong className="text-ink tabular">${total.toFixed(2)}</strong>
                       </p>
                     </div>
                     {pending && (
                       <div className="grid grid-cols-2 gap-2 p-4 pt-0">
-                        <button onClick={() => onOpenPass(reservation)} className="h-11 rounded-tag bg-ink text-white text-sm font-semibold flex items-center justify-center gap-2">
+                        <button onClick={() => onOpenPass(reservation)} className="h-11 rounded-tag bg-mora text-white text-sm font-semibold flex items-center justify-center gap-2">
                           <QrCode className="w-4 h-4" />Ver pase QR
                         </button>
                         <button
                           onClick={() => void cancel(reservation.id)}
                           disabled={cancelling === reservation.id}
-                          className="h-11 rounded-tag border border-aisle-strong dark:border-slate-600 text-karen-deep dark:text-red-400 text-sm font-semibold disabled:opacity-60"
+                          className="h-11 rounded-tag border border-aisle-strong text-karen-deep text-sm font-semibold disabled:opacity-60"
                         >
                           {cancelling === reservation.id ? 'Cancelando…' : 'Cancelar reserva'}
                         </button>

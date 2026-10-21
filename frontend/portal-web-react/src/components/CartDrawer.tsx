@@ -40,8 +40,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         aria-labelledby="mi-lista"
         className="relative w-full max-w-md h-full bg-aisle flex flex-col animate-drawer-in"
       >
-        <header className="flex items-center justify-between gap-3 bg-white px-5 h-16 border-b border-aisle-rule">
-          <h2 id="mi-lista" className="font-tag font-bold text-2xl text-ink">
+        <header className="flex items-center justify-between gap-3 bg-surface px-5 h-16 border-b border-aisle-rule">
+          <h2 id="mi-lista" className="font-display font-extrabold text-2xl text-ink">
             Mi lista <span className="text-ink-muted text-lg tabular">({units})</span>
           </h2>
           <button onClick={onClose} className="p-2 -mr-2 text-ink-muted hover:text-ink" aria-label="Cerrar lista">
@@ -51,22 +51,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
         {items.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-            <p className="font-tag font-bold text-2xl text-ink">Tu lista está vacía</p>
+            <p className="font-display font-extrabold text-2xl text-ink">Tu lista está vacía</p>
             <p className="mt-2 text-ink-soft">Agrega productos desde los pasillos y reserva todo de una vez.</p>
-            <button onClick={onClose} className="mt-6 h-11 px-5 rounded-tag bg-ink text-white font-semibold">
+            <button onClick={onClose} className="mt-6 h-11 px-5 rounded-tag bg-mora text-white font-semibold">
               Seguir comprando
             </button>
           </div>
         ) : (
           <>
             <div className="flex-1 overflow-y-auto px-4 pt-4">
-            <ul className="bg-white rounded-tag border border-aisle-rule divide-y divide-aisle-rule">
+            <ul className="bg-surface rounded-tag border border-aisle-rule divide-y divide-aisle-rule">
               {items.map(({ product, quantity }) => (
                 <li key={product.id} className="flex gap-3 p-3">
                   <ProductImage src={product.image} alt="" className="w-16 h-16 shrink-0 rounded-tag border border-aisle-rule" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-ink leading-snug line-clamp-2">{product.name}</p>
-                    {product.isOffer && <p className="text-xs font-semibold text-karen">Precio de oferta</p>}
+                    {product.isOffer && <p className="text-xs font-semibold text-karen-text">Precio de oferta</p>}
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <div className="flex items-center rounded-tag border border-aisle-strong">
                         <button
@@ -91,7 +91,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   </div>
                   <button
                     onClick={() => onRemoveItem(product.id)}
-                    className="self-start p-1.5 text-ink-faint hover:text-karen"
+                    className="self-start p-1.5 text-ink-faint hover:text-karen-text"
                     aria-label={`Eliminar ${product.name}`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -101,7 +101,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </ul>
             </div>
 
-            <footer className="bg-white border-t border-aisle-rule p-5 mt-4 space-y-4">
+            <footer className="bg-surface border-t border-aisle-rule p-5 mt-4 space-y-4">
               <div className="flex items-end justify-between">
                 <span className="text-ink-soft">Total a pagar en caja</span>
                 <Price value={total} size="md" />

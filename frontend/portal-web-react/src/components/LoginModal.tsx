@@ -43,15 +43,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     }
   };
 
-  const field = 'w-full h-11 px-3 rounded-tag bg-white border border-aisle-strong text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none';
+  const field = 'w-full h-11 px-3 rounded-tag bg-surface border border-aisle-strong text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button className="absolute inset-0 bg-ink/60" onClick={onClose} aria-label="Cerrar" tabIndex={-1} />
-      <div role="dialog" aria-modal="true" aria-labelledby="login-title" className="relative w-full max-w-sm rounded-tag bg-white overflow-hidden animate-slide-up">
+      <div role="dialog" aria-modal="true" aria-labelledby="login-title" className="relative w-full max-w-sm rounded-tag bg-surface overflow-hidden animate-slide-up">
         <div className="bg-ink px-6 py-5 flex items-start justify-between gap-4">
           <div>
-            <h2 id="login-title" className="font-tag font-bold text-2xl text-white">
+            <h2 id="login-title" className="font-display font-extrabold text-2xl text-white">
               {isRegister ? 'Crea tu cuenta' : 'Ingresa a tu cuenta'}
             </h2>
             <p className="mt-1 text-sm text-white/75">
