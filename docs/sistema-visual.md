@@ -12,14 +12,15 @@ Cada sección del supermercado tiene su color, como los letreros de pasillo. Las
 |---|---|---|
 | Rojo Karen | `#D52B1E` | Marca, ofertas, acción principal |
 | Limón | `#FFD400` | Pegatinas, estado activo, encabezados |
-| Mora | `#2A1148` | Texto, bordes y sombra dura |
+| Mora | `#2A1D14` | Texto, bordes y sombra dura (café casi negro) |
 | Aguacate | `#0E7A43` | Confirmaciones y bloques con texto blanco |
 | Naranjilla | `#FF7A1A` | Contadores y avisos amables; siempre con texto Mora |
 | Guayaba | `#FF9EB5` | Acentos cálidos |
-| Pasillo | `#F6F1FB` | Fondo de página |
-| Mora noche | `#1B0B2E` | Fondo del modo oscuro |
+| Pasillo | `#FBF6EC` | Fondo de página (crema) |
+| Mora noche | `#1C1612` | Fondo del modo oscuro |
 
 Reglas:
+- **Los neutros son cálidos (crema y café), nunca morados.** La marca la llevan el rojo Karen y el limón; fondo, texto y sombras solo los acompañan.
 - **Blanco sobre Naranjilla no pasa contraste (2.61).** Con Naranjilla siempre texto Mora.
 - Los colores del semáforo de caducidad (vencido, rojo, amarillo, normal) son regla de negocio. No se usan como decoración.
 - El logo va siempre sobre una placa blanca, también en modo oscuro.
