@@ -132,20 +132,20 @@ export const HelpChatWidget: React.FC = () => {
   };
 
   return (
-    <aside aria-label="Asistente de ayuda KarenBot" className="fixed bottom-5 right-5 z-50">
+    <aside aria-label="Asistente de ayuda KarenBot" className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[45]">
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
           aria-label="Abrir chat de ayuda en línea"
-          className="press flex items-center gap-2.5 rounded-full border-2 border-mora bg-limon text-mora pl-4 pr-5 py-3"
+          className="press flex items-center justify-center gap-2.5 rounded-full border-2 border-mora bg-limon text-mora w-12 h-12 sm:w-auto sm:h-auto sm:pl-4 sm:pr-5 sm:py-3"
         >
           <MessageSquare className="w-5 h-5" />
-          <span className="font-display font-extrabold text-sm">¿Necesitas ayuda?</span>
+          <span className="hidden sm:inline font-display font-extrabold text-sm">¿Necesitas ayuda?</span>
         </button>
       )}
 
       {isOpen && (
-        <div className="w-[360px] sm:w-[400px] max-w-[calc(100vw-2.5rem)] h-[520px] max-h-[calc(100vh-6rem)] rounded-block bg-surface shadow-pop-lg border-2 border-mora flex flex-col overflow-hidden animate-scale-up">
+        <div className="w-[360px] sm:w-[400px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100dvh-6rem)] rounded-block bg-surface shadow-pop-lg border-2 border-mora flex flex-col overflow-hidden animate-scale-up">
           {/* Cabecera del chat */}
           <div className="bg-limon text-mora border-b-2 border-mora px-5 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -166,7 +166,7 @@ export const HelpChatWidget: React.FC = () => {
             <button
               onClick={() => setIsOpen(false)}
               aria-label="Cerrar chat de ayuda"
-              className="w-9 h-9 rounded-full hover:bg-mora/10 flex items-center justify-center transition-colors"
+              className="w-11 h-11 rounded-full hover:bg-mora/10 flex items-center justify-center transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -238,13 +238,13 @@ export const HelpChatWidget: React.FC = () => {
           <div
             role="group"
             aria-label="Preguntas frecuentes"
-            className="px-3 py-2.5 bg-surface border-t-2 border-aisle-rule overflow-y-auto flex flex-wrap gap-2 max-h-28 shrink-0"
+            className="px-3 py-2.5 bg-surface border-t-2 border-aisle-rule overflow-x-auto no-scrollbar flex gap-2 sm:flex-wrap sm:overflow-x-visible sm:overflow-y-auto sm:max-h-28 shrink-0"
           >
             {FAQ_CHIPS.map((chip, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(chip.label)}
-                className="rounded-full bg-surface hover:bg-limon hover:text-mora hover:border-mora border-2 border-aisle-rule px-3.5 py-1.5 text-left text-xs font-bold text-ink transition-colors"
+                className="shrink-0 rounded-full bg-surface hover:bg-limon hover:text-mora hover:border-mora border-2 border-aisle-rule px-3.5 py-2 text-left text-xs font-bold text-ink transition-colors"
               >
                 {chip.label}
               </button>
@@ -259,7 +259,7 @@ export const HelpChatWidget: React.FC = () => {
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Escribe tu consulta aquí..."
-              className="flex-1 h-11 px-4 rounded-full bg-page border-2 border-transparent text-sm font-semibold text-ink placeholder:text-ink-muted placeholder:font-normal focus:outline-none focus:border-mora focus:bg-surface transition-colors"
+              className="flex-1 min-w-0 h-11 px-4 rounded-full bg-page border-2 border-transparent text-base sm:text-sm font-semibold text-ink placeholder:text-ink-muted placeholder:font-normal focus:outline-none focus:border-mora focus:bg-surface transition-colors"
             />
             <button
               onClick={() => handleSend()}
