@@ -75,8 +75,9 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-mora/75 p-3 sm:p-6 flex items-start sm:items-center justify-center">
-      <div role="dialog" aria-modal="true" aria-labelledby="pase-titulo" className="relative w-full max-w-sm animate-slide-up">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-mora/75 p-3 sm:p-6 flex items-start justify-center">
+      {/* my-auto centra cuando cabe y deja hacer scroll cuando no; items-center recortaba el ticket por arriba. */}
+      <div role="dialog" aria-modal="true" aria-labelledby="pase-titulo" className="relative my-auto w-full max-w-sm animate-slide-up">
         <button
           onClick={onClose}
           className="absolute -top-1 right-0 sm:-right-12 sm:top-0 z-10 w-10 h-10 rounded-full bg-limon text-mora border-2 border-mora flex items-center justify-center"
