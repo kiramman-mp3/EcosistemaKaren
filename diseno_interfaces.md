@@ -44,7 +44,7 @@ Este documento define la arquitectura de separación del canal de usuario entre 
 * **Propósito**: Exhibir ofertas relámpago, promociones generadas con Gemini AI y permitir la reserva de stock temporal anti-overbooking sin riesgo de sobreventa.
 * **Características de UX/UI**:
   * Diseño moderno, visual, limpio y responsivo (Mobile-First).
-  * Temporizador de cuenta regresiva TTL (10 minutos) para retiro en caja.
+  * Temporizador de cuenta regresiva TTL (30 minutos) para retiro en caja.
   * Indicador de latido de red (**Heartbeat**): si el servidor local de la tienda no emite señal en 60s, el portal bloquea automáticamente el checkout online con un mensaje de aviso preventivo.
 
 ---
@@ -185,7 +185,7 @@ Este documento define la arquitectura de separación del canal de usuario entre 
 
 ---
 
-#### 📱 Pantalla C-02: Pase Digital de Reserva (PIN / QR con TTL 10 min)
+#### 📱 Pantalla C-02: Pase Digital de Reserva (PIN / QR con TTL 30 min)
 * **Audiencia**: Cliente final tras presionar "Confirmar Reserva".
 * **Funcionalidad**: Emisión del código PIN `KR-XXXXXX` junto a un código QR e instrucciones para presentar en caja SIACI antes de la expiración del TTL.
 

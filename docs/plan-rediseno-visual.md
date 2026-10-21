@@ -89,7 +89,7 @@ Errores: dicen qué pasó y qué hacer, sin disculparse ni dramatizar.
 | Botón de portada | Ver productos | Armar mi lista |
 | Oferta del día | Agregar oferta a mi lista | Apartar a $2,40 |
 | Carrito vacío | (texto genérico) | Tu canasta está vacía. Mira qué se va hoy. |
-| Reserva confirmada | (confirmación genérica) | ¡Apartado! Tienes 10 minutos para llegar a caja. |
+| Reserva confirmada | (confirmación genérica) | ¡Apartado! Tienes 30 minutos para llegar a caja. |
 | Reserva por vencer | (solo temporizador) | Quedan 2 minutos. Si no llegas, liberamos tus productos. |
 | Tienda sin señal | Aviso preventivo del bloqueo | Por ahora no podemos apartar productos. Intenta de nuevo en un momento. |
 
