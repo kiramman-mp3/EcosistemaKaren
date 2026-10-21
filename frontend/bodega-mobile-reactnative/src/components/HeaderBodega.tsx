@@ -67,7 +67,7 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
         accessibilityRole="button"
         accessibilityLabel={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       >
-        <Ionicons name={isDark ? 'sunny' : 'moon-outline'} size={22} color={colors.sticker} />
+        <Ionicons name={isDark ? 'sunny' : 'moon-outline'} size={22} color={colors.ink} />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -76,7 +76,7 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
         accessibilityRole="button"
         accessibilityLabel="Abrir perfil"
       >
-        <Ionicons name="person-circle-outline" size={28} color="#FFFFFF" />
+        <Ionicons name="person-circle-outline" size={28} color={colors.ink} />
       </TouchableOpacity>
 
       <Modal visible={profileOpen} transparent animationType="fade" onRequestClose={() => setProfileOpen(false)}>
@@ -106,14 +106,14 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
 
 const styles = themed(() => StyleSheet.create({
   container: {
-    backgroundColor: colors.mora, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: colors.card, borderBottomWidth: 2, borderBottomColor: colors.mora, paddingHorizontal: 14, paddingVertical: 10,
     flexDirection: 'row', alignItems: 'center', gap: 8,
   },
   brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
-  logoPlate: { width: LOGO_WIDTH, height: LOGO_HEIGHT, borderRadius: radius.tag, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: colors.sticker, overflow: 'hidden' },
+  logoPlate: { width: LOGO_WIDTH, height: LOGO_HEIGHT, borderRadius: radius.tag, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: colors.mora, overflow: 'hidden' },
   brandText: { flex: 1, minWidth: 0 },
-  title: { fontFamily: fonts.tag, fontSize: 16, color: colors.sticker, lineHeight: 18 },
-  operator: { fontFamily: fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.85)' },
+  title: { fontFamily: fonts.tag, fontSize: 16, color: colors.karenText, lineHeight: 18 },
+  operator: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkSoft },
   status: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   statusText: { fontFamily: fonts.bold, fontSize: 12, color: '#FFFFFF' },

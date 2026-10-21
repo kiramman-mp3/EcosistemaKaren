@@ -20,6 +20,7 @@ Cada sección del supermercado tiene su color, como los letreros de pasillo. Las
 | Mora noche | `#1C1612` | Fondo del modo oscuro |
 
 Reglas:
+- **La app arranca en modo claro** y no sigue la preferencia del sistema; el modo oscuro es una elección de la persona y se recuerda. Las superficies grandes (encabezados, cinta de ofertas, pie de página) son blancas con borde Mora, no bloques oscuros.
 - **Los neutros son cálidos (crema y café), nunca morados.** La marca la llevan el rojo Karen y el limón; fondo, texto y sombras solo los acompañan.
 - **Blanco sobre Naranjilla no pasa contraste (2.61).** Con Naranjilla siempre texto Mora.
 - Los colores del semáforo de caducidad (vencido, rojo, amarillo, normal) son regla de negocio. No se usan como decoración.

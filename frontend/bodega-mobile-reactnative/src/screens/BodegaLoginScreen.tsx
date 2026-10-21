@@ -81,16 +81,16 @@ export const BodegaLoginScreen: React.FC<Props> = ({ onLogin }) => {
 };
 
 const styles = themed(() => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.mora },
+  safeArea: { flex: 1, backgroundColor: colors.aisle },
   flex: { flex: 1 },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
   inner: { width: '100%', maxWidth: 420, alignSelf: 'center' },
   logo: {
-    width: 56, height: 56, borderRadius: radius.pill, backgroundColor: colors.sticker, borderWidth: 2, borderColor: '#FFFFFF',
+    width: 56, height: 56, borderRadius: radius.pill, backgroundColor: colors.sticker, borderWidth: 2, borderColor: colors.mora,
     alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
   logoText: { fontFamily: fonts.tag, fontSize: 38, lineHeight: 42, color: colors.mora },
-  brand: { fontFamily: fonts.tag, fontSize: 44, lineHeight: 46, color: colors.sticker },
-  lead: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.9)', marginTop: 8, marginBottom: 24 },
+  brand: { fontFamily: fonts.tag, fontSize: 44, lineHeight: 46, color: colors.karenText },
+  lead: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 23, color: colors.inkSoft, marginTop: 8, marginBottom: 24 },
   card: { backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.sticker, padding: 20, paddingBottom: 22 },
 }));

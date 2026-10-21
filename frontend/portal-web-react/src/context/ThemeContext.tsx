@@ -21,10 +21,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'light';
     const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-    if (saved === 'light' || saved === 'dark') return saved;
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light';
+    // La portada es clara por defecto; el modo oscuro es una elección de la persona.
+    return saved === 'dark' ? 'dark' : 'light';
   });
 
   useEffect(() => {
