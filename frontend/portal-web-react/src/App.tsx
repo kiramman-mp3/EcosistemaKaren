@@ -394,9 +394,16 @@ export const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await api.logout();
+    try {
+      await api.logout();
+    } catch {
+      // La cookie es HttpOnly: solo el servidor puede borrarla. Si no respondió, la sesión sigue abierta.
+      showToast('No pudimos cerrar tu sesión. Revisa tu conexión e inténtalo de nuevo.');
+      return;
+    }
     setCurrentUser(null);
     setCurrentPass(null);
+    setIsPassModalOpen(false);
     setReservations([]);
     setCart([]);
     showToast('Cerraste sesión. ¡Vuelve pronto!');
