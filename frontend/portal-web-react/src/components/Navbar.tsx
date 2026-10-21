@@ -88,11 +88,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {user ? (
-            <div className="hidden sm:flex items-center gap-1 shrink-0">
-              <span className="text-sm text-ink-soft">Hola, <strong className="font-display font-extrabold text-ink">{firstName}</strong></span>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="hidden sm:inline text-sm text-ink-soft">Hola, <strong className="font-display font-extrabold text-ink">{firstName}</strong></span>
               <button
                 onClick={onLogout}
-                className="p-2 text-ink-muted hover:text-karen-text rounded-full"
+                className="w-11 h-11 flex items-center justify-center text-ink-muted hover:text-karen-text rounded-full"
                 aria-label="Cerrar sesión"
                 title="Cerrar sesión"
               >
