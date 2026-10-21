@@ -34,23 +34,23 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-ink/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-[70] bg-mora/70 flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="terms-title"
     >
-      <div className="relative w-full max-w-3xl rounded-2xl bg-surface shadow-lift border border-aisle-rule overflow-hidden my-6 animate-scale-up flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-3xl rounded-block bg-surface shadow-pop-lg border-2 border-mora overflow-hidden my-6 animate-scale-up flex flex-col max-h-[90vh]">
         {/* Encabezado del modal */}
-        <div className="bg-aisle px-6 py-5 border-b border-aisle-rule flex items-center justify-between shrink-0">
+        <div className="bg-limon text-mora px-6 py-5 border-b-2 border-mora flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-karen-tint text-karen-text flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-11 h-11 rounded-full border-2 border-mora bg-surface text-mora flex items-center justify-center shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="terms-title" className="font-display font-extrabold text-xl text-ink leading-tight">
+              <h2 id="terms-title" className="font-display font-extrabold text-2xl text-mora leading-tight">
                 Términos y Condiciones del Servicio
               </h2>
-              <p className="text-xs text-ink-soft">
+              <p className="text-xs font-semibold text-mora/80">
                 Supermercados Karen S.A. · RUC 0992345678001 · Guayaquil, Ecuador · Actualizado 2026
               </p>
             </div>
@@ -58,30 +58,30 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           <button
             onClick={onClose}
             aria-label="Cerrar términos y condiciones"
-            className="w-9 h-9 rounded-full bg-surface border border-aisle-rule text-ink hover:bg-mora hover:text-white flex items-center justify-center transition-colors shrink-0 ml-2"
+            className="w-10 h-10 rounded-full bg-surface border-2 border-mora text-mora hover:bg-mora hover:text-white flex items-center justify-center transition-colors shrink-0 ml-2"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Barra de pestañas / filtro rápido */}
-        <div className="bg-aisle/50 px-6 py-2 border-b border-aisle-rule flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 text-xs">
+        <div className="bg-page px-6 py-3 border-b-2 border-aisle-rule flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 text-xs">
           <button
             onClick={() => setActiveCategory('todos')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 ${
+            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 ${
               activeCategory === 'todos'
-                ? 'bg-mora text-white'
-                : 'bg-surface text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             Todas las Políticas
           </button>
           <button
             onClick={() => setActiveCategory('privacidad')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'privacidad'
-                ? 'bg-karen text-white'
-                : 'bg-surface text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             <Lock className="w-3 h-3" />
@@ -89,10 +89,10 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('reservas')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'reservas'
-                ? 'bg-karen text-white'
-                : 'bg-surface text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             <Clock className="w-3 h-3" />
@@ -100,10 +100,10 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('fefo')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'fefo'
-                ? 'bg-karen text-white'
-                : 'bg-surface text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             <Sparkles className="w-3 h-3" />
@@ -111,10 +111,10 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             onClick={() => setActiveCategory('pagos')}
-            className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 flex items-center gap-1 ${
+            className={`px-3.5 py-1.5 rounded-full font-bold border-2 border-transparent transition-colors shrink-0 flex items-center gap-1 ${
               activeCategory === 'pagos'
-                ? 'bg-karen text-white'
-                : 'bg-surface text-ink-soft hover:bg-aisle-strong'
+                ? 'bg-limon text-mora border-2 border-mora'
+                : 'bg-surface text-ink-soft border-2 border-aisle-rule hover:bg-aisle-rule'
             }`}
           >
             <CreditCard className="w-3 h-3" />
