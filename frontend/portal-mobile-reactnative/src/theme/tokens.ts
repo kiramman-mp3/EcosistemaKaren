@@ -26,7 +26,6 @@ export const lightColors = {
   fresh: '#0E7A43',
   freshTint: '#DDF5E6',
   white: '#FFFFFF',
-  logoPlate: 'transparent',
   card: '#FFFFFF',
   cardBorder: '#EADFCB',
 } as const;
@@ -55,7 +54,6 @@ export const darkColors = {
   fresh: '#34D388',
   freshTint: '#0B3A24',
   white: '#2A1D14',
-  logoPlate: '#FFFFFF',
   card: '#2A1D14',
   cardBorder: '#44382D',
 } as const;
