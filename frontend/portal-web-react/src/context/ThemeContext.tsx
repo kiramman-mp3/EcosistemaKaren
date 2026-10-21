@@ -1,16 +1,21 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { prefersReducedMotion } from '../hooks/useReducedMotion';
 
 type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme: () => void;
+  /** Con `origin` el cambio se revela en círculo desde ese punto (View Transitions). */
+  toggleTheme: (origin?: { x: number; y: number }) => void;
   setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'karen_theme';
+
+type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => unknown };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
@@ -32,8 +37,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setThemeState(prev => (prev === 'light' ? 'dark' : 'light'));
+  const toggleTheme = (origin?: { x: number; y: number }) => {
+    const next: Theme = theme === 'light' ? 'dark' : 'light';
+    const doc = document as ViewTransitionDocument;
+    if (!doc.startViewTransition || prefersReducedMotion()) {
+      setThemeState(next);
+      return;
+    }
+    const root = document.documentElement;
+    root.style.setProperty('--vt-x', `${origin?.x ?? window.innerWidth}px`);
+    root.style.setProperty('--vt-y', `${origin?.y ?? 0}px`);
+    doc.startViewTransition(() => {
+      // El navegador captura el estado nuevo al terminar este callback: el DOM debe estar ya actualizado.
+      flushSync(() => setThemeState(next));
+      root.classList.toggle('dark', next === 'dark');
+    });
   };
 
   const setTheme = (newTheme: Theme) => {
