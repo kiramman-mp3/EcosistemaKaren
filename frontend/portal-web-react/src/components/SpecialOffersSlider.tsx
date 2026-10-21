@@ -29,7 +29,7 @@ export const SPECIAL_DATE_OFFERS: SpecialEventOffer[] = [
     description: 'Precios especiales en cortes de carne seleccionados, embutidos premium y lácteos de alta rotación.',
     discountHighlight: '40% DTO',
     themeColor: 'karen',
-    imageUrl: '/api/v1/media/productos/7861000100014.jpg',
+    imageUrl: '/api/v1/media/productos/7861029402267.jpg',
     category: 'Lácteos y Derivados',
     featuredProducts: ['Leche Entera Vita 1L', 'Queso Mozzarella', 'Yogurt Griego Natural'],
   },
