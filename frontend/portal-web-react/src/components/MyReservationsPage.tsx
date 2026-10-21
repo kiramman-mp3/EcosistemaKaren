@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, QrCode, RefreshCw } from 'lucide-react';
 import type { BackendReservation } from '../api/client';
 import { formatDateTime } from '../utils/dates';
+import { Button } from './ui/Button';
+import { Illustration } from './ui/Illustration';
 
 interface Props {
   authenticated: boolean;
@@ -31,10 +33,10 @@ const statusLabel: Record<BackendReservation['estado'], string> = {
 };
 
 const statusClass: Record<BackendReservation['estado'], string> = {
-  PENDIENTE: 'bg-limon text-ink',
-  CONFIRMADA: 'bg-fresh-tint text-fresh',
-  EXPIRADA: 'bg-aisle text-ink-muted',
-  CANCELADA: 'bg-aisle text-ink-muted',
+  PENDIENTE: 'bg-limon text-mora border-2 border-mora',
+  CONFIRMADA: 'bg-fresh-tint text-fresh border-2 border-transparent',
+  EXPIRADA: 'bg-aisle text-ink-muted border-2 border-transparent',
+  CANCELADA: 'bg-aisle text-ink-muted border-2 border-transparent',
 };
 
 export const MyReservationsPage: React.FC<Props> = ({
@@ -74,31 +76,28 @@ export const MyReservationsPage: React.FC<Props> = ({
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 min-h-[60vh]">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-display font-extrabold text-4xl sm:text-5xl text-ink leading-none">Mis reservas</h1>
-          <p className="mt-2 text-ink-soft">Tus códigos de retiro y lo que ya pasó por caja.</p>
+          <h1 className="text-4xl sm:text-6xl text-ink leading-none">Mis reservas</h1>
+          <p className="mt-3 text-lg text-ink-soft">Tus códigos de retiro y lo que ya pasó por caja.</p>
         </div>
         {authenticated && (
-          <button
-            onClick={() => void onRefresh()}
-            disabled={syncing}
-            className="h-10 px-4 rounded-tag border border-aisle-rule bg-surface text-sm font-semibold text-ink flex items-center gap-2 disabled:opacity-60 transition-colors"
-          >
+          <Button onClick={() => void onRefresh()} disabled={syncing} variant="surface">
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Actualizando…' : 'Actualizar'}
-          </button>
+          </Button>
         )}
       </div>
 
       {!authenticated ? (
-        <div className="max-w-lg rounded-tag bg-surface border border-aisle-rule p-8">
-          <h2 className="font-display font-extrabold text-2xl text-ink">Ingresa para ver tus reservas</h2>
+        <div className="max-w-lg rounded-block bg-surface border-2 border-mora shadow-pop p-8 flex flex-col items-start">
+          <Illustration name="ticket" className="w-28 h-28" />
+          <h2 className="mt-2 text-2xl text-ink">Ingresa para ver tus reservas</h2>
           <p className="mt-2 text-ink-soft">Tus códigos de retiro están protegidos por tu cuenta.</p>
-          <button onClick={onLogin} className="mt-5 h-11 px-5 rounded-tag bg-mora text-white font-semibold">Ingresar</button>
+          <Button onClick={onLogin} className="mt-5">Ingresar</Button>
         </div>
       ) : (
         <>
           {error && (
-            <p role="alert" className="mb-5 flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm p-3">
+            <p role="alert" className="mb-5 flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm font-semibold p-3">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{error}
             </p>
           )}
@@ -110,10 +109,10 @@ export const MyReservationsPage: React.FC<Props> = ({
                 role="tab"
                 aria-selected={filter === option.id}
                 onClick={() => setFilter(option.id)}
-                className={`shrink-0 h-9 px-3.5 rounded-tag text-sm font-semibold ${
+                className={`shrink-0 h-10 px-4 rounded-full border-2 text-sm font-bold transition-colors ${
                   filter === option.id
-                    ? 'bg-mora text-white'
-                    : 'bg-surface text-ink-soft border border-aisle-rule'
+                    ? 'bg-limon text-mora border-mora shadow-pop-sm'
+                    : 'bg-surface text-ink-soft border-aisle-rule'
                 }`}
               >
                 {option.label}
@@ -122,31 +121,32 @@ export const MyReservationsPage: React.FC<Props> = ({
           </div>
 
           {!syncing && reservations.length === 0 ? (
-            <div className="max-w-lg rounded-tag bg-surface border border-aisle-rule p-8">
-              <h2 className="font-display font-extrabold text-2xl text-ink">Todavía no tienes reservas</h2>
-              <p className="mt-2 text-ink-soft">Agrega productos a tu lista y reserva para recibir tu código de retiro.</p>
-              <button onClick={onExplore} className="mt-5 h-11 px-5 rounded-tag bg-karen text-white font-semibold">Ver productos</button>
+            <div className="max-w-lg rounded-block bg-surface border-2 border-mora shadow-pop p-8 flex flex-col items-start">
+              <Illustration name="ticket" className="w-28 h-28" />
+              <h2 className="mt-2 text-2xl text-ink">Todavía no tienes reservas</h2>
+              <p className="mt-2 text-ink-soft">Arma tu lista y apártala: aquí aparece tu código de retiro.</p>
+              <Button onClick={onExplore} className="mt-5">Ver productos</Button>
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-ink-muted">No tienes reservas en este grupo.</p>
           ) : (
-            <ul className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <ul className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
               {filtered.map(({ reservation, effectiveStatus }) => {
                 const pending = effectiveStatus === 'PENDIENTE';
                 const total = reservation.detalles.reduce((sum, item) => sum + Number(item.cantidad) * Number(item.precioUnitario), 0);
                 const names = reservation.detalles.map(detail => detail.productoNombre).filter(Boolean) as string[];
                 return (
-                  <li key={reservation.id} className={`flex flex-col rounded-tag bg-surface border ${pending ? 'border-ink' : 'border-aisle-rule'}`}>
+                  <li key={reservation.id} className={`flex flex-col rounded-block bg-surface border-2 ${pending ? 'border-mora shadow-pop' : 'border-aisle-rule'}`}>
                     <div className="flex items-start justify-between gap-3 p-4">
                       <div className="min-w-0">
-                        <p className="font-display font-extrabold text-2xl text-ink tracking-wide leading-none">{reservation.codigoRetiro}</p>
+                        <p className="font-stamp font-black text-3xl text-ink tracking-wide leading-none">{reservation.codigoRetiro}</p>
                         <p className="mt-1.5 text-xs text-ink-muted">
                           {pending
                             ? `Retira antes de ${formatDateTime(reservation.fechaExpiracion)}`
-                            : `Reservada el ${formatDateTime(reservation.created_at || reservation.fechaExpiracion)}`}
+                            : `Apartada el ${formatDateTime(reservation.created_at || reservation.fechaExpiracion)}`}
                         </p>
                       </div>
-                      <span className={`shrink-0 rounded-tag px-2 py-1 text-xs font-semibold ${statusClass[effectiveStatus]}`}>
+                      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-extrabold ${statusClass[effectiveStatus]}`}>
                         {statusLabel[effectiveStatus]}
                       </span>
                     </div>
@@ -161,16 +161,16 @@ export const MyReservationsPage: React.FC<Props> = ({
                     </div>
                     {pending && (
                       <div className="grid grid-cols-2 gap-2 p-4 pt-0">
-                        <button onClick={() => onOpenPass(reservation)} className="h-11 rounded-tag bg-mora text-white text-sm font-semibold flex items-center justify-center gap-2">
+                        <Button onClick={() => onOpenPass(reservation)}>
                           <QrCode className="w-4 h-4" />Ver pase QR
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => void cancel(reservation.id)}
                           disabled={cancelling === reservation.id}
-                          className="h-11 rounded-tag border border-aisle-strong text-karen-deep text-sm font-semibold disabled:opacity-60"
+                          variant="surface"
                         >
                           {cancelling === reservation.id ? 'Cancelando…' : 'Cancelar reserva'}
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </li>

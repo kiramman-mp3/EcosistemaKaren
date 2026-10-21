@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { api } from '../api/client';
+import { Button } from './ui/Button';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -43,44 +44,44 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     }
   };
 
-  const field = 'w-full h-11 px-3 rounded-tag bg-surface border border-aisle-strong text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none';
+  const field = 'w-full h-12 px-4 rounded-full bg-page border-2 border-transparent font-semibold text-ink placeholder:text-ink-faint focus:bg-surface focus:border-mora focus:outline-none transition-colors';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button className="absolute inset-0 bg-ink/60" onClick={onClose} aria-label="Cerrar" tabIndex={-1} />
-      <div role="dialog" aria-modal="true" aria-labelledby="login-title" className="relative w-full max-w-sm rounded-tag bg-surface overflow-hidden animate-slide-up">
-        <div className="bg-ink px-6 py-5 flex items-start justify-between gap-4">
+      <button className="absolute inset-0 bg-mora/70" onClick={onClose} aria-label="Cerrar" tabIndex={-1} />
+      <div role="dialog" aria-modal="true" aria-labelledby="login-title" className="relative w-full max-w-sm rounded-block border-2 border-mora bg-surface overflow-hidden shadow-pop-lg animate-scale-up">
+        <div className="bg-limon text-mora border-b-2 border-mora px-6 py-5 flex items-start justify-between gap-4">
           <div>
-            <h2 id="login-title" className="font-display font-extrabold text-2xl text-white">
-              {isRegister ? 'Crea tu cuenta' : 'Ingresa a tu cuenta'}
+            <h2 id="login-title" className="text-3xl leading-none">
+              {isRegister ? 'Crea tu cuenta' : 'Hola de nuevo'}
             </h2>
-            <p className="mt-1 text-sm text-white/75">
-              {isRegister ? 'Con una cuenta puedes reservar y ver tus códigos de retiro.' : 'Para reservar y ver tus códigos de retiro.'}
+            <p className="mt-2 text-sm font-semibold">
+              {isRegister ? 'Con una cuenta puedes apartar y ver tus códigos de retiro.' : 'Ingresa para apartar y ver tus códigos de retiro.'}
             </p>
           </div>
-          <button onClick={onClose} className="p-1 text-white/70 hover:text-white" aria-label="Cerrar inicio de sesión">
+          <button onClick={onClose} className="w-9 h-9 -mr-2 -mt-1 rounded-full flex items-center justify-center hover:bg-mora/10" aria-label="Cerrar inicio de sesión">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <p role="alert" className="flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm p-3">
+            <p role="alert" className="flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm font-semibold p-3">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{error}
             </p>
           )}
           {isRegister && (
             <label className="block">
-              <span className="block text-sm font-semibold text-ink mb-1">Nombre y apellido</span>
+              <span className="block text-sm font-bold text-ink mb-1.5">Nombre y apellido</span>
               <input type="text" required autoComplete="name" value={nombre} onChange={e => setNombre(e.target.value)} className={field} />
             </label>
           )}
           <label className="block">
-            <span className="block text-sm font-semibold text-ink mb-1">Correo</span>
+            <span className="block text-sm font-bold text-ink mb-1.5">Correo</span>
             <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} className={field} />
           </label>
           <label className="block">
-            <span className="block text-sm font-semibold text-ink mb-1">Contraseña</span>
+            <span className="block text-sm font-bold text-ink mb-1.5">Contraseña</span>
             <input
               type="password"
               required
@@ -92,13 +93,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             />
             {isRegister && <span className="mt-1 block text-xs text-ink-muted">Mínimo 8 caracteres.</span>}
           </label>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-12 rounded-tag bg-karen text-white font-semibold hover:bg-karen-deep disabled:opacity-60"
-          >
+          <Button type="submit" disabled={loading} size="lg" className="w-full">
             {loading ? 'Un momento…' : isRegister ? 'Crear cuenta' : 'Ingresar'}
-          </button>
+          </Button>
           {isRegister && (
             <p className="text-[11px] text-ink-muted text-center leading-normal">
               Al registrarte aceptas los <strong>Términos y Condiciones</strong> y la <strong>Política de Privacidad</strong> (LOPDP Ecuador).
@@ -109,7 +106,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             <button
               type="button"
               onClick={() => { setIsRegister(!isRegister); setError(null); }}
-              className="font-semibold text-ink underline underline-offset-2"
+              className="font-extrabold text-ink underline underline-offset-4 decoration-2 decoration-limon"
             >
               {isRegister ? 'Ingresa' : 'Crea una cuenta'}
             </button>
