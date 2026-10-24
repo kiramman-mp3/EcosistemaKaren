@@ -2,7 +2,10 @@ const createAuthMiddleware = require('../../infrastructure/http/middlewares/auth
 const AlertStreamManager = require('../../infrastructure/sse/AlertStreamManager');
 const ReservationCleanerWorker = require('../../infrastructure/workers/ReservationCleanerWorker');
 const LotExpiryWorker = require('../../infrastructure/workers/LotExpiryWorker');
-const HeartbeatSimulatorWorker = require('../../infrastructure/workers/HeartbeatSimulatorWorker');
+const HeartbeatSenderWorker = require('../../infrastructure/workers/HeartbeatSenderWorker');
+const HttpHeartbeatTransport = require('../../infrastructure/heartbeat/HttpHeartbeatTransport');
+const LocalHeartbeatTransport = require('../../infrastructure/heartbeat/LocalHeartbeatTransport');
+const packageInfo = require('../../../package.json');
 const HeartbeatMonitor = require('../../infrastructure/heartbeat/HeartbeatMonitor');
 const PostgresHeartbeatStore = require('../../infrastructure/heartbeat/PostgresHeartbeatStore');
 const PromotionCache = require('../../infrastructure/cache/PromotionCache');
@@ -35,7 +38,7 @@ const HeartbeatController = require('../../adapters/controllers/HeartbeatControl
 // Instancia casos de uso, controladores y procesos de fondo. `store` agrega la autoridad de
 // inventario (lotes, alertas, Gemini, confirmación en caja, workers) y `portal` agrega las
 // reservas de clientes. La lectura de catálogo, la auth y el heartbeat son comunes.
-function buildWiring({ pool, repos, store, portal }) {
+function buildWiring({ pool, repos, store, portal, serviceConfig }) {
   const { categoryRepo, productRepo, lotRepo, reservationRepo, userRepo, alertRepo, promotionRepo, tokenBlacklistRepo } = repos;
 
   const heartbeatStore = pool ? new PostgresHeartbeatStore(pool) : null;
@@ -118,12 +121,17 @@ function buildWiring({ pool, repos, store, portal }) {
     workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo), 60000));
     workers.push(new LotExpiryWorker(new ExpireLots(lotRepo), 60000));
 
-    const autoPingEnabled = process.env.HEARTBEAT_AUTO_PING === 'true' ||
-      (process.env.HEARTBEAT_AUTO_PING !== 'false' && process.env.NODE_ENV === 'development');
-    if (autoPingEnabled) {
+    // La tienda es quien emite el latido: por HTTP hacia el portal, o en proceso en el monolito.
+    if (serviceConfig.heartbeatEnabled) {
       const timeoutSec = Number(process.env.HEARTBEAT_TIMEOUT_SECONDS) || 60;
       const intervalMs = Math.min(25000, Math.max(5000, Math.floor((timeoutSec * 1000) / 2)));
-      workers.push(new HeartbeatSimulatorWorker(heartbeatMonitor, intervalMs));
+      const transport = portal
+        ? new LocalHeartbeatTransport(heartbeatMonitor)
+        : new HttpHeartbeatTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey });
+      workers.push(new HeartbeatSenderWorker(transport, intervalMs, {
+        storeId: serviceConfig.storeId,
+        version: packageInfo.version
+      }));
     }
   }
 

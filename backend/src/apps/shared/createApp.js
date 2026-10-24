@@ -19,7 +19,7 @@ async function createApp({ name, store = false, portal = false }) {
   const serviceConfig = readServiceConfig({ store, portal });
   const { app, pool, dbConnected, httpSecurity } = await createBaseApp();
   const repos = buildRepositories(pool, dbConnected);
-  const wiring = buildWiring({ pool, repos, store, portal });
+  const wiring = buildWiring({ pool, repos, store, portal, serviceConfig });
 
   wiring.start();
 
