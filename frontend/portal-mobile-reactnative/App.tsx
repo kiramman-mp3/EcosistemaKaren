@@ -21,6 +21,7 @@ import { ReservationsScreen } from './src/screens/ReservationsScreen';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './src/types';
 import { api, BackendReservation, mediaUrl } from './src/api/client';
 import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
+import { isAwaitingStore, waitForStoreResolution } from './src/reservations/awaitStore';
 import { formatDate } from './src/utils/dates';
 import { notify } from './src/utils/dialogs';
 import { colors, themed } from './src/theme/tokens';
@@ -189,6 +190,13 @@ function PortalAppContent() {
     return () => { clearInterval(interval); subscription.remove(); };
   }, [currentUser, syncReservations]);
 
+  // Mientras la tienda confirma una reserva, la lista se actualiza sola hasta que la resuelva.
+  useEffect(() => {
+    if (!currentUser || !reservations.some(isAwaitingStore)) return undefined;
+    const interval = setInterval(() => { void syncReservations(currentUser); }, 4000);
+    return () => clearInterval(interval);
+  }, [currentUser, reservations, syncReservations]);
+
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
       const existing = prev.find(i => i.product.id === product.id);
@@ -216,6 +224,35 @@ function PortalAppContent() {
     setIsPassOpen(true);
   };
 
+  /**
+   * Con la tienda separada del portal, la reserva puede quedar en PENDIENTE_SYNC mientras la tienda
+   * responde. Espera a que la acepte o la rechace; devuelve null si sigue en proceso (la reserva
+   * aparecerá sola en "Mis reservas") y lanza el motivo si la tienda no pudo apartarla.
+   */
+  const settleReservation = async (
+    reservation: BackendReservation,
+    user: { id: string }
+  ): Promise<(BackendReservation & { codigoRetiro: string }) | null> => {
+    let settled: BackendReservation | null = reservation;
+    if (isAwaitingStore(reservation)) {
+      settled = await waitForStoreResolution(reservation.id, () => api.getUserReservations(user.id));
+      if (!settled || isAwaitingStore(settled)) return null;
+    }
+    if (settled.estado === 'RECHAZADA') {
+      throw new Error(settled.mensajeRechazo || 'La tienda no pudo apartar tus productos. Intenta de nuevo.');
+    }
+    if (settled.estado !== 'PENDIENTE' || !settled.codigoRetiro) {
+      throw new Error('La reserva ya no está vigente. Intenta apartar de nuevo.');
+    }
+    return settled as BackendReservation & { codigoRetiro: string };
+  };
+
+  const notifyReservationInProgress = (user: { id: string; nombre: string }) => {
+    void syncReservations(user);
+    setActiveTab('reservas');
+    notify('Tu reserva está en proceso', 'Aparecerá en Mis reservas apenas la tienda la confirme.');
+  };
+
   const handleConfirmReservation = async () => {
     if (cart.length === 0) return;
     if (!currentUser) {
@@ -225,10 +262,17 @@ function PortalAppContent() {
     }
     setIsSubmitting(true);
     try {
-      const reservation = await api.createReservation({
+      const created = await api.createReservation({
         usuarioId: currentUser.id,
         items: cart.map(i => ({ productoId: i.product.id, cantidad: i.quantity })),
       });
+      const reservation = await settleReservation(created, currentUser);
+      if (!reservation) {
+        setIsCartOpen(false);
+        setCart([]);
+        notifyReservationInProgress(currentUser);
+        return;
+      }
       const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
       setIsCartOpen(false);
       await openPassFor(reservation.codigoRetiro, {
@@ -264,10 +308,15 @@ function PortalAppContent() {
     setReservingOfferId(offer.id);
     try {
       // promocionId hace que el backend cobre el precio con descuento y use el lote en oferta.
-      const reservation = await api.createReservation({
+      const created = await api.createReservation({
         usuarioId: currentUser.id,
         items: [{ productoId: product.id, cantidad: 1, promocionId: offer.id }],
       });
+      const reservation = await settleReservation(created, currentUser);
+      if (!reservation) {
+        notifyReservationInProgress(currentUser);
+        return;
+      }
       await openPassFor(reservation.codigoRetiro, {
         code: reservation.codigoRetiro,
         status: reservation.estado,
