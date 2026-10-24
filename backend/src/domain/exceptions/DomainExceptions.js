@@ -36,6 +36,13 @@ class ForbiddenException extends DomainException {
   }
 }
 
+// El recurso que se intenta crear ya existe (correo, código de barras, nombre de categoría...).
+class ConflictException extends DomainException {
+  constructor(message = 'El registro ya existe') {
+    super(message, 409);
+  }
+}
+
 class ServiceUnavailableException extends DomainException {
   constructor(message = 'Servicio temporalmente no disponible') {
     super(message, 503);
@@ -49,5 +56,6 @@ module.exports = {
   OverbookingException,
   UnauthorizedException,
   ForbiddenException,
+  ConflictException,
   ServiceUnavailableException
 };

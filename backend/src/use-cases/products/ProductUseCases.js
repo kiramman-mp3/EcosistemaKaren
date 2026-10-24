@@ -1,4 +1,4 @@
-const { NotFoundException, ValidationException } = require('../../domain/exceptions/DomainExceptions');
+const { NotFoundException, ValidationException, ConflictException } = require('../../domain/exceptions/DomainExceptions');
 const Product = require('../../domain/entities/Product');
 
 class GetProducts {
@@ -44,7 +44,7 @@ class CreateProduct {
 
     const existingProduct = await this.productRepository.findByBarcode(productData.codigoBarras);
     if (existingProduct) {
-      throw new ValidationException(`Ya existe un producto registrado con el código de barras '${productData.codigoBarras}'.`);
+      throw new ConflictException(`Ya existe un producto registrado con el código de barras '${productData.codigoBarras}'.`);
     }
 
     const product = new Product(productData);
