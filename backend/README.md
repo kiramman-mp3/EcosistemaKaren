@@ -44,6 +44,19 @@ separadas:
 2. `docker compose --profile split up -d` (levanta además `postgres_portal` en el puerto 5434).
 3. `npm run start:store` y `npm run start:portal` en terminales distintas.
 
+Desde la raíz del repositorio, `node start.js --split` hace todo lo anterior con un solo
+comando: levanta ambas bases, genera `STORE_SERVICE_KEY` si falta, siembra los datos de
+demostración (los clientes demo también en la base del portal), arranca portal-api (4001) y
+store-api (4000) y apunta cada app a su backend:
+
+| App | Backend | Cómo se configura |
+|---|---|---|
+| Portal web | portal-api | proxy de vite (`VITE_PROXY_TARGET`) |
+| Portal móvil | portal-api | `EXPO_PUBLIC_API_URL`; `--api-url=URL` para cambiarla |
+| Bodega móvil | store-api | `EXPO_PUBLIC_API_URL`; `--store-api-url=URL` para cambiarla |
+
+`node start.js --down` detiene también la base del portal.
+
 Un despliegue solo del portal en la nube puede usar `DB_*` para su propia base. Con base
 separada, el portal sirve auth, heartbeat, rate limit, la lectura del catálogo (categorías,
 productos, disponibilidad y promociones) desde la copia que le publica la tienda, y las
