@@ -26,16 +26,17 @@ la app de bodega con Bearer.
 | Cancelar reservas | Propietario o `ADMIN` |
 | Confirmar reservas | `BODEGUERO`, `ADMIN` |
 | Alertas y generación de promociones | `BODEGUERO`, `PERCHERO`, `ADMIN` |
-| Registrar heartbeat | `BODEGUERO`, `ADMIN` |
 
 El catálogo, las promociones activas, el heartbeat de lectura y `GET /availability`
 son públicos. Este último solo expone identificador de lote/producto, fecha, estado y
 cantidad disponible; excluye lotes vencidos o sin disponibilidad.
 
-El servidor inicia con las reservas bloqueadas. `POST /heartbeat` debe ser enviado por
-la aplicación operativa y permanece vigente durante 60 segundos por defecto. Si nunca se
-ha recibido un latido o el último superó `HEARTBEAT_TIMEOUT_SECONDS`, `POST /reservations`
-responde `503 Service Unavailable` sin modificar el inventario.
+El servidor inicia con las reservas bloqueadas. El latido lo envía el backend de la tienda
+(store-api) a `POST /internal/v1/store/heartbeat`, un canal interno autenticado con la
+cabecera `x-store-key` que no forma parte de la API pública ni acepta tokens de usuario.
+Permanece vigente durante 60 segundos por defecto. Si nunca se ha recibido un latido o el
+último superó `HEARTBEAT_TIMEOUT_SECONDS`, `POST /reservations` responde
+`503 Service Unavailable` sin modificar el inventario. `GET /heartbeat` solo consulta el estado.
 
 ---
 

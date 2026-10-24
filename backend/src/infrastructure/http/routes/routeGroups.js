@@ -87,10 +87,10 @@ function authRoutes(router, { authController }, { authenticate }) {
   router.post('/auth/logout', validate({ body: schemas.emptyBody }), (req, res) => authController.logout(req, res));
 }
 
-// Heartbeat de la tienda
-function heartbeatRoutes(router, { heartbeatController }, { authenticate, authorize }) {
-  router.post('/heartbeat', authenticate, authorize('BODEGUERO', 'ADMIN'), validate({ body: schemas.emptyBody }), (req, res) => heartbeatController.ping(req, res));
-  router.get('/heartbeat', (req, res) => heartbeatController.getStatus(req, res));
+// Estado del heartbeat de la tienda. El latido lo emite store-api por el canal interno
+// (`POST /internal/v1/store/heartbeat`), no los clientes.
+function heartbeatRoutes(router, { heartbeatController }) {
+  router.get('/heartbeat', (req, res, next) => heartbeatController.getStatus(req, res, next));
 }
 
 module.exports = {

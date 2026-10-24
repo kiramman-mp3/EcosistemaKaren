@@ -97,15 +97,19 @@ async function runTests() {
       }
     }
 
-    // Heartbeat operativo obligatorio antes de reservar
-    const heartbeatPing = await request('/heartbeat', 'POST', {}, warehouseToken);
-    expectStatus('POST /heartbeat', heartbeatPing, 200);
-    const hb = await request('/heartbeat');
+    // La tienda emite el latido por su cuenta: se espera a que llegue antes de reservar
+    const userHeartbeat = await request('/heartbeat', 'POST', {}, warehouseToken);
+    expectStatus('POST /heartbeat (ya no existe)', userHeartbeat, 404);
+    let hb = await request('/heartbeat');
+    for (let attempt = 0; attempt < 15 && hb.body.reservationsBlocked; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      hb = await request('/heartbeat');
+    }
     expectStatus('GET /heartbeat', hb, 200);
     if (hb.body.reservationsBlocked) {
-      throw new Error('GET /heartbeat: las reservas continúan bloqueadas después del ping.');
+      throw new Error('GET /heartbeat: la tienda no envió un latido en 15 s; las reservas siguen bloqueadas.');
     }
-    console.log('6. POST/GET /heartbeat:', hb.status, `Status: ${hb.body.status}`);
+    console.log('6. GET /heartbeat:', hb.status, `Status: ${hb.body.status}`);
 
     // 7. Probar Reserva FEFO
     if (prods.body.data && prods.body.data.length > 0) {

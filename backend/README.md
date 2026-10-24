@@ -28,7 +28,7 @@ conviven tres puntos de entrada:
 | `npm run start:portal` | portal-api (clientes, reservas, lectura de catálogo) | `PORTAL_PORT` o 4001 |
 
 Cada servicio solo registra las rutas que le corresponden. Los workers (expiración de
-reservas y de lotes, heartbeat de desarrollo) corren únicamente en store-api.
+reservas y de lotes, envío del heartbeat) corren únicamente en store-api.
 
 ## Verificación
 
@@ -49,8 +49,22 @@ reservas toman el identificador de cliente desde ese token y las operaciones de 
 confirmar, cancelar y expirar se ejecutan como transacciones con bloqueos de fila.
 
 La creación de reservas también exige un heartbeat operativo vigente. Al arrancar, el
-backend mantiene las reservas bloqueadas hasta recibir `POST /api/v1/heartbeat` desde un
-usuario `BODEGUERO` o `ADMIN`. El timeout se configura con `HEARTBEAT_TIMEOUT_SECONDS`.
+portal mantiene las reservas bloqueadas hasta que store-api le envíe un latido a
+`POST /internal/v1/store/heartbeat`, autenticado con la cabecera `x-store-key`. Ningún
+usuario puede registrar latidos por la API pública; `GET /api/v1/heartbeat` solo lo consulta.
+El timeout se configura con `HEARTBEAT_TIMEOUT_SECONDS`.
+
+Configuración del canal tienda → portal:
+
+| Variable | Dónde | Descripción |
+|---|---|---|
+| `STORE_SERVICE_KEY` | store-api y portal-api | Secreto compartido de al menos 32 caracteres (obligatorio en producción al separar los servicios). |
+| `PORTAL_URL` | store-api | URL del portal (`https` en producción) a la que se envía el latido. |
+| `STORE_ID` | store-api | Identificador informativo de la tienda (por defecto `tienda-principal`). |
+| `HEARTBEAT_ENABLED` | store-api | `false` desactiva el envío del latido. |
+
+En el monolito de transición el latido se emite en proceso y no hace falta ninguna de estas
+variables.
 
 Los lotes con fecha de caducidad igual o anterior al día actual nunca participan en FEFO.
 Un worker los marca como `VENCIDO` al arrancar y cada 60 segundos; el filtro SQL de las

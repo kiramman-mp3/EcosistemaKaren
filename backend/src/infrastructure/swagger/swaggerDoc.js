@@ -543,17 +543,9 @@ const swaggerDocument = {
       }
     },
     '/heartbeat': {
-      post: {
-        tags: ['Heartbeat'],
-        summary: 'Enviar latido de red física desde tienda a nube (ping)',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          '200': { description: 'Señal registrada' }
-        }
-      },
       get: {
         tags: ['Heartbeat'],
-        summary: 'Consultar estado de conectividad con tienda y si las reservas están bloqueadas',
+        summary: 'Consultar estado de conectividad con tienda y si las reservas están bloqueadas. El latido lo envía store-api por el canal interno.',
         responses: {
           '200': { description: 'Estado ONLINE u OFFLINE' }
         }
