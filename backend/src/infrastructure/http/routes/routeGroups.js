@@ -54,6 +54,11 @@ function storeReservationRoutes(router, { reservationController }, { authenticat
   router.post('/reservations/:id/confirm', authenticate, authorize('BODEGUERO', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => reservationController.confirm(req, res, next));
 }
 
+// Estado de la copia del catálogo, para que los clientes avisen si los datos están desactualizados
+function catalogStatusRoutes(router, { catalogStatusController }) {
+  router.get('/catalog/status', (req, res, next) => catalogStatusController.getStatus(req, res, next));
+}
+
 function alertRoutes(router, { alertController }, { authenticate, authorize }) {
   router.get('/alerts', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.alertQuery }), (req, res, next) => alertController.getAlerts(req, res, next));
   router.patch('/alerts/:id/atender', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ params: schemas.idParams }), (req, res, next) => alertController.markAsAttended(req, res, next));
@@ -97,6 +102,7 @@ module.exports = {
   rootRoutes,
   catalogReadRoutes,
   catalogAdminRoutes,
+  catalogStatusRoutes,
   inventoryRoutes,
   customerReservationRoutes,
   reservationLookupRoutes,

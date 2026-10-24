@@ -49,7 +49,9 @@ function readServiceConfig({ store, portal }, env = process.env) {
     heartbeatEnabled,
     catalogSyncEnabled,
     catalogSyncIntervalMs: positiveSeconds(env.CATALOG_SYNC_INTERVAL_SECONDS, 15, 5) * 1000,
-    catalogResyncMs: positiveSeconds(env.CATALOG_RESYNC_SECONDS, 600, 30) * 1000
+    catalogResyncMs: positiveSeconds(env.CATALOG_RESYNC_SECONDS, 600, 30) * 1000,
+    // Debe ser mayor que el reenvío completo: las secciones sin cambios solo se reenvían entonces.
+    catalogStaleSeconds: positiveSeconds(env.CATALOG_STALE_SECONDS, 1200, 60)
   };
 }
 

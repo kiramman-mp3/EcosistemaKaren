@@ -39,7 +39,8 @@ const AuthController = require('../../adapters/controllers/AuthController');
 const HeartbeatController = require('../../adapters/controllers/HeartbeatController');
 const CatalogSyncController = require('../../adapters/controllers/CatalogSyncController');
 const PostgresCatalogMirrorRepository = require('../../adapters/repositories/PostgresCatalogMirrorRepository');
-const { ApplyCatalogSnapshot } = require('../../use-cases/catalog/CatalogSyncUseCases');
+const CatalogStatusController = require('../../adapters/controllers/CatalogStatusController');
+const { ApplyCatalogSnapshot, GetCatalogSyncStatus } = require('../../use-cases/catalog/CatalogSyncUseCases');
 
 // Instancia casos de uso, controladores y procesos de fondo. `store` agrega la autoridad de
 // inventario (lotes, alertas, Gemini, confirmación en caja, workers) y `portal` agrega las
@@ -84,10 +85,15 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
 
   // portal-api con base propia recibe la copia del catálogo; en el monolito las tablas se comparten.
   // Sin PostgreSQL (respaldo en memoria) no hay dónde guardarla y la ruta no se registra.
-  if (portal && !store && pool) {
-    controllers.catalogSyncController = new CatalogSyncController(
-      new ApplyCatalogSnapshot(new PostgresCatalogMirrorRepository(pool))
-    );
+  const catalogMirrorRepo = portal && !store && pool ? new PostgresCatalogMirrorRepository(pool) : null;
+  if (catalogMirrorRepo) {
+    controllers.catalogSyncController = new CatalogSyncController(new ApplyCatalogSnapshot(catalogMirrorRepo));
+  }
+  if (portal) {
+    controllers.catalogStatusController = new CatalogStatusController(new GetCatalogSyncStatus(catalogMirrorRepo, {
+      mode: store ? 'direct' : 'mirror',
+      staleAfterSeconds: serviceConfig.catalogStaleSeconds
+    }));
   }
 
   const workers = [];

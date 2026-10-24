@@ -30,9 +30,14 @@ test('store-api no recibe reservas de clientes', () => {
 });
 
 test('portal-api expone reservas de clientes y lectura pública', () => {
-  for (const route of ['POST /reservations', 'GET /reservations/user/:userId', 'GET /products', 'GET /availability', 'GET /promotions', 'GET /heartbeat']) {
+  for (const route of ['POST /reservations', 'GET /reservations/user/:userId', 'GET /products', 'GET /availability', 'GET /promotions', 'GET /heartbeat', 'GET /catalog/status']) {
     assert.ok(portal.includes(route), `portal-api debe exponer ${route}`);
   }
+});
+
+test('el estado de la copia del catálogo es del portal, no de la tienda', () => {
+  assert.ok(portal.includes('GET /catalog/status'));
+  assert.ok(!store.includes('GET /catalog/status'));
 });
 
 test('portal-api no expone inventario, alertas ni administración', () => {

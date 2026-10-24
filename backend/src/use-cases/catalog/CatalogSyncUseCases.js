@@ -1,5 +1,5 @@
 const { ValidationException } = require('../../domain/exceptions/DomainExceptions');
-const { SECTIONS } = require('../../infrastructure/sync/catalogSections');
+const { SECTIONS, SECTION_ORDER } = require('../../infrastructure/sync/catalogSections');
 
 // portal-api: aplica el snapshot de una sección que publica la tienda.
 class ApplyCatalogSnapshot {
@@ -22,4 +22,41 @@ class ApplyCatalogSnapshot {
   }
 }
 
-module.exports = { ApplyCatalogSnapshot };
+// Estado de la copia del catálogo que ven los clientes. Las secciones sin cambios solo se
+// reenvían en el reenvío completo de la tienda, así que `staleAfterSeconds` debe ser mayor que
+// ese intervalo. En el monolito (modo 'direct') el catálogo se lee de la fuente y nunca está viejo.
+class GetCatalogSyncStatus {
+  constructor(catalogMirrorRepository, { mode = 'mirror', staleAfterSeconds = 1200, clock = () => Date.now() } = {}) {
+    this.catalogMirrorRepository = catalogMirrorRepository;
+    this.mode = mode;
+    this.staleAfterSeconds = staleAfterSeconds;
+    this.clock = clock;
+  }
+
+  async execute() {
+    if (this.mode === 'direct') {
+      return { mode: 'direct', stale: false, lastSyncAt: null, staleAfterSeconds: null, sections: [] };
+    }
+
+    const sections = this.catalogMirrorRepository ? await this.catalogMirrorRepository.getSyncStatus() : [];
+    const synced = new Map(sections.map(section => [section.seccion, section]));
+    const missing = SECTION_ORDER.filter(name => !synced.has(name));
+    const oldest = sections.length
+      ? Math.min(...sections.map(section => Date.parse(section.sincronizadoAt)))
+      : null;
+    const ageSeconds = oldest === null ? null : Math.max(0, Math.floor((this.clock() - oldest) / 1000));
+    const stale = missing.length > 0 || ageSeconds > this.staleAfterSeconds;
+
+    return {
+      mode: 'mirror',
+      stale,
+      lastSyncAt: oldest === null ? null : new Date(oldest).toISOString(),
+      secondsSinceSync: ageSeconds,
+      staleAfterSeconds: this.staleAfterSeconds,
+      missingSections: missing,
+      sections
+    };
+  }
+}
+
+module.exports = { ApplyCatalogSnapshot, GetCatalogSyncStatus };
