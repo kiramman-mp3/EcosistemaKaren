@@ -6,6 +6,7 @@ const {
 } = require('../../domain/exceptions/DomainExceptions');
 const Reservation = require('../../domain/entities/Reservation');
 const { normalizeReservationItems } = require('./ReservationUseCases');
+const { isDatabaseDataError } = require('../../infrastructure/http/middlewares/databaseErrors');
 
 // Lo que el cliente puede ver de cada línea asignada por la tienda.
 function toPublicLine(detail) {
@@ -74,6 +75,9 @@ class ProcessStoreCommand {
       if (error instanceof OverbookingException) return rejectedResult('OVERBOOKING', error.message);
       if (error instanceof NotFoundException) return rejectedResult('NOT_FOUND', error.message);
       if (error instanceof ValidationException) return rejectedResult('VALIDATION', error.message);
+      // Un dato que la base rechaza (formato, longitud...) nunca se arregla reintentando: se rechaza la
+      // reserva en vez de dejar el comando sin respuesta hasta agotar sus reentregas.
+      if (isDatabaseDataError(error)) return rejectedResult('VALIDATION', 'Los datos de la reserva no son válidos.');
       throw error;
     }
   }

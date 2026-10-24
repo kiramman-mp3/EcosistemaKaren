@@ -1,4 +1,4 @@
-const { ValidationException, UnauthorizedException } = require('../../domain/exceptions/DomainExceptions');
+const { ValidationException, UnauthorizedException, ConflictException } = require('../../domain/exceptions/DomainExceptions');
 const User = require('../../domain/entities/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -20,7 +20,7 @@ class RegisterUser {
 
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
-      throw new ValidationException(`El correo electrónico '${email}' ya está registrado.`);
+      throw new ConflictException(`El correo electrónico '${email}' ya está registrado.`);
     }
 
     const passwordHash = await bcrypt.hash(password, 10);

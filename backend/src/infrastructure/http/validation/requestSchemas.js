@@ -6,16 +6,18 @@ const text = (min, max, label) => z.string()
   .min(min, `${label} debe tener al menos ${min} caracteres.`)
   .max(max, `${label} no puede superar ${max} caracteres.`);
 
-const entityId = z.string()
-  .trim()
-  .min(1, 'El identificador es obligatorio.')
-  .max(64, 'El identificador es demasiado largo.')
-  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'El identificador no tiene un formato válido.');
+// Igual que el tipo UUID de PostgreSQL: cualquier 8-4-4-4-12 hexadecimal. z.uuid() exige además
+// versión y variante RFC 4122 y rechazaría ids válidos de la base (p. ej. los de los datos semilla).
+// Todo identificador que se compara con una columna uuid se valida así: un texto cualquiera llegaría
+// a la base y ésta respondería con un error de formato.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const postgresUuid = z.string().regex(UUID_PATTERN, 'El identificador no es un UUID válido.');
+const entityId = z.string().trim().regex(UUID_PATTERN, 'El identificador no tiene un formato válido.');
 
 const barcode = z.string()
   .trim()
   .min(4, 'El código de barras debe tener al menos 4 caracteres.')
-  .max(64, 'El código de barras no puede superar 64 caracteres.')
+  .max(50, 'El código de barras no puede superar 50 caracteres.')
   .regex(/^[A-Za-z0-9.-]+$/, 'El código de barras contiene caracteres no válidos.');
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe usar el formato AAAA-MM-DD.')
@@ -34,9 +36,6 @@ const emptyToUndefined = (schema) => z.preprocess(val => (val === '' ? undefined
 
 const MAX_SYNC_ITEMS = 50000;
 
-// Igual que el tipo UUID de PostgreSQL: cualquier 8-4-4-4-12 hexadecimal. z.uuid() exige además
-// versión y variante RFC 4122, y rechazaría ids válidos de la base (p. ej. los de los datos semilla).
-const postgresUuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'El identificador no es un UUID válido.');
 
 // Valida cada sección del snapshot de catálogo con las mismas definiciones que usa el
 // repositorio espejo, de modo que el contrato vive en un solo lugar.
@@ -107,7 +106,7 @@ const schemas = {
   productBody: z.strictObject({
     categoriaId: entityId,
     codigoBarras: barcode,
-    nombre: text(3, 200, 'El nombre'),
+    nombre: text(3, 150, 'El nombre'),
     descripcion: text(1, 1000, 'La descripción').nullable().optional(),
     precioVenta: money,
     impuestoPorcentaje: z.coerce.number().finite().min(0).max(100).optional(),
@@ -122,7 +121,7 @@ const schemas = {
   barcodeParams: z.strictObject({ barcode }),
   lotBody: z.strictObject({
     productoId: entityId,
-    numeroLote: text(1, 100, 'El número de lote').regex(/^[\p{L}\p{N}._/-]+$/u, 'El número de lote contiene caracteres no válidos.'),
+    numeroLote: text(1, 50, 'El número de lote').regex(/^[\p{L}\p{N}._/-]+$/u, 'El número de lote contiene caracteres no válidos.'),
     fechaElaboracion: isoDate,
     fechaCaducidad: isoDate,
     costoUnitario: money,
@@ -186,11 +185,11 @@ const schemas = {
   }),
   registerBody: z.strictObject({
     nombre: text(2, 120, 'El nombre'),
-    email: z.string().trim().email('El correo electrónico no es válido.').max(254).transform(value => value.toLowerCase()),
+    email: z.string().trim().email('El correo electrónico no es válido.').max(150).transform(value => value.toLowerCase()),
     password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.').max(128, 'La contraseña no puede superar 128 caracteres.')
   }),
   loginBody: z.strictObject({
-    email: z.string().trim().email('El correo electrónico no es válido.').max(254).transform(value => value.toLowerCase()),
+    email: z.string().trim().email('El correo electrónico no es válido.').max(150).transform(value => value.toLowerCase()),
     password: z.string().min(1, 'La contraseña es obligatoria.').max(128, 'La contraseña no puede superar 128 caracteres.')
   }),
   // Latido que store-api envía al portal; todos los campos son informativos.

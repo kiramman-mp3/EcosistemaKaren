@@ -437,6 +437,19 @@ class PostgresReservationRepository {
    * local de usuarios, por lo que sus movimientos de inventario no llevan actor.
    */
   async createWithLockedStock(reservation, items, options = {}) {
+    // El código de retiro es único y se genera al azar: ante una colisión (rarísima) se genera otro.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this._createWithLockedStock(reservation, items, options);
+      } catch (error) {
+        const collision = error.code === '23505' && /codigo_retiro/.test(error.constraint || '');
+        if (!collision || attempt >= 2) throw error;
+        reservation.codigoRetiro = Reservation.generarCodigoRetiro();
+      }
+    }
+  }
+
+  async _createWithLockedStock(reservation, items, options = {}) {
     const remote = options.remote || null;
     const client = await this.pool.connect();
     try {
