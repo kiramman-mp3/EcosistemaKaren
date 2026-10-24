@@ -10,7 +10,7 @@ import { BackendCategory, BackendProduct } from '../types';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, Field, Notice, ScreenTitle } from '../components/ui';
-import { colors, fonts, radius, themed } from '../theme/tokens';
+import { colors, fonts, getAisleColor, radius, themed } from '../theme/tokens';
 
 const PAGE_SIZE = 30;
 const EMPTY_FORM = { categoriaId: '', nombre: '', descripcion: '', precioVenta: '', impuestoPorcentaje: '15', minStockAlerta: '10' };
@@ -186,6 +186,8 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       </>}
       renderItem={({ item }) => {
         const image = mediaUrl(item.imagenUrl);
+        const catName = categoryName(item.categoriaId);
+        const aisle = getAisleColor(catName);
         return (
           <View style={styles.row}>
             <View style={styles.thumb}>
@@ -195,7 +197,10 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
             </View>
             <View style={styles.rowInfo}>
               <Text style={styles.name} numberOfLines={2}>{item.nombre}</Text>
-              <Text style={styles.meta} numberOfLines={1}>{categoryName(item.categoriaId)}</Text>
+              <View style={[styles.aisleBadge, { backgroundColor: aisle.bg }]}>
+                <View style={[styles.aisleDot, { backgroundColor: aisle.dot }]} />
+                <Text style={[styles.aisleText, { color: aisle.text }]} numberOfLines={1}>{catName}</Text>
+              </View>
               <Text style={styles.ean}>EAN {item.codigoBarras}</Text>
             </View>
             <View style={styles.priceBox}>
@@ -277,7 +282,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
 
 const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.aisle },
-  list: { padding: 16, paddingBottom: 32 },
+  list: { padding: 16, paddingBottom: 32, width: '100%', maxWidth: 1080, alignSelf: 'center' },
   flex: { flex: 1, minWidth: 0 },
   adminActions: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   search: {
@@ -295,6 +300,12 @@ const styles = themed(() => StyleSheet.create({
   thumbImage: { width: 60, height: 60 },
   rowInfo: { flex: 1, minWidth: 0 },
   name: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
+  aisleBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, marginTop: 3, marginBottom: 3,
+  },
+  aisleDot: { width: 7, height: 7, borderRadius: 3.5 },
+  aisleText: { fontFamily: fonts.bold, fontSize: 11 },
   meta: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted, marginTop: 2 },
   ean: { fontFamily: fonts.body, fontSize: 12, color: colors.inkFaint },
   priceBox: { alignItems: 'flex-end' },

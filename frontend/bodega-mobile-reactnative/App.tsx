@@ -5,6 +5,7 @@ import {
   View,
   Text,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { HeaderBodega } from './src/components/HeaderBodega';
@@ -208,79 +209,81 @@ function BodegaAppContent() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && styles.desktopRoot]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.mora} />
 
-      {/* Header Bodega */}
-      <HeaderBodega
-        isOnline={isOnline}
-        operatorName={currentUser.nombre}
-        operatorRole={currentUser.rol}
-        onOpenReports={() => setActiveTab('reportes')}
-        onLogout={() => {
-          void api.logout();
-          setCurrentUser(null);
-          setProducts([]);
-          setLots([]);
-          setAlerts([]);
-          setSelectedPromo(null);
-          setMermaTarget(null);
-        }}
-      />
+      <View style={[styles.appShell, Platform.OS === 'web' && styles.desktopShell]}>
+        {/* Header Bodega */}
+        <HeaderBodega
+          isOnline={isOnline}
+          operatorName={currentUser.nombre}
+          operatorRole={currentUser.rol}
+          onOpenReports={() => setActiveTab('reportes')}
+          onLogout={() => {
+            void api.logout();
+            setCurrentUser(null);
+            setProducts([]);
+            setLots([]);
+            setAlerts([]);
+            setSelectedPromo(null);
+            setMermaTarget(null);
+          }}
+        />
 
-      {/* Main Screen Body */}
-      <View style={styles.body}>
-        {activeTab === 'ingreso' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
-          <IngresoLoteScreen
-            products={products}
-            onLotCreated={loadData}
-            onOpenCatalog={() => setActiveTab('catalogo')}
-            onRefresh={loadData}
-            refreshing={refreshing}
-          />
-        )}
+        {/* Main Screen Body */}
+        <View style={styles.body}>
+          {activeTab === 'ingreso' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
+            <IngresoLoteScreen
+              products={products}
+              onLotCreated={loadData}
+              onOpenCatalog={() => setActiveTab('catalogo')}
+              onRefresh={loadData}
+              refreshing={refreshing}
+            />
+          )}
 
-        {activeTab === 'catalogo' && (
-          <CatalogoProductosScreen role={currentUser.rol} onCatalogChanged={loadData} />
-        )}
+          {activeTab === 'catalogo' && (
+            <CatalogoProductosScreen role={currentUser.rol} onCatalogChanged={loadData} />
+          )}
 
-        {activeTab === 'reportes' && <ReportesScreen />}
-        {activeTab === 'promociones' && currentUser.rol === 'ADMIN' && <AprobacionesScreen />}
+          {activeTab === 'reportes' && <ReportesScreen />}
+          {activeTab === 'promociones' && currentUser.rol === 'ADMIN' && <AprobacionesScreen />}
 
-        {activeTab === 'alertas' && (
-          <AlertasCaducidadScreen
-            alerts={alerts}
-            onRefresh={loadData}
-            refreshing={refreshing}
-            onOpenAiPromo={(promo) => setSelectedPromo(promo)}
-            onOpenMerma={handleOpenMerma}
-          />
-        )}
+          {activeTab === 'alertas' && (
+            <AlertasCaducidadScreen
+              alerts={alerts}
+              onRefresh={loadData}
+              refreshing={refreshing}
+              onOpenAiPromo={(promo) => setSelectedPromo(promo)}
+              onOpenMerma={handleOpenMerma}
+            />
+          )}
 
-        {activeTab === 'inventario' && (
-          <InventarioLotesScreen
-            lots={lots}
-            onRefresh={loadData}
-            refreshing={refreshing}
-          />
-        )}
+          {activeTab === 'inventario' && (
+            <InventarioLotesScreen
+              lots={lots}
+              onRefresh={loadData}
+              refreshing={refreshing}
+            />
+          )}
 
-        {activeTab === 'caja' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
-          <CajaSiaciScreen
-            onReservationUpdated={loadData}
-            onRefresh={loadData}
-            refreshing={refreshing}
-          />
-        )}
+          {activeTab === 'caja' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
+            <CajaSiaciScreen
+              onReservationUpdated={loadData}
+              onRefresh={loadData}
+              refreshing={refreshing}
+            />
+          )}
+        </View>
+
+        {/* Bottom Navigation */}
+        <TabNavBodega
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          role={currentUser.rol}
+          criticalAlertsCount={criticalAlertsCount}
+        />
       </View>
-
-      {/* Bottom Navigation */}
-      <TabNavBodega
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        role={currentUser.rol}
-        criticalAlertsCount={criticalAlertsCount}
-      />
 
       {/* Modals */}
       <AiPromoModal
@@ -307,7 +310,7 @@ function BodegaAppContent() {
           onConfirmMerma={handleConfirmMerma}
         />
       )}
-      </SafeAreaView>
+    </SafeAreaView>
   );
 }
 
@@ -327,6 +330,30 @@ const styles = themed(() => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.mora,
+  },
+  desktopRoot: {
+    backgroundColor: '#16100B',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
+  },
+  appShell: {
+    flex: 1,
+    width: '100%',
+  },
+  desktopShell: {
+    maxWidth: 1160,
+    width: '100%',
+    height: '100%',
+    alignSelf: 'center',
+    backgroundColor: colors.aisle,
+    borderLeftWidth: 2,
+    borderRightWidth: 2,
+    borderColor: colors.mora,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 8,
   },
   body: {
     flex: 1,
