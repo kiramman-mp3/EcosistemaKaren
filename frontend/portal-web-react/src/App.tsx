@@ -21,6 +21,7 @@ import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass
 import { AlertTriangle } from 'lucide-react';
 import { api, BackendCategory, BackendReservation } from './api/client';
 import { reservationToPass, selectActiveReservation } from './reservations/recovery';
+import { isAwaitingStore, waitForStoreResolution } from './reservations/awaitStore';
 import { daysUntil, formatDate } from './utils/dates';
 
 // Foto neutra si un producto aún no tiene imagen propia.
@@ -60,6 +61,8 @@ export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol?: string } | null>(null);
 
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  // La copia del catálogo del portal lleva demasiado sin sincronizarse con la tienda.
+  const [catalogStale, setCatalogStale] = useState<boolean>(false);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
   const [dataState, setDataState] = useState<DataLoadState>('loading');
   const [dataError, setDataError] = useState<string | null>(null);
@@ -102,6 +105,13 @@ export const App: React.FC = () => {
     } finally { setSyncingReservations(false); }
   }, []);
 
+  // Mientras la tienda confirma una reserva, se actualiza la lista sola hasta que la resuelva.
+  useEffect(() => {
+    if (!currentUser || !reservations.some(isAwaitingStore)) return undefined;
+    const timer = window.setInterval(() => void syncReservations(currentUser), 4000);
+    return () => window.clearInterval(timer);
+  }, [currentUser, reservations, syncReservations]);
+
   const checkHeartbeat = useCallback(async () => {
     try {
       const hb = await api.getHeartbeat();
@@ -116,6 +126,7 @@ export const App: React.FC = () => {
     setDataError(null);
     try {
       await checkHeartbeat();
+      void api.getCatalogStatus().then(status => setCatalogStale(Boolean(status?.stale)));
       const [backendCats, pageRes, backendLots, backendPromos] = await Promise.all([
         api.getCategories(), api.getProductsPage({ limit: 24, offset: 0 }), api.getLots(), api.getPromotions(),
       ]);
@@ -339,7 +350,7 @@ export const App: React.FC = () => {
     const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
     try {
-      const result = await api.createReservation({
+      let result = await api.createReservation({
         usuarioId: currentUser.id,
         items: cart.map(i => ({
           productoId: i.product.reservationProductId || i.product.id,
@@ -347,13 +358,36 @@ export const App: React.FC = () => {
           promocionId: i.product.promotionId,
         })),
       });
+
+      // Con la tienda separada del portal, la respuesta puede tardar: la reserva queda en
+      // PENDIENTE_SYNC y se espera a que la tienda la acepte o la rechace.
+      if (isAwaitingStore(result)) {
+        showToast('La tienda está confirmando tu reserva…');
+        const resolved = await waitForStoreResolution(result.id, () => api.getUserReservations(currentUser.id));
+        if (!resolved || isAwaitingStore(resolved)) {
+          setCart([]);
+          setIsCartOpen(false);
+          void syncReservations(currentUser);
+          goTo('reservas');
+          showToast('Tu reserva está en proceso. Aparecerá en Mis reservas apenas la tienda la confirme.');
+          return;
+        }
+        if (resolved.estado === 'RECHAZADA') {
+          throw new Error(resolved.mensajeRechazo || 'La tienda no pudo apartar tus productos. Intenta de nuevo.');
+        }
+        if (resolved.estado !== 'PENDIENTE' || !resolved.codigoRetiro) {
+          throw new Error('La reserva ya no está vigente. Intenta apartar de nuevo.');
+        }
+        result = resolved;
+      }
+      const code = result.codigoRetiro as string;
       const remainingSeconds = secondsUntilExpiration(result.fechaExpiracion);
       // La respuesta de creación no trae nombres ni lotes legibles: se consulta la
       // reserva completa (FEFO puede repartir un producto en varios lotes).
-      const saved = await api.getReservationByCode(result.codigoRetiro).catch(() => null);
+      const saved = await api.getReservationByCode(code).catch(() => null);
 
       setCurrentPass(saved ? reservationToPass(saved, currentUser.nombre) : {
-        code: result.codigoRetiro,
+        code,
         status: 'ACTIVA',
         initialSeconds: remainingSeconds,
         remainingSeconds,
@@ -422,6 +456,15 @@ export const App: React.FC = () => {
   return (
     <ThemeProvider>
       <div className="min-h-screen flex flex-col bg-page text-ink pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0">
+        {isOnline && catalogStale && (
+        <div className="bg-limon text-mora text-sm font-semibold border-b-2 border-mora" role="status">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>El stock que ves puede no estar al día. Si algo ya no está, te avisaremos al apartar.</span>
+          </div>
+        </div>
+      )}
+
         {!isOnline && (
         <div className="bg-karen text-white text-sm font-semibold border-b-2 border-mora" role="alert">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
