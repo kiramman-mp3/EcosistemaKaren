@@ -40,6 +40,8 @@ const HeartbeatController = require('../../adapters/controllers/HeartbeatControl
 const CatalogSyncController = require('../../adapters/controllers/CatalogSyncController');
 const PostgresCatalogMirrorRepository = require('../../adapters/repositories/PostgresCatalogMirrorRepository');
 const CatalogStatusController = require('../../adapters/controllers/CatalogStatusController');
+const wirePortalReservations = require('./wirePortalReservations');
+const wireStoreChannel = require('./wireStoreChannel');
 const { ApplyCatalogSnapshot, GetCatalogSyncStatus } = require('../../use-cases/catalog/CatalogSyncUseCases');
 
 // Instancia casos de uso, controladores y procesos de fondo. `store` agrega la autoridad de
@@ -97,6 +99,16 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
   }
 
   const workers = [];
+
+  // portal-api con base propia encola las reservas para la tienda en vez de descontar stock.
+  const portalReservations = portal && !store && pool
+    ? wirePortalReservations({ pool, heartbeatMonitor, serviceConfig })
+    : null;
+  if (portalReservations) {
+    controllers.storeChannelController = portalReservations.storeChannelController;
+    workers.push(...portalReservations.workers);
+  }
+
   let alertStreamManager = null;
   let lotUseCases = {};
   let confirmReservationUC;
@@ -121,7 +133,13 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       getInventoryMovementsUC: new GetInventoryMovements(lotRepo),
       getWastesUC: new GetWastes(lotRepo)
     };
-    confirmReservationUC = new ConfirmReservation(reservationRepo);
+    // Con la tienda separada del portal, atiende las reservas que éste le encarga y le avisa los cambios.
+    const storeChannel = !portal && pool && serviceConfig.reservationQueueEnabled
+      ? wireStoreChannel({ pool, reservationRepo, serviceConfig })
+      : null;
+    if (storeChannel) workers.push(...storeChannel.workers);
+    const reservationEvents = storeChannel ? storeChannel.eventPublisher : null;
+    confirmReservationUC = new ConfirmReservation(reservationRepo, reservationEvents);
 
     promotionUseCases = {
       generarPromocionesIAUC: new GenerarPromocionesIA(lotRepo, promotionRepo, geminiAdapter, promotionCache, productRepo),
@@ -138,7 +156,7 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     );
 
     // Procesos de fondo: expiración de reservas TTL y de lotes
-    workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo), 60000));
+    workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo, reservationEvents), 60000));
     workers.push(new LotExpiryWorker(new ExpireLots(lotRepo), 60000));
 
     // Con base propia, el portal recibe una copia del catálogo que la tienda le publica.
@@ -160,7 +178,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
         : new HttpHeartbeatTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey });
       workers.push(new HeartbeatSenderWorker(transport, intervalMs, {
         storeId: serviceConfig.storeId,
-        version: packageInfo.version
+        version: packageInfo.version,
+        getPendingEvents: storeChannel ? () => storeChannel.outbox.pendingCount() : undefined
       }));
     }
   }
@@ -175,13 +194,15 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     lotUseCases.getWastesUC
   );
 
-  controllers.reservationController = new ReservationController(
-    portal ? new ReservarStock(reservationRepo, heartbeatMonitor) : undefined,
-    getReservationByCodeUC,
-    confirmReservationUC,
-    portal ? new CancelReservation(reservationRepo) : undefined,
-    portal ? new GetReservationsByUser(reservationRepo) : undefined
-  );
+  controllers.reservationController = portalReservations
+    ? portalReservations.reservationController
+    : new ReservationController(
+      portal ? new ReservarStock(reservationRepo, heartbeatMonitor) : undefined,
+      getReservationByCodeUC,
+      confirmReservationUC,
+      portal ? new CancelReservation(reservationRepo) : undefined,
+      portal ? new GetReservationsByUser(reservationRepo) : undefined
+    );
 
   controllers.promotionController = new PromotionController(
     promotionUseCases.generarPromocionesIAUC,

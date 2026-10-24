@@ -6,7 +6,11 @@ const schemas = require('../validation/requestSchemas');
 // API key de servicio (ADR-003). La tienda inicia siempre la comunicación.
 // `bodyParsers` se monta después de autenticar, de modo que un llamador sin clave nunca
 // obliga al servidor a leer un cuerpo grande.
-function createInternalRouter({ heartbeatController, catalogSyncController }, serviceAuth, bodyParsers = []) {
+function createInternalRouter(
+  { heartbeatController, catalogSyncController, storeChannelController },
+  serviceAuth,
+  bodyParsers = []
+) {
   const router = Router();
   router.use(serviceAuth);
   if (bodyParsers.length > 0) router.use(bodyParsers);
@@ -16,6 +20,13 @@ function createInternalRouter({ heartbeatController, catalogSyncController }, se
   // Solo existe cuando portal-api tiene su propia copia del catálogo; el monolito comparte las tablas.
   if (catalogSyncController) {
     router.post('/store/sync/catalog', validate({ body: schemas.catalogSyncBody }), (req, res, next) => catalogSyncController.apply(req, res, next));
+  }
+
+  // Cola de comandos de reserva: solo cuando portal-api tiene base propia donde guardarla.
+  if (storeChannelController) {
+    router.get('/store/commands', validate({ query: schemas.storeCommandsQuery }), (req, res, next) => storeChannelController.getCommands(req, res, next));
+    router.post('/store/commands/:id/result', validate({ params: schemas.commandIdParams, body: schemas.storeCommandResultBody }), (req, res, next) => storeChannelController.postResult(req, res, next));
+    router.post('/store/events', validate({ body: schemas.storeEventsBody }), (req, res, next) => storeChannelController.postEvents(req, res, next));
   }
 
   return router;

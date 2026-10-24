@@ -16,11 +16,13 @@ const MIGRATION_SETS = {
     { version: '008_product_image', file: path.join(INIT_DB, 'store/08-product-image.sql') },
     { version: '009_product_search', file: path.join(INIT_DB, 'store/09-product-search.sql') },
     { version: '010_heartbeat_and_ratelimit', file: path.join(INIT_DB, 'store/10-heartbeat-and-ratelimit.sql') },
-    { version: '011_token_revocation', file: path.join(INIT_DB, 'store/11-token-revocation.sql') }
+    { version: '011_token_revocation', file: path.join(INIT_DB, 'store/11-token-revocation.sql') },
+    { version: '012_remote_clients_and_outbox', file: path.join(INIT_DB, 'store/12-remote-clients-and-outbox.sql') }
   ],
   portal: [
     { version: 'portal_001_schema', file: path.join(INIT_DB, 'portal/01-portal-schema.sql') },
-    { version: 'portal_002_catalog_mirror', file: path.join(INIT_DB, 'portal/02-catalog-mirror.sql') }
+    { version: 'portal_002_catalog_mirror', file: path.join(INIT_DB, 'portal/02-catalog-mirror.sql') },
+    { version: 'portal_003_reservations', file: path.join(INIT_DB, 'portal/03-reservations.sql') }
   ]
 };
 

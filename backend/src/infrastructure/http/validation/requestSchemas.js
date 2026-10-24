@@ -65,6 +65,40 @@ function catalogSyncBody() {
   return z.discriminatedUnion('section', sections);
 }
 
+// Resultado que la tienda informa para un comando de reserva. Las líneas aceptadas solo llevan
+// lo que el cliente puede ver; cualquier otro campo se rechaza.
+function storeCommandResultBody() {
+  const line = z.strictObject({
+    loteId: postgresUuid,
+    cantidad: z.number().int().min(1).max(100000),
+    precioUnitario: z.number().finite().min(0).max(1000000),
+    numeroLote: z.string().min(1).max(50),
+    productoId: postgresUuid,
+    productoNombre: z.string().min(1).max(150),
+    codigoBarras: z.string().min(1).max(64),
+    imagenUrl: z.string().max(500).nullable()
+  });
+  return z.discriminatedUnion('status', [
+    z.strictObject({
+      status: z.literal('ACCEPTED'),
+      reservation: z.strictObject({
+        codigoRetiro: z.string().regex(/^KR-[A-Z0-9]{6,20}$/, 'El código de retiro no tiene un formato válido.'),
+        fechaExpiracion: z.iso.datetime({ offset: true }),
+        detalles: z.array(line).min(1).max(100)
+      })
+    }),
+    z.strictObject({
+      status: z.literal('REJECTED'),
+      reason: z.enum(['OVERBOOKING', 'VALIDATION', 'NOT_FOUND', 'EXPIRED', 'STORE_ERROR']),
+      message: z.string().max(500).optional()
+    }),
+    z.strictObject({
+      status: z.enum(['APPLIED', 'IGNORED']),
+      estado: z.enum(['CANCELADA', 'CONFIRMADA', 'EXPIRADA', 'DESCONOCIDA'])
+    })
+  ]);
+}
+
 const schemas = {
   categoryBody: z.strictObject({
     nombre: text(2, 100, 'El nombre'),
@@ -166,6 +200,20 @@ const schemas = {
     pendingEvents: z.number().int().min(0).max(1000000).optional()
   }),
   catalogSyncBody: catalogSyncBody(),
+  // Canal de comandos de reserva store-api <-> portal-api (ADR-003)
+  storeCommandsQuery: z.strictObject({
+    wait: z.coerce.number().int().min(0).max(30).default(0),
+    limit: z.coerce.number().int().min(1).max(50).default(20)
+  }),
+  commandIdParams: z.strictObject({ id: postgresUuid }),
+  storeCommandResultBody: storeCommandResultBody(),
+  storeEventsBody: z.strictObject({
+    events: z.array(z.strictObject({
+      reservaId: postgresUuid,
+      estado: z.enum(['CONFIRMADA', 'EXPIRADA', 'CANCELADA']),
+      at: z.iso.datetime({ offset: true })
+    })).min(1).max(200)
+  }),
   emptyBody
 };
 

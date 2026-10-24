@@ -45,10 +45,10 @@ dedicada, comparación con `timingSafeEqual`, secreto distinto de `JWT_SECRET`).
 | Método y ruta | Uso |
 |---|---|
 | `POST /store/heartbeat` | Latido de la tienda: `{ storeId, version, pendingEvents }`. El portal registra la hora con su propio reloj. |
-| `GET /store/commands?wait=25` | Long-poll. Entrega comandos `RESERVATION_CREATE` y `RESERVATION_CANCEL`. |
-| `POST /store/commands/:id/result` | Resultado `ACCEPTED` o `REJECTED`. Idempotente por `commandId`. |
+| `GET /store/commands?wait=25&limit=20` | Long-poll. Entrega comandos `RESERVATION_CREATE` y `RESERVATION_CANCEL`. |
+| `POST /store/commands/:id/result` | Resultado del comando: `ACCEPTED` o `REJECTED` (con motivo) para `CREATE`; `APPLIED` o `IGNORED` (con el estado real) para `CANCEL`. Idempotente por id de comando. |
 | `POST /store/sync/catalog` | Snapshot completo de una sección del catálogo (`categorias`, `productos`, `lotes`, `promociones`) con `version` monótona. El portal reemplaza su copia de esa sección e ignora versiones iguales o anteriores. |
-| `POST /store/events` | Reserva confirmada, expirada o cancelada, y cambios de disponibilidad. |
+| `POST /store/events` | Lote de cambios de estado de reservas hechos en la tienda (`CONFIRMADA`, `EXPIRADA`, `CANCELADA`). La disponibilidad viaja por la sincronización de catálogo. |
 
 ### Sincronización del catálogo (implementada)
 
@@ -75,9 +75,6 @@ orden de eventos que preservar y un envío fallido se corrige solo con el siguie
   estar también en la carpeta `public/media` del portal; sincronizar los archivos queda fuera de
   esta fase.
 
-La tienda mantiene una tabla `outbox` con reintentos y backoff para que ningún evento se
-pierda si el portal no responde.
-
 ### Flujo de reserva
 
 1. El cliente llama `POST /reservations` en el portal.
@@ -92,6 +89,49 @@ pierda si el portal no responde.
    por `events`.
 6. Si el TTL vence sin respuesta de la tienda, el portal marca la reserva como `EXPIRADA` y
    descarta cualquier aceptación tardía.
+
+### Cola de reservas (implementada)
+
+**Estados del portal:** `PENDIENTE_SYNC` (esperando a la tienda) → `PENDIENTE` (aceptada) →
+`CONFIRMADA` | `EXPIRADA` | `CANCELADA`; o `PENDIENTE_SYNC` → `RECHAZADA`.
+
+**Respuesta al cliente.** `POST /reservations` espera hasta 8 s (`RESERVATION_SYNC_WAIT_SECONDS`)
+la respuesta de la tienda y responde con el mismo formato de siempre: `201` con código de retiro
+y lotes si fue aceptada, o el error habitual (`409` sin stock, `400`, `404`, `503`) si fue
+rechazada. Si la tienda tarda más, responde `202` con la reserva en `PENDIENTE_SYNC` y el cliente
+la consulta con `GET /reservations/user/:userId`. Sin heartbeat vigente no se guarda ni se encola
+nada (`503`).
+
+**Cola durable.** Los comandos viven en `comandos_tienda` (base del portal) y la tienda los pide
+con long-poll. Un comando entregado y sin resultado se vuelve a ofrecer a los 60 s; tras 5
+entregas se da por fallido y la reserva pasa a `RECHAZADA` (`STORE_ERROR`). Nunca se entrega un
+comando si hay otro anterior sin resolver de la misma reserva, así `CREATE` siempre se resuelve
+antes que un `CANCEL`.
+
+**Idempotencia.** La reserva usa el mismo `id` en ambos servicios. Si la tienda recibe otra vez
+un `CREATE` cuya reserva ya existe, devuelve el resultado existente sin reservar de nuevo; los
+resultados y eventos repetidos no cambian nada en el portal.
+
+**La tienda manda.** El stock lo decide solo la tienda (`createWithLockedStock`, FEFO). Un
+`CREATE` que llega después del plazo se rechaza (`EXPIRED`). La confirmación en caja es
+definitiva y prevalece sobre lo que el portal haya inferido. El portal solo expira por su cuenta
+las reservas que la tienda nunca aceptó; las aceptadas las expira la tienda y se lo avisa.
+
+**Cancelación.** El portal cancela de inmediato para el cliente. Si la tienda aún no recibió el
+`CREATE`, ambos se anulan en el portal y la tienda nunca se entera; si ya lo recibió, se encola
+un `CANCEL` que libera el stock. Si en la tienda ya estaba confirmada, se informa el estado
+real y el portal lo corrige.
+
+**Bandeja de salida (`outbox_portal`, base de la tienda).** Los resultados de los comandos y los
+cambios de estado (confirmada, expirada) se guardan antes de enviarse y se reintentan en orden
+con espera creciente (2 s hasta 5 min). Un fallo de red o 5xx detiene el ciclo para no perder el
+orden; un 4xx permanente en una fila no bloquea las demás y un 404 la descarta. Los resultados
+salen de inmediato tras procesarse, porque el cliente espera la respuesta. El heartbeat informa
+cuántos avisos esperan (`pendingEvents`).
+
+**Clientes remotos en la tienda.** `reservas.usuario_id` deja de ser clave foránea hacia
+`usuarios` y se guarda `cliente_nombre`; los movimientos de inventario de esas reservas no llevan
+actor local y registran el `clienteId` y el origen en su metadata.
 
 ### Decisiones tomadas
 

@@ -49,10 +49,10 @@ test('readServiceConfig exige PORTAL_URL válida y https en producción para sto
   assert.equal(config.storeId, 'tienda-principal');
 });
 
-test('readServiceConfig permite desactivar el heartbeat y la sincronización de catálogo', () => {
+test('readServiceConfig permite desactivar el heartbeat, la sincronización de catálogo y la cola de reservas', () => {
   const config = readServiceConfig(
     { store: true, portal: false },
-    { NODE_ENV: 'development', HEARTBEAT_ENABLED: 'false', CATALOG_SYNC_ENABLED: 'false' }
+    { NODE_ENV: 'development', HEARTBEAT_ENABLED: 'false', CATALOG_SYNC_ENABLED: 'false', RESERVATION_QUEUE_ENABLED: 'false' }
   );
   assert.equal(config.heartbeatEnabled, false);
   assert.equal(config.catalogSyncEnabled, false);
