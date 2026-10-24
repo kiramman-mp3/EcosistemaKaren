@@ -79,6 +79,8 @@ jobs:
           psql -h localhost -U karen_user -d ecosistema_karen -f init-db/store/01-schema.sql
           psql -h localhost -U karen_user -d ecosistema_karen -c "CREATE DATABASE ecosistema_karen_portal"
       - run: npm run test:services
+      - run: npm run test:http-errors
+      - run: node --test test/schema-limits.test.js
 
   portal-web:
     runs-on: ubuntu-latest
