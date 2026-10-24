@@ -17,7 +17,11 @@ async function createApp({ name, store = false, portal = false }) {
   if (!store && !portal) throw new Error('createApp requiere activar al menos store o portal.');
 
   const serviceConfig = readServiceConfig({ store, portal });
-  const { app, pool, dbConnected, httpSecurity } = await createBaseApp();
+  // Cada servicio usa su propia base (ADR-003); el monolito comparte la de la tienda.
+  const { app, pool, dbConnected, httpSecurity } = await createBaseApp({
+    database: portal && !store ? 'portal' : 'store',
+    migrations: [...(store ? ['store'] : []), ...(portal ? ['portal'] : [])]
+  });
   const repos = buildRepositories(pool, dbConnected);
   const wiring = buildWiring({ pool, repos, store, portal, serviceConfig });
 

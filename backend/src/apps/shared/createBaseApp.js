@@ -10,17 +10,20 @@ const { createSecurityMiddlewares, validateProductionSecurity, cookieCsrfProtect
 
 // Pila HTTP común a store-api y portal-api: base de datos, cabeceras de seguridad, CORS,
 // límites de tasa, parseo de cuerpo y protección CSRF.
-async function createBaseApp() {
+//
+// `database` indica a qué base se conecta el servicio (`store` o `portal`) y `migrations`
+// qué conjuntos de migraciones aplica sobre ella (el monolito aplica ambos a una sola base).
+async function createBaseApp({ database = 'store', migrations = ['store'] } = {}) {
   validateProductionSecurity(process.env);
   const app = express();
 
   // Probar conexión PostgreSQL
-  const dbConnected = await testConnection();
+  const dbConnected = await testConnection(database);
   let pool = null;
 
   if (dbConnected) {
-    pool = getPool();
-    await runMigrations(pool);
+    pool = getPool(database);
+    await runMigrations(pool, { targets: migrations });
   } else {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('PostgreSQL es obligatorio en producción; se rechazó el fallback en memoria.');

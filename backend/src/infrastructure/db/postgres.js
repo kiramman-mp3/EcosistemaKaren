@@ -5,16 +5,36 @@ const { businessTimezone } = require('../../domain/policies/BusinessDates');
 // a medianoche de la zona horaria del servidor Node.
 types.setTypeParser(1082, value => value);
 
-let pool = null;
+const pools = new Map();
 
-function getPool() {
-  if (!pool) {
-    pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT, 10) || 5432,
-      database: process.env.DB_NAME || 'ecosistema_karen',
-      user: process.env.DB_USER || 'karen_user',
-      password: process.env.DB_PASSWORD || 'karen_pass',
+// store-api (y el monolito) usan DB_*. portal-api usa PORTAL_DB_* y, para cada valor que no
+// esté definido, cae en el DB_* correspondiente: en un despliegue solo del portal basta con
+// DB_*, y en desarrollo con dos contenedores PORTAL_DB_* apunta al segundo.
+function connectionSettings(role = 'store', env = process.env) {
+  const pick = (name) => {
+    const own = role === 'portal' ? env[`PORTAL_${name}`] : undefined;
+    return own !== undefined && own !== '' ? own : env[name];
+  };
+  return {
+    host: pick('DB_HOST') || 'localhost',
+    port: parseInt(pick('DB_PORT'), 10) || 5432,
+    database: pick('DB_NAME') || 'ecosistema_karen',
+    user: pick('DB_USER') || 'karen_user',
+    password: pick('DB_PASSWORD') || 'karen_pass'
+  };
+}
+
+// Dos roles con la misma conexión (monolito, desarrollo con una sola base) comparten pool.
+function poolKey(settings) {
+  return `${settings.host}:${settings.port}/${settings.database}@${settings.user}`;
+}
+
+function getPool(role = 'store') {
+  const settings = connectionSettings(role);
+  const key = poolKey(settings);
+  if (!pools.has(key)) {
+    const pool = new Pool({
+      ...settings,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 3000,
@@ -25,13 +45,14 @@ function getPool() {
     pool.on('error', (err) => {
       console.error('⚠️ Error inesperado en el pool de PostgreSQL:', err.message);
     });
+    pools.set(key, pool);
   }
-  return pool;
+  return pools.get(key);
 }
 
-async function testConnection() {
+async function testConnection(role = 'store') {
   try {
-    const p = getPool();
+    const p = getPool(role);
     const res = await p.query('SELECT NOW()');
     console.log('✅ Conexión exitosa a la base de datos PostgreSQL:', res.rows[0].now);
     return true;
@@ -42,15 +63,14 @@ async function testConnection() {
 }
 
 async function closePool() {
-  if (pool) {
-    const currentPool = pool;
-    pool = null;
-    await currentPool.end();
-  }
+  const open = [...pools.values()];
+  pools.clear();
+  await Promise.all(open.map(pool => pool.end()));
 }
 
 module.exports = {
   getPool,
   testConnection,
-  closePool
+  closePool,
+  connectionSettings
 };
