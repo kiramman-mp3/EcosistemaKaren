@@ -10,6 +10,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
+    "start:store": "node index.store.js",
+    "start:portal": "node index.portal.js",
+    "dev:store": "node --watch index.store.js",
+    "dev:portal": "node --watch index.portal.js",
     "test": "node --test test/*.test.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
