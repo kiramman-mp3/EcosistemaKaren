@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { SECTIONS } = require('../../sync/catalogSections');
 
 const text = (min, max, label) => z.string()
   .trim()
@@ -30,6 +31,35 @@ const emptyBody = z.strictObject({});
 const idParams = z.strictObject({ id: entityId });
 
 const emptyToUndefined = (schema) => z.preprocess(val => (val === '' ? undefined : val), schema);
+
+const MAX_SYNC_ITEMS = 50000;
+
+// Valida cada sección del snapshot de catálogo con las mismas definiciones que usa el
+// repositorio espejo, de modo que el contrato vive en un solo lugar.
+function catalogItemSchema(spec) {
+  const shape = {};
+  for (const { key, sql, max, min, nullable } of spec.fields) {
+    let schema;
+    if (sql === 'uuid') schema = z.uuid();
+    else if (sql === 'text') schema = z.string().min(nullable ? 0 : 1).max(max);
+    else if (sql === 'int') schema = z.number().int().min(min).max(max);
+    else if (sql === 'numeric') schema = z.number().finite().min(min).max(max);
+    else if (sql === 'date') schema = isoDate;
+    else if (sql === 'timestamptz') schema = z.iso.datetime({ offset: true });
+    else throw new Error(`Tipo de sincronización no soportado: ${sql}`);
+    shape[key] = nullable ? schema.nullable() : schema;
+  }
+  return z.strictObject(shape);
+}
+
+function catalogSyncBody() {
+  const sections = Object.entries(SECTIONS).map(([section, spec]) => z.strictObject({
+    section: z.literal(section),
+    version: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
+    items: z.array(catalogItemSchema(spec)).max(MAX_SYNC_ITEMS)
+  }));
+  return z.discriminatedUnion('section', sections);
+}
 
 const schemas = {
   categoryBody: z.strictObject({
@@ -131,6 +161,7 @@ const schemas = {
     version: z.string().trim().min(1).max(32).optional(),
     pendingEvents: z.number().int().min(0).max(1000000).optional()
   }),
+  catalogSyncBody: catalogSyncBody(),
   emptyBody
 };
 

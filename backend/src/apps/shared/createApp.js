@@ -1,3 +1,4 @@
+const express = require('express');
 const createBaseApp = require('./createBaseApp');
 const { readServiceConfig } = require('./serviceConfig');
 const { createServiceAuth } = require('../../infrastructure/http/middlewares/serviceAuth');
@@ -49,7 +50,12 @@ async function createApp({ name, store = false, portal = false }) {
     app.use(
       '/internal/v1',
       httpSecurity.auth,
-      createInternalRouter(wiring.controllers, createServiceAuth(serviceConfig.storeServiceKey))
+      createInternalRouter(wiring.controllers, createServiceAuth(serviceConfig.storeServiceKey), [
+        // Los snapshots de catálogo superan el límite de la API pública.
+        express.json({ limit: process.env.INTERNAL_BODY_LIMIT || '10mb', strict: true }),
+        httpSecurity.normalizeJsonBody,
+        httpSecurity.rejectDangerousKeys
+      ])
     );
   }
 
