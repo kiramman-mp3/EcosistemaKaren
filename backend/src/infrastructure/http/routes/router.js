@@ -46,10 +46,13 @@ function createApiRouter(controllers, security) {
 
   // Reservaciones Anti-Overbooking
   router.post('/reservations', authenticate, authorize('CLIENTE'), validate({ body: schemas.reservationBody }), (req, res, next) => reservationController.createReservation(req, res, next));
+  router.get('/reservations/consult/:code', validate({ params: schemas.reservationCodeParams }), (req, res, next) => reservationController.consultByCode(req, res, next));
   router.get('/reservations/code/:code', authenticate, validate({ params: schemas.reservationCodeParams }), (req, res, next) => reservationController.getByCode(req, res, next));
   router.get('/reservations/user/:userId', authenticate, validate({ params: schemas.userParams, query: schemas.reservationQuery }), (req, res, next) => reservationController.getByUser(req, res, next));
   router.post('/reservations/:id/confirm', authenticate, authorize('BODEGUERO', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => reservationController.confirm(req, res, next));
   router.post('/reservations/:id/cancel', authenticate, authorize('CLIENTE', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => reservationController.cancel(req, res, next));
+  router.post('/reservations/:id/extend', authenticate, authorize('CLIENTE', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.extendReservationBody }), (req, res, next) => reservationController.extend(req, res, next));
+  router.patch('/reservations/:id/extend', authenticate, authorize('CLIENTE', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.extendReservationBody }), (req, res, next) => reservationController.extend(req, res, next));
 
   // Alertas y SSE Stream
   router.get('/alerts', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.alertQuery }), (req, res, next) => alertController.getAlerts(req, res, next));

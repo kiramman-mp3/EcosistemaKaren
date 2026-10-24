@@ -843,8 +843,43 @@ class PostgresReservationRepository {
   }
 
   async findByCode(code) {
-    const [reservation] = await this._findWithDetails('r.codigo_retiro = $1', [code]);
+    const cleanCode = (code || '').trim().toUpperCase();
+    const [reservation] = await this._findWithDetails('UPPER(TRIM(r.codigo_retiro)) = $1', [cleanCode]);
     return reservation || null;
+  }
+
+  async extendTimeWithLockedStock(reservationId, actor, minutes = 30) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const resRow = await this._findByIdForUpdate(client, reservationId);
+      if (!resRow) {
+        throw new NotFoundException(`Reserva con ID '${reservationId}' no encontrada.`);
+      }
+      if (!['ADMIN', 'BODEGUERO'].includes(actor.rol) && resRow.usuario_id !== actor.id) {
+        throw new ForbiddenException('Solo el propietario o un administrador puede extender la reserva.');
+      }
+      if (resRow.estado !== 'PENDIENTE') {
+        throw new ValidationException(`No se puede extender una reserva en estado ${resRow.estado}.`);
+      }
+      if (new Date(resRow.fecha_expiracion) <= new Date()) {
+        throw new ValidationException('La reserva ya ha expirado y no puede extenderse.');
+      }
+      await client.query(`
+        UPDATE reservas
+        SET fecha_expiracion = fecha_expiracion + ($1 * INTERVAL '1 minute'),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [minutes, reservationId]);
+      await client.query('COMMIT');
+      const [updated] = await this._findWithDetails('r.id = $1', [reservationId]);
+      return updated || null;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async findById(id) {

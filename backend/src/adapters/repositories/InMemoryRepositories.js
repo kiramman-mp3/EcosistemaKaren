@@ -354,7 +354,10 @@ class InMemoryRepositories {
 
   get reservationRepository() {
     return {
-      findByCode: async (code) => this.reservations.find(r => r.codigoRetiro === code) || null,
+      findByCode: async (code) => {
+        const needle = (code || '').trim().toUpperCase();
+        return this.reservations.find(r => (r.codigoRetiro || '').trim().toUpperCase() === needle) || null;
+      },
       findById: async (id) => this.reservations.find(r => r.id === id) || null,
       findByUserId: async (userId, { limit = 50, offset = 0 } = {}) => this.reservations
         .filter(r => r.usuarioId === userId)
@@ -483,6 +486,23 @@ class InMemoryRepositories {
           throw new ValidationException('La reserva ya había expirado; su stock fue liberado.');
         }
         reservation.cancelar();
+        return reservation;
+      },
+      extendTimeWithLockedStock: async (reservationId, actor, minutes = 30) => {
+        const reservation = this.reservations.find(r => r.id === reservationId);
+        if (!reservation) throw new NotFoundException(`Reserva con ID '${reservationId}' no encontrada.`);
+        if (actor.rol !== 'ADMIN' && reservation.usuarioId !== actor.id) {
+          throw new ForbiddenException('Solo el propietario o un administrador puede extender la reserva.');
+        }
+        if (reservation.estado !== 'PENDIENTE') {
+          throw new ValidationException(`No se puede extender una reserva en estado ${reservation.estado}.`);
+        }
+        if (reservation.estaExpirada()) {
+          throw new ValidationException('La reserva ya ha expirado y no puede extenderse.');
+        }
+        const currentExpiry = new Date(reservation.fechaExpiracion);
+        reservation.fechaExpiracion = new Date(currentExpiry.getTime() + minutes * 60 * 1000);
+        reservation.updated_at = new Date();
         return reservation;
       },
       expirePendingWithLockedStock: async () => {

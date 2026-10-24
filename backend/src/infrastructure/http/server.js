@@ -37,7 +37,7 @@ const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
 const { GetProducts, GetProductByBarcode, CreateProduct } = require('../../use-cases/products/ProductUseCases');
 const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
-const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
+const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, ExtendReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const {
   GenerarPromocionesIA,
   GetPromotions,
@@ -180,6 +180,7 @@ async function createServer() {
   const confirmReservationUC = new ConfirmReservation(reservationRepo);
   const cleanExpiredReservationsUC = new CleanExpiredReservations(reservationRepo);
   const cancelReservationUC = new CancelReservation(reservationRepo);
+  const extendReservationUC = new ExtendReservation(reservationRepo);
   const getReservationsByUserUC = new GetReservationsByUser(reservationRepo);
 
   const generarPromocionesIAUC = new GenerarPromocionesIA(
@@ -207,7 +208,8 @@ async function createServer() {
     getReservationByCodeUC,
     confirmReservationUC,
     cancelReservationUC,
-    getReservationsByUserUC
+    getReservationsByUserUC,
+    extendReservationUC
   );
   const alertController = new AlertController(obtenerAlertasCaducidadUC, alertStreamManager, atenderAlertaCaducidadUC);
   const promotionController = new PromotionController(
