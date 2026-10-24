@@ -35,7 +35,7 @@ async function createApp({ name, store = false, portal = false }) {
   };
 
   // Configurar Swagger UI
-  const swaggerEnabled = setupSwagger(app, process.env);
+  const swaggerEnabled = setupSwagger(app, process.env, { store, portal });
   app.locals.swaggerEnabled = swaggerEnabled;
 
   // Montar Router `/api/v1`

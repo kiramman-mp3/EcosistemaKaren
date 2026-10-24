@@ -34,6 +34,52 @@ jobs:
       - run: npm test
       - run: npm audit --omit=dev
 
+  # Contra una PostgreSQL real: las migraciones de cada servicio (tienda, portal y monolito) dejan el
+  # esquema esperado y son repetibles, y cada servicio arranca con solo las rutas que le tocan.
+  backend-services:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: karen_user
+          POSTGRES_PASSWORD: karen_pass
+          POSTGRES_DB: ecosistema_karen
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U karen_user -d ecosistema_karen"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      JWT_SECRET: dev_jwt_secret_ecosistema_karen_2026_super_secret_32chars
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: ecosistema_karen
+      DB_USER: karen_user
+      DB_PASSWORD: karen_pass
+      PORTAL_DB_NAME: ecosistema_karen_portal
+      PGPASSWORD: karen_pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:migrations
+      - name: Preparar las bases de la tienda y del portal
+        run: |
+          psql -h localhost -U karen_user -d ecosistema_karen -f init-db/store/01-schema.sql
+          psql -h localhost -U karen_user -d ecosistema_karen -c "CREATE DATABASE ecosistema_karen_portal"
+      - run: npm run test:services
+
   portal-web:
     runs-on: ubuntu-latest
     defaults:

@@ -1,6 +1,6 @@
 # ADR-003: Separar el backend en store-api (tienda) y portal-api (nube)
 
-- Estado: Aceptada
+- Estado: Aceptada e implementada
 - Fecha: 2026-10-24
 - Alcance: Ecosistema Karen (backend, portal web, portal móvil, bodega móvil)
 
@@ -178,7 +178,7 @@ actor local y registran el `clienteId` y el origen en su metadata.
 - `reservas.usuario_id` y `reserva_detalles.lote_id` dejan de ser claves foráneas entre
   servicios: el portal no conoce lotes y la tienda no conoce la tabla de usuarios del portal.
 
-## Plan de implementación
+## Plan de implementación (completado)
 
 1. `refactor/split-composition-roots`: dos puntos de entrada y dos routers sobre el mismo
    `domain` y `use-cases`, sin cambio de comportamiento.
@@ -187,4 +187,16 @@ actor local y registran el `clienteId` y el origen en su metadata.
 4. `feature/catalog-sync`: sincronización del catálogo y la disponibilidad hacia el portal.
 5. `feature/reservation-command-queue`: reservas como comandos con `outbox` y long-poll.
 6. `feature/clients-per-backend`: cada app apunta al backend que le corresponde.
-7. `chore/ci-and-docs`: CI por servicio y documentación actualizada.
+7. `chore/ci-and-docs`: CI por servicio, Swagger por servicio y documentación actualizada.
+
+## Pendiente conocido
+
+- Las imágenes locales de productos (`/api/v1/media/...`) no se sincronizan: la carpeta
+  `public/media` debe existir también en el portal.
+- ADMIN no puede cancelar reservas con los servicios separados: su ruta de cancelación vive en el
+  portal, donde no tiene cuenta, y la tienda no expone una.
+- El aviso de confirmación o expiración se encola justo después de confirmar en la tienda; si la
+  base cae en ese instante, el portal tarda en enterarse.
+- El portal móvil no muestra el aviso de catálogo desactualizado que sí muestra el portal web.
+- La verificación de punta a punta con dos instancias reales de PostgreSQL y HTTP entre los servicios
+  la hace el CI (`backend-services`); localmente se validó con una base embebida.
