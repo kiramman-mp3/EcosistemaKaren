@@ -104,13 +104,29 @@ export interface ReservationDetail {
 export interface BackendReservation {
   id: string;
   usuarioId: string;
-  codigoRetiro: string;
-  estado: 'PENDIENTE' | 'CONFIRMADA' | 'EXPIRADA' | 'CANCELADA';
+  /** Sin código mientras la tienda no acepta la reserva (PENDIENTE_SYNC) o si la rechazó. */
+  codigoRetiro: string | null;
+  /**
+   * PENDIENTE_SYNC: la tienda aún está confirmando la reserva. RECHAZADA: la tienda no pudo
+   * reservar (ver mensajeRechazo). Los demás estados son los de siempre.
+   */
+  estado: 'PENDIENTE_SYNC' | 'PENDIENTE' | 'CONFIRMADA' | 'EXPIRADA' | 'CANCELADA' | 'RECHAZADA';
   fechaExpiracion: string;
   detalles: ReservationDetail[];
+  motivoRechazo?: string;
+  mensajeRechazo?: string;
   clienteNombre?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface CatalogStatus {
+  success: boolean;
+  mode: 'mirror' | 'direct';
+  /** true si falta alguna sección o la copia lleva demasiado sin sincronizarse con la tienda. */
+  stale: boolean;
+  lastSyncAt: string | null;
+  message?: string;
 }
 
 export interface AuthResponse {
@@ -131,11 +147,6 @@ export const api = {
   // Heartbeat & System Status
   async getHeartbeat(): Promise<HeartbeatResponse> {
     const res = await apiClient.get<HeartbeatResponse>('/heartbeat');
-    return res.data;
-  },
-
-  async pingHeartbeat(): Promise<HeartbeatResponse> {
-    const res = await apiClient.post<HeartbeatResponse>('/heartbeat');
     return res.data;
   },
 
@@ -194,39 +205,14 @@ export const api = {
     return res.data.data || [];
   },
 
-  async generatePromotion(loteId: string): Promise<BackendPromotion> {
+  // Estado de la copia del catálogo que mantiene el portal (ADR-003). Si el backend no lo expone, se ignora.
+  async getCatalogStatus(): Promise<CatalogStatus | null> {
     try {
-      const res = await apiClient.post<{ success: boolean; data: BackendPromotion }>('/promotions/generate', { loteId });
-      return res.data.data;
-    } catch (err: any) {
-      const status = err.response?.status;
-      if (status === 504) throw new Error('Tiempo de espera agotado al consultar la IA (Timeout 10s).');
-      if (status === 429) throw new Error('Límite de solicitudes de IA alcanzado. Espere un momento.');
-      if (status === 502) throw new Error('La IA devolvió una respuesta no válida. Intente nuevamente.');
-      if (status === 503) throw new Error('El servicio de Gemini no está configurado o disponible.');
-      if (err.response?.data?.message) throw new Error(err.response.data.message);
-      throw new Error('No se pudo confirmar el resultado de la generación. No se reintentó para evitar duplicados.');
+      const res = await apiClient.get<CatalogStatus>('/catalog/status', { timeout: 4000 });
+      return res.data;
+    } catch {
+      return null;
     }
-  },
-
-  async getPendingPromotions(): Promise<BackendPromotion[]> {
-    const res = await apiClient.get<{ success: boolean; data: BackendPromotion[] }>('/promotions/pending');
-    return res.data.data || [];
-  },
-
-  async approvePromotion(id: string): Promise<BackendPromotion> {
-    const res = await apiClient.post<{ success: boolean; data: BackendPromotion }>(`/promotions/${id}/approve`);
-    return res.data.data;
-  },
-
-  async rejectPromotion(id: string, motivoRechazo: string): Promise<BackendPromotion> {
-    const res = await apiClient.post<{ success: boolean; data: BackendPromotion }>(`/promotions/${id}/reject`, { motivoRechazo });
-    return res.data.data;
-  },
-
-  async getAiMetrics(): Promise<any> {
-    const res = await apiClient.get<{ success: boolean; data: any }>('/metrics/ai');
-    return res.data.data;
   },
 
   // Anti-Overbooking Reservations (FEFO)

@@ -26,17 +26,21 @@ const FILTERS: { id: ReservationFilter; label: string }[] = [
 ];
 
 const statusLabel: Record<BackendReservation['estado'], string> = {
+  PENDIENTE_SYNC: 'Confirmando',
   PENDIENTE: 'Por retirar',
   CONFIRMADA: 'Retirada',
   EXPIRADA: 'Venció',
   CANCELADA: 'Cancelada',
+  RECHAZADA: 'No disponible',
 };
 
 const statusClass: Record<BackendReservation['estado'], string> = {
+  PENDIENTE_SYNC: 'bg-aisle text-ink border-2 border-mora',
   PENDIENTE: 'bg-limon text-mora border-2 border-mora',
   CONFIRMADA: 'bg-fresh-tint text-fresh border-2 border-transparent',
   EXPIRADA: 'bg-aisle text-ink-muted border-2 border-transparent',
   CANCELADA: 'bg-aisle text-ink-muted border-2 border-transparent',
+  RECHAZADA: 'bg-karen-tint text-karen-deep border-2 border-transparent',
 };
 
 export const MyReservationsPage: React.FC<Props> = ({
@@ -47,16 +51,16 @@ export const MyReservationsPage: React.FC<Props> = ({
   const [filter, setFilter] = useState<ReservationFilter>('TODAS');
 
   const normalized = useMemo(() => reservations.map(reservation => {
-    const isExpiredPending = reservation.estado === 'PENDIENTE'
+    const isExpiredPending = (reservation.estado === 'PENDIENTE' || reservation.estado === 'PENDIENTE_SYNC')
       && new Date(reservation.fechaExpiracion).getTime() <= Date.now();
     return { reservation, effectiveStatus: isExpiredPending ? 'EXPIRADA' as const : reservation.estado };
   }), [reservations]);
 
   const filtered = useMemo(() => normalized.filter(({ effectiveStatus }) => {
     if (filter === 'TODAS') return true;
-    if (filter === 'PENDIENTES') return effectiveStatus === 'PENDIENTE';
+    if (filter === 'PENDIENTES') return effectiveStatus === 'PENDIENTE' || effectiveStatus === 'PENDIENTE_SYNC';
     if (filter === 'COMPLETADAS') return effectiveStatus === 'CONFIRMADA';
-    return effectiveStatus === 'CANCELADA' || effectiveStatus === 'EXPIRADA';
+    return effectiveStatus === 'CANCELADA' || effectiveStatus === 'EXPIRADA' || effectiveStatus === 'RECHAZADA';
   }), [filter, normalized]);
 
   const cancel = async (id: string) => {
@@ -133,13 +137,17 @@ export const MyReservationsPage: React.FC<Props> = ({
             <ul className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
               {filtered.map(({ reservation, effectiveStatus }) => {
                 const pending = effectiveStatus === 'PENDIENTE';
+                const awaitingStore = effectiveStatus === 'PENDIENTE_SYNC';
+                const rejected = effectiveStatus === 'RECHAZADA';
                 const total = reservation.detalles.reduce((sum, item) => sum + Number(item.cantidad) * Number(item.precioUnitario), 0);
                 const names = reservation.detalles.map(detail => detail.productoNombre).filter(Boolean) as string[];
                 return (
-                  <li key={reservation.id} className={`flex flex-col rounded-block bg-surface border-2 ${pending ? 'border-mora shadow-pop' : 'border-aisle-rule'}`}>
+                  <li key={reservation.id} className={`flex flex-col rounded-block bg-surface border-2 ${pending || awaitingStore ? 'border-mora shadow-pop' : 'border-aisle-rule'}`}>
                     <div className="flex items-start justify-between gap-3 p-4">
                       <div className="min-w-0">
-                        <p className="font-stamp font-black text-3xl text-ink tracking-wide leading-none">{reservation.codigoRetiro}</p>
+                        <p className="font-stamp font-black text-3xl text-ink tracking-wide leading-none">
+                          {reservation.codigoRetiro || (rejected ? 'Sin código' : 'Confirmando…')}
+                        </p>
                         <p className="mt-1.5 text-xs text-ink-muted">
                           {pending
                             ? `Retira antes de ${formatDateTime(reservation.fechaExpiracion)}`
@@ -152,13 +160,34 @@ export const MyReservationsPage: React.FC<Props> = ({
                     </div>
                     <div className="rule-dashed mx-4" aria-hidden="true" />
                     <div className="p-4 flex-1">
+                      {awaitingStore && (
+                        <p className="text-sm text-ink-soft">Estamos confirmando tu reserva con la tienda. Se actualiza sola.</p>
+                      )}
+                      {rejected && (
+                        <p role="status" className="text-sm font-semibold text-karen-deep">
+                          {reservation.mensajeRechazo || 'La tienda no pudo apartar estos productos.'}
+                        </p>
+                      )}
                       {names.length > 0 && (
                         <p className="text-sm text-ink-soft line-clamp-2">{names.join(', ')}</p>
                       )}
-                      <p className="mt-2 text-sm text-ink-soft">
-                        Total reservado: <strong className="text-ink tabular">${total.toFixed(2)}</strong>
-                      </p>
+                      {reservation.detalles.length > 0 && (
+                        <p className="mt-2 text-sm text-ink-soft">
+                          Total reservado: <strong className="text-ink tabular">${total.toFixed(2)}</strong>
+                        </p>
+                      )}
                     </div>
+                    {awaitingStore && (
+                      <div className="p-4 pt-0">
+                        <Button
+                          onClick={() => void cancel(reservation.id)}
+                          disabled={cancelling === reservation.id}
+                          variant="surface"
+                        >
+                          {cancelling === reservation.id ? 'Cancelando…' : 'Cancelar reserva'}
+                        </Button>
+                      </div>
+                    )}
                     {pending && (
                       <div className="grid grid-cols-2 gap-2 p-4 pt-0">
                         <Button onClick={() => onOpenPass(reservation)}>

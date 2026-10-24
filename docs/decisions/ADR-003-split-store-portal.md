@@ -133,6 +133,21 @@ cuántos avisos esperan (`pendingEvents`).
 `usuarios` y se guarda `cliente_nombre`; los movimientos de inventario de esas reservas no llevan
 actor local y registran el `clienteId` y el origen en su metadata.
 
+### Apps cliente (implementado)
+
+- **Cada app apunta a su backend.** El portal web y el portal móvil hablan con portal-api; la app
+  de bodega habla con store-api. Ninguna app de cliente conoce la red de la tienda. En desarrollo,
+  `node start.js --split` levanta los dos servicios con sus bases y configura las URLs.
+- **Reservas en proceso.** Las apps de los clientes entienden `PENDIENTE_SYNC` (la tienda aún
+  confirma) y `RECHAZADA` (con el motivo). Al apartar, si la respuesta es `202` esperan hasta 45 s
+  consultando el estado cada 2 s; si la tienda sigue sin responder, la reserva queda en "Mis
+  reservas", que se actualiza sola cada 4 s mientras haya reservas por confirmar, y se puede cancelar.
+- **Aviso de datos desactualizados.** El portal web muestra una franja si `GET /catalog/status`
+  informa `stale`.
+- **Administración fuera del portal (D1).** Se eliminaron del cliente del portal web las llamadas
+  de administración de promociones y métricas de IA, que no tenían pantalla, y el envío de
+  heartbeat desde las apps.
+
 ### Decisiones tomadas
 
 - **D1. ADMIN opera desde la tienda.** La administración de productos, categorías y

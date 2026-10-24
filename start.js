@@ -9,7 +9,9 @@
  *   node start.js --api-url=URL   # URL del backend para las apps móviles (por defecto, la IP de la red local)
  *   node start.js --no-seed       # no siembra datos aunque la base esté vacía
  *   node start.js --skip-images   # el seed no descarga imágenes de productos
- *   node start.js --down          # detiene PostgreSQL y pgAdmin
+ *   node start.js --split         # backend separado (ADR-003): store-api + portal-api, cada uno con su base
+ *                                 # (--api-url = portal móvil, --store-api-url = bodega móvil)
+ *   node start.js --down          # detiene PostgreSQL (y la base del portal) y pgAdmin
  *
  * Solo usa módulos nativos de Node (>= 20). Ctrl+C detiene backend y frontends;
  * los contenedores de Docker se dejan corriendo (usar --down para pararlos).
@@ -21,6 +23,7 @@ const path = require('path');
 const crypto = require('crypto');
 const http = require('http');
 const os = require('os');
+const { isWeakKey, withServiceKey, buildSplitEnv, mobileApiUrls } = require('./dev/splitEnv');
 
 const ROOT = __dirname;
 const BACKEND = path.join(ROOT, 'backend');
@@ -38,13 +41,17 @@ const args = Object.fromEntries(process.argv.slice(2).map(arg => {
   return [key, value === undefined ? true : value];
 }));
 
+const SPLIT = Boolean(args.split);
 const children = [];
 const log = (msg) => console.log(`\x1b[36m[start]\x1b[0m ${msg}`);
 const fail = (msg) => { console.error(`\x1b[31m[start] ${msg}\x1b[0m`); process.exit(1); };
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 function run(cmd, cmdArgs, cwd, opts = {}) {
-  return spawnSync(cmd, cmdArgs, { cwd, shell: IS_WIN && cmd === 'npm', encoding: 'utf8', stdio: opts.capture ? 'pipe' : 'inherit' });
+  return spawnSync(cmd, cmdArgs, {
+    cwd, shell: IS_WIN && cmd === 'npm', encoding: 'utf8', stdio: opts.capture ? 'pipe' : 'inherit',
+    env: opts.env ? { ...process.env, ...opts.env } : process.env
+  });
 }
 
 function readEnv(file) {
@@ -61,6 +68,17 @@ function ensureEnvFile() {
   const example = fs.readFileSync(path.join(BACKEND, '.env.example'), 'utf8');
   fs.writeFileSync(envFile, example.replace(/^JWT_SECRET=.*$/m, `JWT_SECRET=${secret}`));
   log('backend/.env creado con un JWT_SECRET aleatorio');
+}
+
+// Clave compartida entre store-api y portal-api. Si .env no tiene una válida se genera y se guarda.
+function serviceKey() {
+  const envFile = path.join(BACKEND, '.env');
+  const current = readEnv(envFile).STORE_SERVICE_KEY;
+  if (!isWeakKey(current)) return current;
+  const key = crypto.randomBytes(24).toString('hex');
+  fs.writeFileSync(envFile, withServiceKey(fs.readFileSync(envFile, 'utf8'), key));
+  log('backend/.env: se generó STORE_SERVICE_KEY para el canal tienda ↔ portal');
+  return key;
 }
 
 function installDependencies() {
@@ -98,14 +116,19 @@ async function ensureDocker() {
 
 async function ensureDatabase() {
   await ensureDocker();
-  log('docker compose up -d');
-  if (run('docker', ['compose', 'up', '-d'], BACKEND).status !== 0) fail('docker compose up falló');
-  for (let i = 0; i < 60; i++) {
-    const out = run('docker', ['compose', 'ps', 'postgres', '--format', '{{.Health}}'], BACKEND, { capture: true });
-    if ((out.stdout || '').trim() === 'healthy') return log('PostgreSQL healthy');
-    await sleep(3000);
+  const composeArgs = SPLIT ? ['compose', '--profile', 'split', 'up', '-d'] : ['compose', 'up', '-d'];
+  log(`docker ${composeArgs.join(' ')}`);
+  if (run('docker', composeArgs, BACKEND).status !== 0) fail('docker compose up falló');
+  for (const service of SPLIT ? ['postgres', 'postgres_portal'] : ['postgres']) {
+    let healthy = false;
+    for (let i = 0; i < 60 && !healthy; i++) {
+      const out = run('docker', ['compose', '--profile', 'split', 'ps', service, '--format', '{{.Health}}'], BACKEND, { capture: true });
+      healthy = (out.stdout || '').trim() === 'healthy';
+      if (!healthy) await sleep(3000);
+    }
+    if (!healthy) fail(`${service} no llegó a healthy`);
+    log(`${service} healthy`);
   }
-  fail('PostgreSQL no llegó a healthy');
 }
 
 function databaseIsEmpty() {
@@ -116,12 +139,24 @@ function databaseIsEmpty() {
   return out.status !== 0 || Number((out.stdout || '').trim()) === 0;
 }
 
-function seedIfNeeded() {
+// En modo separado los clientes demo también deben existir en la base del portal para poder iniciar sesión.
+function portalDatabaseIsEmpty(portalDb) {
+  const out = run('docker', ['compose', '--profile', 'split', 'exec', '-T', 'postgres_portal', 'psql',
+    '-U', portalDb.PORTAL_DB_USER, '-d', portalDb.PORTAL_DB_NAME,
+    '-tAc', 'SELECT count(*) FROM usuarios'], BACKEND, { capture: true });
+  return out.status !== 0 || Number((out.stdout || '').trim()) === 0;
+}
+
+function seedIfNeeded(split) {
   if (args['no-seed']) return;
-  if (!databaseIsEmpty()) return log('La base ya tiene datos; se omite el seed');
-  log('Base vacía: sembrando datos de demostración (puede tardar ~2 min)');
+  const storeEmpty = databaseIsEmpty();
+  const portalEmpty = Boolean(split) && portalDatabaseIsEmpty(split.portalDb);
+  if (!storeEmpty && !portalEmpty) return log('Las bases ya tienen datos; se omite el seed');
+  log(storeEmpty
+    ? 'Base vacía: sembrando datos de demostración (puede tardar ~2 min)'
+    : 'La base del portal está vacía: se vuelve a sembrar para copiar los clientes demo (puede tardar ~2 min)');
   const seedArgs = ['run', 'db:seed'].concat(args['skip-images'] ? ['--', '--skip-images'] : []);
-  if (run('npm', seedArgs, BACKEND).status !== 0) fail('El seed falló');
+  if (run('npm', seedArgs, BACKEND, { env: split ? split.portalDb : undefined }).status !== 0) fail('El seed falló');
 }
 
 function start(name, color, cwd, cmd, cmdArgs, { interactive = true, env = {} } = {}) {
@@ -199,7 +234,7 @@ function waitForBackend(port) {
 async function main() {
   if (args.down) {
     await ensureDocker();
-    return process.exit(run('docker', ['compose', 'down'], BACKEND).status || 0);
+    return process.exit(run('docker', ['compose', '--profile', 'split', 'down'], BACKEND).status || 0);
   }
 
   const [major] = process.versions.node.split('.').map(Number);
@@ -207,14 +242,24 @@ async function main() {
 
   ensureEnvFile();
   installDependencies();
+  const backendEnv = readEnv(path.join(BACKEND, '.env'));
+  const split = SPLIT ? buildSplitEnv({ env: backendEnv, serviceKey: serviceKey() }) : null;
   await ensureDatabase();
-  seedIfNeeded();
+  seedIfNeeded(split);
   if (args.setup) return log('Entorno listo.');
 
-  const port = Number(readEnv(path.join(BACKEND, '.env')).PORT) || 4000;
-  start('backend', '32', BACKEND, 'npm', ['start']);
+  let port = Number(backendEnv.PORT) || 4000;
+  if (split) {
+    // El portal primero: la tienda le envía latido y catálogo y le pide comandos apenas arranca.
+    port = split.storePort;
+    start('portal-api', '36', BACKEND, 'npm', ['run', 'start:portal'], { env: split.portal });
+    if (!(await waitForBackend(split.portalPort))) log(`portal-api no respondió en :${split.portalPort}; revisa sus logs`);
+    start('store-api', '32', BACKEND, 'npm', ['run', 'start:store'], { env: split.store });
+  } else {
+    start('backend', '32', BACKEND, 'npm', ['start']);
+  }
   if (!(await waitForBackend(port))) log(`El backend no respondió en :${port}; revisa sus logs`);
-  start('web', '35', path.join(FRONT, 'portal-web-react'), 'npm', ['run', 'dev']);
+  start('web', '35', path.join(FRONT, 'portal-web-react'), 'npm', ['run', 'dev'], { env: split ? split.web : {} });
 
   const mobile = args['no-mobile'] ? 'none' : (args.mobile === undefined || args.mobile === true ? 'all' : args.mobile);
   // Cada Expo va en su propia terminal para que muestre el QR; puertos fijos porque no pueden compartir el 8081.
@@ -223,17 +268,26 @@ async function main() {
     ['bodega', 'bodega-mobile', '34', PROJECTS[3], 8082],
   ].filter(([key]) => mobile === key || mobile === 'all');
   const inline = [];
-  const apiUrl = expos.length ? mobileApiUrl(port) : null;
-  const expoEnv = apiUrl ? { EXPO_PUBLIC_API_URL: apiUrl } : {};
-  if (apiUrl) log(`Apps móviles → backend en ${apiUrl} (el teléfono debe estar en la misma red Wi-Fi)`);
-  else if (expos.length) log('No se detectó la IP de la red local; las apps móviles usarán localhost (solo sirve en emulador).');
+  // Cada app móvil apunta a su backend: con uno solo es el mismo; en modo separado, portal-api o store-api.
+  let apiUrls = {};
+  if (split) {
+    apiUrls = mobileApiUrls({ args, lanHost: lanAddress(), storePort: split.storePort, portalPort: split.portalPort });
+  } else if (expos.length) {
+    const url = mobileApiUrl(port);
+    apiUrls = { portal: url, bodega: url };
+  }
+  const expoEnvFor = (key) => (apiUrls[key] ? { EXPO_PUBLIC_API_URL: apiUrls[key] } : {});
+  for (const [key, name] of expos) {
+    if (apiUrls[key]) log(`${name} → backend en ${apiUrls[key]} (el teléfono debe estar en la misma red Wi-Fi)`);
+    else log(`${name}: no se detectó la IP de la red local; usará localhost (solo sirve en emulador).`);
+  }
   for (const expo of expos) {
-    const [, name, , cwd, expoPort] = expo;
-    if (openTerminal(name, cwd, `npm start -- --port ${expoPort}`, expoEnv)) log(`${name}: Expo abierto en otra terminal`);
+    const [key, name, , cwd, expoPort] = expo;
+    if (openTerminal(name, cwd, `npm start -- --port ${expoPort}`, expoEnvFor(key))) log(`${name}: Expo abierto en otra terminal`);
     else inline.push(expo);
   }
   // Sin terminal externa (p. ej. Linux) Expo corre aquí sin stdin y no imprime el QR; se muestra la URL para pegarla en Expo Go ("Enter URL manually").
-  for (const [, name, color, cwd, expoPort] of inline) start(name, color, cwd, 'npm', ['start', '--', '--port', String(expoPort)], { interactive: false, env: expoEnv });
+  for (const [key, name, color, cwd, expoPort] of inline) start(name, color, cwd, 'npm', ['start', '--', '--port', String(expoPort)], { interactive: false, env: expoEnvFor(key) });
   if (inline.length) {
     const host = lanAddress() || 'localhost';
     for (const [, name, , , expoPort] of inline) log(`${name}: exp://${host}:${expoPort}`);

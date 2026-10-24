@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node start.js",
     "setup": "node start.js --setup",
-    "down": "node start.js --down"
+    "down": "node start.js --down",
+    "test": "node --test dev/"
   },
   "engines": {
     "node": ">=20.0.0"

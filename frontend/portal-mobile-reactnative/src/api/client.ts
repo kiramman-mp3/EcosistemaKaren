@@ -130,10 +130,17 @@ export interface ReservationDetail {
 export interface BackendReservation {
   id: string;
   usuarioId: string;
-  codigoRetiro: string;
-  estado: 'PENDIENTE' | 'CONFIRMADA' | 'EXPIRADA' | 'CANCELADA';
+  /** Sin código mientras la tienda no acepta la reserva (PENDIENTE_SYNC) o si la rechazó. */
+  codigoRetiro: string | null;
+  /**
+   * PENDIENTE_SYNC: la tienda aún está confirmando la reserva. RECHAZADA: la tienda no pudo
+   * reservar (ver mensajeRechazo). Los demás estados son los de siempre.
+   */
+  estado: 'PENDIENTE_SYNC' | 'PENDIENTE' | 'CONFIRMADA' | 'EXPIRADA' | 'CANCELADA' | 'RECHAZADA';
   fechaExpiracion: string;
   detalles: ReservationDetail[];
+  motivoRechazo?: string;
+  mensajeRechazo?: string;
   clienteNombre?: string;
   created_at?: string;
   updated_at?: string;
