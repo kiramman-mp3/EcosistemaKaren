@@ -1,4 +1,10 @@
 {
+  "name": "Portal Karen",
+  "slug": "portal-mobile-karen",
+  "version": "1.0.0",
+  "android": {
+    "package": "com.ecosistemakaren.portal"
+  },
   "plugins": [
     "expo-secure-store",
     "expo-font"
