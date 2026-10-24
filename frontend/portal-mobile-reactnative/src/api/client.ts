@@ -156,11 +156,6 @@ export const api = {
     return res.data;
   },
 
-  async pingHeartbeat(): Promise<HeartbeatResponse> {
-    const res = await apiClient.post<HeartbeatResponse>('/heartbeat', {}, { timeout: 3500 });
-    return res.data;
-  },
-
   // 2. Categories
   async getCategories(): Promise<BackendCategory[]> {
     const res = await apiClient.get<{ success: boolean; data: BackendCategory[] }>('/categories');
