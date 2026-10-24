@@ -19,7 +19,8 @@ const MIGRATION_SETS = {
     { version: '011_token_revocation', file: path.join(INIT_DB, 'store/11-token-revocation.sql') }
   ],
   portal: [
-    { version: 'portal_001_schema', file: path.join(INIT_DB, 'portal/01-portal-schema.sql') }
+    { version: 'portal_001_schema', file: path.join(INIT_DB, 'portal/01-portal-schema.sql') },
+    { version: 'portal_002_catalog_mirror', file: path.join(INIT_DB, 'portal/02-catalog-mirror.sql') }
   ]
 };
 
