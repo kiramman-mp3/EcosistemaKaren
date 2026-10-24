@@ -86,3 +86,32 @@ graph TD
 1. **FEFO (First Expired, First Out)**: Las reservas asignan preferentemente el stock de lotes cuya fecha de caducidad sea más próxima, reduciendo el desperdicio por merma.
 2. **Anti-Overbooking con TTL**: El inventario disponible se descuenta al instante en el carrito y se transfiere a stock reservado durante 30 minutos. Si la compra no se confirma en caja SIACI, un proceso background sweeper restaura automáticamente las unidades a stock libre.
 3. **Event-Driven real-time (SSE)**: En lugar de polling pesado desde el frontend, el backend notifica al cliente movil de bodegueros al instante mediante conexiones `text/event-stream`.
+4. **Heartbeat y cola de comandos saliente**: La tienda inicia toda la comunicación hacia la nube. Envía un latido periódico al portal y consulta por long-poll los comandos de reserva pendientes, de modo que no hace falta exponer la red local (ver sección 4).
+
+---
+
+## 4. Topología de despliegue (objetivo)
+
+El backend se separa en dos servicios con base de datos propia, según [ADR-003](docs/decisions/ADR-003-split-store-portal.md). Ambos reutilizan el mismo `domain` y `use-cases`; cada uno tiene su propia raíz de composición y su propio enrutador.
+
+```mermaid
+graph LR
+    Cliente["Portal web / móvil (CLIENTE)"] -->|HTTPS| Portal
+    Trabajador["Bodega móvil (BODEGUERO, PERCHERO, ADMIN)"] -->|LAN| Store
+
+    subgraph Nube
+        Portal["portal-api"] --- PortalDB[("PostgreSQL portal")]
+    end
+
+    subgraph Tienda ["Red local de la tienda"]
+        Store["store-api"] --- StoreDB[("PostgreSQL tienda")]
+        Store --> Gemini["Gemini API"]
+    end
+
+    Store -->|"heartbeat, catálogo, eventos, resultados"| Portal
+    Store -->|"long-poll de comandos de reserva"| Portal
+```
+
+* **store-api** es la única autoridad de inventario y reservas (FEFO, anti-overbooking, caja, alertas SSE, Gemini y aprobación de promociones).
+* **portal-api** autentica clientes, publica una copia de lectura del catálogo, recibe las reservas como `PENDIENTE_SYNC` y bloquea nuevas reservas si no hay heartbeat vigente de la tienda.
+* Todo el tráfico entre ambos es saliente desde la tienda, bajo `/internal/v1` con API key de servicio.
