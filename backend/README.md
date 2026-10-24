@@ -7,7 +7,7 @@
 3. Esperar a que `docker compose ps` muestre PostgreSQL como `healthy`.
 4. Ejecutar `npm start`. La conexión desde el host usa `localhost:5433` por defecto.
 
-Las cuentas iniciales usan la contraseña local `demo123`. Los scripts de `init-db` solo se
+Las cuentas iniciales usan la contraseña local `demo123`. Los scripts de `init-db/store` solo se
 ejecutan cuando el volumen de PostgreSQL se crea por primera vez. Para recrear datos desde
 cero debe eliminarse deliberadamente el volumen; no se hace automáticamente para evitar
 pérdida accidental de información.

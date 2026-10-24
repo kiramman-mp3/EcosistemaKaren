@@ -1,50 +1,38 @@
 const fs = require('fs');
 const path = require('path');
 
-const MIGRATIONS = [
-  {
-    version: '002_promotions_approval',
-    file: path.resolve(__dirname, '../../../init-db/02-promotions-approval.sql')
-  },
-  {
-    version: '003_promotions_production_hardening',
-    file: path.resolve(__dirname, '../../../init-db/03-promotions-production-hardening.sql')
-  },
-  {
-    version: '004_inventory_traceability',
-    file: path.resolve(__dirname, '../../../init-db/04-inventory-traceability.sql')
-  },
-  {
-    version: '005_refresh_demo_lots',
-    file: path.resolve(__dirname, '../../../init-db/05-refresh-demo-lots.sql')
-  },
-  {
-    version: '006_fix_demo_barcodes',
-    file: path.resolve(__dirname, '../../../init-db/06-fix-demo-barcodes.sql')
-  },
-  {
-    version: '007_product_tax',
-    file: path.resolve(__dirname, '../../../init-db/07-product-tax.sql')
-  },
-  {
-    version: '008_product_image',
-    file: path.resolve(__dirname, '../../../init-db/08-product-image.sql')
-  },
-  {
-    version: '009_product_search',
-    file: path.resolve(__dirname, '../../../init-db/09-product-search.sql')
-  },
-  {
-    version: '010_heartbeat_and_ratelimit',
-    file: path.resolve(__dirname, '../../../init-db/10-heartbeat-and-ratelimit.sql')
-  },
-  {
-    version: '011_token_revocation',
-    file: path.resolve(__dirname, '../../../init-db/11-token-revocation.sql')
-  }
-];
+const INIT_DB = path.resolve(__dirname, '../../../init-db');
 
-async function runMigrations(pool) {
+// Cada servicio (ADR-003) tiene su propio conjunto de migraciones y su propia base de datos.
+// El monolito de transición aplica ambos conjuntos sobre una misma base.
+const MIGRATION_SETS = {
+  store: [
+    { version: '002_promotions_approval', file: path.join(INIT_DB, 'store/02-promotions-approval.sql') },
+    { version: '003_promotions_production_hardening', file: path.join(INIT_DB, 'store/03-promotions-production-hardening.sql') },
+    { version: '004_inventory_traceability', file: path.join(INIT_DB, 'store/04-inventory-traceability.sql') },
+    { version: '005_refresh_demo_lots', file: path.join(INIT_DB, 'store/05-refresh-demo-lots.sql') },
+    { version: '006_fix_demo_barcodes', file: path.join(INIT_DB, 'store/06-fix-demo-barcodes.sql') },
+    { version: '007_product_tax', file: path.join(INIT_DB, 'store/07-product-tax.sql') },
+    { version: '008_product_image', file: path.join(INIT_DB, 'store/08-product-image.sql') },
+    { version: '009_product_search', file: path.join(INIT_DB, 'store/09-product-search.sql') },
+    { version: '010_heartbeat_and_ratelimit', file: path.join(INIT_DB, 'store/10-heartbeat-and-ratelimit.sql') },
+    { version: '011_token_revocation', file: path.join(INIT_DB, 'store/11-token-revocation.sql') }
+  ],
+  portal: [
+    { version: 'portal_001_schema', file: path.join(INIT_DB, 'portal/01-portal-schema.sql') }
+  ]
+};
+
+function migrationsFor(targets) {
+  const unknown = targets.filter(target => !MIGRATION_SETS[target]);
+  if (unknown.length > 0) {
+    throw new Error(`Conjunto de migraciones desconocido: ${unknown.join(', ')}.`);
+  }
+  return targets.flatMap(target => MIGRATION_SETS[target]);
+}
+
+async function runMigrations(pool, { targets = ['store'] } = {}) {
+  const migrations = migrationsFor(targets);
   const client = await pool.connect();
   const migrationLockId = 742601;
   try {
@@ -56,7 +44,7 @@ async function runMigrations(pool) {
       )
     `);
 
-    for (const migration of MIGRATIONS) {
+    for (const migration of migrations) {
       const alreadyApplied = await client.query(
         'SELECT 1 FROM schema_migrations WHERE version = $1',
         [migration.version]
@@ -84,4 +72,4 @@ async function runMigrations(pool) {
   }
 }
 
-module.exports = { runMigrations };
+module.exports = { runMigrations, MIGRATION_SETS };
