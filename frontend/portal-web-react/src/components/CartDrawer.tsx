@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { AlertTriangle, Minus, Plus, Trash2, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertTriangle, Clock, Minus, Plus, Trash2, X } from 'lucide-react';
 import { CartItem } from '../types';
 import { Price, ProductImage } from './ui/Tag';
 import { Button } from './ui/Button';
@@ -13,7 +13,7 @@ interface CartDrawerProps {
   items: CartItem[];
   onUpdateQuantity: (productId: string, delta: number) => void;
   onRemoveItem: (productId: string) => void;
-  onConfirmReservation: () => void;
+  onConfirmReservation: (ttlMinutos?: number) => void;
   isSubmitting?: boolean;
   error?: string | null;
   isLoggedIn?: boolean;
@@ -23,6 +23,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onConfirmReservation,
   isSubmitting = false, error = null, isLoggedIn = true,
 }) => {
+  const [selectedTtl, setSelectedTtl] = useState<number>(30);
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -68,48 +69,64 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           <>
             <div className="flex-1 overflow-y-auto px-4 pt-4">
               <ul className="space-y-3">
-                {items.map(({ product, quantity }) => (
-                  <li key={product.id} className="flex gap-3 p-3 rounded-block bg-surface border-2 border-aisle-rule animate-fly-in">
-                    <ProductImage
-                      src={product.image}
-                      alt=""
-                      tone={categoryTone(product.category)}
-                      className="w-16 h-16 shrink-0 rounded-photo"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-extrabold font-display text-ink leading-snug line-clamp-2">{product.name}</p>
-                      {product.isOffer && <p className="text-xs font-bold text-karen-text">Precio de oferta</p>}
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <div className="flex items-center rounded-full border-2 border-mora">
-                          <button
-                            onClick={() => onUpdateQuantity(product.id, -1)}
-                            className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora"
-                            aria-label={`Quitar una unidad de ${product.name}`}
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                          <span className="w-8 text-center text-sm font-extrabold tabular" aria-live="polite">{quantity}</span>
-                          <button
-                            onClick={() => onUpdateQuantity(product.id, 1)}
-                            disabled={quantity >= product.stock}
-                            className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora disabled:text-ink-faint disabled:hover:bg-transparent"
-                            aria-label={`Agregar una unidad de ${product.name}`}
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
+                {items.map(({ product, quantity }) => {
+                  const maxOffer = product.isOffer && product.maxOfferLimit ? product.maxOfferLimit : undefined;
+                  const maxAllowed = maxOffer ? Math.min(product.stock, maxOffer) : product.stock;
+                  const isAtLimit = quantity >= maxAllowed;
+
+                  return (
+                    <li key={product.id} className="flex gap-3 p-3 rounded-block bg-surface border-2 border-aisle-rule animate-fly-in">
+                      <ProductImage
+                        src={product.image}
+                        alt=""
+                        tone={categoryTone(product.category)}
+                        className="w-16 h-16 shrink-0 rounded-photo"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-extrabold font-display text-ink leading-snug line-clamp-2">{product.name}</p>
+                        {product.isOffer && (
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                            <span className="text-xs font-bold text-karen-text">Precio de oferta</span>
+                            {maxOffer && (
+                              <span className="text-[10px] font-black uppercase tracking-wider text-mora bg-limon px-1.5 py-0.5 rounded-full">
+                                Máx. {maxOffer} un.
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center rounded-full border-2 border-mora">
+                            <button
+                              onClick={() => onUpdateQuantity(product.id, -1)}
+                              className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora"
+                              aria-label={`Quitar una unidad de ${product.name}`}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <span className="w-8 text-center text-sm font-extrabold tabular" aria-live="polite">{quantity}</span>
+                            <button
+                              onClick={() => onUpdateQuantity(product.id, 1)}
+                              disabled={isAtLimit}
+                              className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora disabled:text-ink-faint disabled:hover:bg-transparent"
+                              aria-label={`Agregar una unidad de ${product.name}`}
+                              title={isAtLimit ? (maxOffer ? `Límite de oferta: máx. ${maxOffer}` : 'Sin más stock') : undefined}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <span className="font-display font-extrabold text-ink tabular">${(product.price * quantity).toFixed(2)}</span>
                         </div>
-                        <span className="font-display font-extrabold text-ink tabular">${(product.price * quantity).toFixed(2)}</span>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => onRemoveItem(product.id)}
-                      className="self-start p-1.5 text-ink-faint hover:text-karen-text"
-                      aria-label={`Eliminar ${product.name}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </li>
-                ))}
+                      <button
+                        onClick={() => onRemoveItem(product.id)}
+                        className="self-start p-1.5 text-ink-faint hover:text-karen-text"
+                        aria-label={`Eliminar ${product.name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 
@@ -124,16 +141,43 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <span className="text-ink-soft font-semibold">Total a pagar en caja</span>
                 <Price value={total} size="md" />
               </div>
-              <p className="text-sm text-ink-muted leading-relaxed">
-                Al apartar, te guardamos estas unidades 30 minutos. Pagas al retirar en la Sucursal Matriz.
-              </p>
+
+              {/* Selector de tiempo de reserva */}
+              <div className="space-y-1.5 pt-2 border-t border-aisle-rule">
+                <div className="flex items-center justify-between text-xs font-bold text-ink-soft">
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-mora" /> Tiempo para retirar
+                  </span>
+                  <span className="text-mora font-black">{selectedTtl} minutos</span>
+                </div>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[30, 45, 60, 90, 120].map(mins => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setSelectedTtl(mins)}
+                      className={`py-1.5 text-xs font-extrabold rounded-btn border-2 transition-all ${
+                        selectedTtl === mins
+                          ? 'bg-limon border-mora text-mora shadow-pop-sm'
+                          : 'bg-page border-aisle-rule text-ink hover:border-mora/40'
+                      }`}
+                    >
+                      {mins >= 60 ? `${mins / 60}h` : `${mins}m`}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-ink-muted">
+                  Guardamos tus productos {selectedTtl} min en la Sucursal Matriz. Puedes extender más tiempo luego con tu código.
+                </p>
+              </div>
+
               {error && (
                 <p role="alert" className="flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm font-semibold p-3">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   {error}
                 </p>
               )}
-              <Button onClick={onConfirmReservation} disabled={isSubmitting} size="lg" className="w-full">
+              <Button onClick={() => onConfirmReservation(selectedTtl)} disabled={isSubmitting} size="lg" className="w-full">
                 {isSubmitting && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                 {isSubmitting ? 'Apartando…' : isLoggedIn ? 'Apartar y obtener mi código' : 'Ingresa para apartar'}
               </Button>

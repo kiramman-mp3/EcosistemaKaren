@@ -2,10 +2,11 @@ import React from 'react';
 import { Phone, Mail, MapPin, Clock, MessageSquare, ShieldCheck, FileText, ExternalLink } from 'lucide-react';
 import { NavTab } from '../types';
 import { Logo } from './ui/Logo';
+import { StoreMap } from './ui/StoreMap';
 
 interface FooterProps {
   onNavigate: (tab: NavTab) => void;
-  onOpenTerms: () => void;
+  onOpenTerms: (tab?: 'todos' | 'privacidad' | 'reservas' | 'fefo' | 'pagos') => void;
   onOpenChat: () => void;
 }
 
@@ -15,6 +16,8 @@ const FACEBOOK_PATH = 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 
 const channel = 'group flex items-center gap-3 rounded-full bg-page hover:bg-limon hover:text-mora pl-2 pr-4 py-2 transition-colors';
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenTerms, onOpenChat }) => {
+  const [showMap, setShowMap] = React.useState(false);
+
   return (
     <footer className="relative mt-20 bg-surface text-ink border-t-2 border-mora">
       {/* Banda de colores de pasillo */}
@@ -39,11 +42,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
               </div>
             </div>
             <p className="text-sm text-ink-soft leading-relaxed max-w-[34ch]">
-              Aparta tus productos desde casa y retíralos en caja en 30 minutos, sin hacer fila.
+              Aparta tus productos desde casa y retíralos en caja con tu código, sin hacer fila.
             </p>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-aguacate-bright px-3 py-1.5 text-xs font-extrabold text-mora">
               <ShieldCheck className="w-4 h-4 shrink-0" />
-              Te guardamos tu pedido 30 minutos
+              Retiro garantizado en caja SIACI
             </span>
           </div>
 
@@ -109,11 +112,18 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
                 <span>Lunes a Sábado: 07:00 – 21:00 · Domingos: 08:00 – 19:00</span>
               </li>
             </ul>
+            <button
+              onClick={() => setShowMap(!showMap)}
+              className="press inline-flex items-center gap-2 rounded-full border-2 border-mora bg-limon px-3.5 py-1.5 text-xs font-extrabold text-mora shadow-pop-sm hover:bg-mora hover:text-white transition-colors"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>{showMap ? 'Ocultar mapa' : 'Ver mapa interactivo'}</span>
+            </button>
           </div>
 
           <div className="space-y-3">
             <button
-              onClick={onOpenTerms}
+              onClick={() => onOpenTerms('todos')}
               className="group inline-flex items-center gap-3 font-display text-lg font-extrabold text-left"
               aria-label="Términos y Condiciones"
             >
@@ -123,23 +133,30 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
               <span className="underline decoration-limon decoration-2 underline-offset-4">Términos y Condiciones</span>
             </button>
             <p className="text-sm text-ink-soft leading-relaxed max-w-[36ch]">
-              Cómo funciona tu reserva, cuánto tiempo la guardamos y cómo cuidamos tus datos personales.
+              Cómo funciona tu reserva, cuánto tiempo la guardamos y cómo cuidamos tus datos personales (LOPDP).
             </p>
           </div>
         </div>
+
+        {/* Sección desplegable con el mapa de la tienda */}
+        {showMap && (
+          <div className="mt-8 pt-6 border-t-2 border-aisle-rule animate-fade">
+            <StoreMap />
+          </div>
+        )}
       </div>
 
       <div className="border-t-2 border-aisle-rule pt-4 pb-16 sm:pb-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ink-muted">
           <p>© {new Date().getFullYear()} Supermercado Karen S.A. · RUC 0992345678001</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <button onClick={onOpenTerms} className="hover:text-karen-text transition-colors underline underline-offset-2">
-              Política de Reserva (30 min TTL)
+            <button onClick={() => onOpenTerms('reservas')} className="hover:text-karen-text transition-colors underline underline-offset-2">
+              Política de Reserva (TTL)
             </button>
-            <button onClick={onOpenTerms} className="hover:text-karen-text transition-colors underline underline-offset-2">
+            <button onClick={() => onOpenTerms('privacidad')} className="hover:text-karen-text transition-colors underline underline-offset-2">
               Protección de Datos LOPDP
             </button>
-            <span>Ecuador</span>
+            <span>Guayaquil, Ecuador</span>
           </div>
         </div>
       </div>

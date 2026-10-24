@@ -23,6 +23,7 @@ export function reservationToPass(
 ): ReservationPass {
   const remainingSeconds = secondsUntil(reservation.fechaExpiracion, now);
   return {
+    id: reservation.id,
     code: reservation.codigoRetiro,
     status: 'ACTIVA',
     initialSeconds: remainingSeconds,
