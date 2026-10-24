@@ -125,6 +125,12 @@ const schemas = {
     email: z.string().trim().email('El correo electrónico no es válido.').max(254).transform(value => value.toLowerCase()),
     password: z.string().min(1, 'La contraseña es obligatoria.').max(128, 'La contraseña no puede superar 128 caracteres.')
   }),
+  // Latido que store-api envía al portal; todos los campos son informativos.
+  storeHeartbeatBody: z.strictObject({
+    storeId: z.string().trim().min(1).max(64).optional(),
+    version: z.string().trim().min(1).max(32).optional(),
+    pendingEvents: z.number().int().min(0).max(1000000).optional()
+  }),
   emptyBody
 };
 
