@@ -19,6 +19,29 @@ services:
       timeout: 5s
       retries: 10
 
+  # Base de datos de portal-api (ADR-003). Solo se levanta con el perfil "split":
+  #   docker compose --profile split up -d
+  # El esquema lo aplica portal-api al arrancar (init-db/portal).
+  postgres_portal:
+    profiles: ["split"]
+    image: postgres:14-alpine@sha256:727876d274666da0b92a445390ba093c84b8e9f8343e1c53cd4e9a7ab2d85310
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PORTAL_DB_NAME:-ecosistema_karen_portal}
+      POSTGRES_USER: ${PORTAL_DB_USER:-karen_portal}
+      POSTGRES_PASSWORD: ${PORTAL_DB_PASSWORD:-karen_portal_pass}
+    ports:
+      - "${PORTAL_DB_EXPOSED_PORT:-5434}:5432"
+    volumes:
+      - postgres_portal_data:/var/lib/postgresql/data
+    networks:
+      - karen_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   pgadmin:
     image: dpage/pgadmin4@sha256:2f4ce946ddf8360680d7eff4eaba1d91859eb6b4003e6623bad5c63a322c2f4d
     restart: unless-stopped
@@ -38,6 +61,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres_portal_data:
   pgadmin_data:
 
 networks:

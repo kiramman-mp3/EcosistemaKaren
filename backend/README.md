@@ -17,9 +17,8 @@ PostgreSQL y pgAdmin se leen desde `.env`; los valores incluidos son únicamente
 
 ## Servicios: store-api y portal-api
 
-El backend se está separando en dos servicios (ver
-[ADR-003](../docs/decisions/ADR-003-split-store-portal.md)). Mientras comparten base de datos
-conviven tres puntos de entrada:
+El backend se está separando en dos servicios con base de datos propia (ver
+[ADR-003](../docs/decisions/ADR-003-split-store-portal.md)). Conviven tres puntos de entrada:
 
 | Comando | Servicio | Puerto por defecto |
 |---|---|---|
@@ -29,6 +28,25 @@ conviven tres puntos de entrada:
 
 Cada servicio solo registra las rutas que le corresponden. Los workers (expiración de
 reservas y de lotes, envío del heartbeat) corren únicamente en store-api.
+
+### Bases de datos
+
+| Servicio | Variables | Migraciones | Contenido |
+|---|---|---|---|
+| store-api | `DB_*` | `init-db/store` | Catálogo, lotes, reservas, alertas, promociones, personal |
+| portal-api | `PORTAL_DB_*` (cada valor que falte cae en `DB_*`) | `init-db/portal` | Clientes, tokens revocados, rate limit, estado del heartbeat |
+| monolito | `DB_*` | ambos conjuntos | Una sola base con todo |
+
+Cada servicio aplica sus migraciones al arrancar. Para probar los dos servicios con bases
+separadas:
+
+1. Descomentar `PORTAL_DB_*` en `.env`.
+2. `docker compose --profile split up -d` (levanta además `postgres_portal` en el puerto 5434).
+3. `npm run start:store` y `npm run start:portal` en terminales distintas.
+
+Un despliegue solo del portal en la nube puede usar `DB_*` para su propia base. Mientras no
+estén hechas la sincronización de catálogo y la cola de reservas, el portal con base separada
+solo sirve auth, heartbeat y rate limit; el catálogo y las reservas siguen en el monolito.
 
 ## Verificación
 
