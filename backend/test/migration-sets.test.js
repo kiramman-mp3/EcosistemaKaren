@@ -46,7 +46,7 @@ test('runMigrations aplica solo el conjunto del portal y es idempotente', async 
   const { pool, applied } = fakePool();
   await runMigrations(pool, { targets: ['portal'] });
   await runMigrations(pool, { targets: ['portal'] });
-  assert.deepEqual([...applied], ['portal_001_schema']);
+  assert.deepEqual([...applied], MIGRATION_SETS.portal.map(m => m.version));
 });
 
 test('el monolito aplica ambos conjuntos sobre la misma base', async () => {

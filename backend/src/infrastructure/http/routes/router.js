@@ -20,6 +20,7 @@ const STORE_GROUPS = [
 const PORTAL_GROUPS = [
   groups.rootRoutes,
   groups.catalogReadRoutes,
+  groups.catalogStatusRoutes,
   groups.customerReservationRoutes,
   groups.reservationLookupRoutes,
   groups.publicPromotionRoutes,

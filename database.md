@@ -380,5 +380,7 @@ La base de **portal-api** (`ecosistema_karen_portal`, migraciones en `backend/in
 | `tokens_revocados` | Revocación de JWT al cerrar sesión. |
 | `rate_limit_hits` | Límite de tasa distribuido entre réplicas. |
 | `tienda_heartbeat` | Último latido recibido de la tienda. |
+| `categorias`, `productos`, `lotes`, `promociones_ia` | Copia de lectura del catálogo, con el mismo nombre y forma que en la tienda. Solo contiene lotes vigentes con existencias y promociones aprobadas; costos, ubicaciones, reservas y datos de IA quedan vacíos. La reemplaza la sincronización de catálogo. |
+| `sync_estado` | Última versión y hora de sincronización de cada sección de la copia. |
 
-La copia de lectura del catálogo y la cola de reservas se agregarán al esquema del portal junto con la sincronización de catálogo y la cola de comandos. El monolito de transición aplica ambos conjuntos de migraciones sobre una sola base.
+La cola de reservas se agregará al esquema del portal junto con la cola de comandos. El monolito de transición aplica ambos conjuntos de migraciones sobre una sola base.

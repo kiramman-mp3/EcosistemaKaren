@@ -61,7 +61,9 @@ async function createBaseApp({ database = 'store', migrations = ['store'] } = {}
   app.use('/api/v1/auth', httpSecurity.auth);
   app.use('/api/v1/reservations', httpSecurity.reservations);
   app.use('/api/v1/promotions/generate', httpSecurity.ai);
-  app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb', strict: true }));
+  // El canal interno /internal/v1 lee su propio cuerpo, con otro límite y después de autenticar.
+  const publicJson = express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb', strict: true });
+  app.use((req, res, next) => (req.path.startsWith('/internal/') ? next() : publicJson(req, res, next)));
   app.use(httpSecurity.normalizeJsonBody);
   app.use(cookieParser());
   app.use(cookieCsrfProtection(allowedOrigins, process.env.NODE_ENV === 'production'));

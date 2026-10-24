@@ -5,6 +5,9 @@ const LotExpiryWorker = require('../../infrastructure/workers/LotExpiryWorker');
 const HeartbeatSenderWorker = require('../../infrastructure/workers/HeartbeatSenderWorker');
 const HttpHeartbeatTransport = require('../../infrastructure/heartbeat/HttpHeartbeatTransport');
 const LocalHeartbeatTransport = require('../../infrastructure/heartbeat/LocalHeartbeatTransport');
+const CatalogSyncWorker = require('../../infrastructure/workers/CatalogSyncWorker');
+const HttpCatalogSyncTransport = require('../../infrastructure/sync/HttpCatalogSyncTransport');
+const PostgresCatalogSnapshotReader = require('../../infrastructure/sync/PostgresCatalogSnapshotReader');
 const packageInfo = require('../../../package.json');
 const HeartbeatMonitor = require('../../infrastructure/heartbeat/HeartbeatMonitor');
 const PostgresHeartbeatStore = require('../../infrastructure/heartbeat/PostgresHeartbeatStore');
@@ -34,6 +37,10 @@ const AlertController = require('../../adapters/controllers/AlertController');
 const PromotionController = require('../../adapters/controllers/PromotionController');
 const AuthController = require('../../adapters/controllers/AuthController');
 const HeartbeatController = require('../../adapters/controllers/HeartbeatController');
+const CatalogSyncController = require('../../adapters/controllers/CatalogSyncController');
+const PostgresCatalogMirrorRepository = require('../../adapters/repositories/PostgresCatalogMirrorRepository');
+const CatalogStatusController = require('../../adapters/controllers/CatalogStatusController');
+const { ApplyCatalogSnapshot, GetCatalogSyncStatus } = require('../../use-cases/catalog/CatalogSyncUseCases');
 
 // Instancia casos de uso, controladores y procesos de fondo. `store` agrega la autoridad de
 // inventario (lotes, alertas, Gemini, confirmación en caja, workers) y `portal` agrega las
@@ -75,6 +82,19 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     authController,
     heartbeatController
   };
+
+  // portal-api con base propia recibe la copia del catálogo; en el monolito las tablas se comparten.
+  // Sin PostgreSQL (respaldo en memoria) no hay dónde guardarla y la ruta no se registra.
+  const catalogMirrorRepo = portal && !store && pool ? new PostgresCatalogMirrorRepository(pool) : null;
+  if (catalogMirrorRepo) {
+    controllers.catalogSyncController = new CatalogSyncController(new ApplyCatalogSnapshot(catalogMirrorRepo));
+  }
+  if (portal) {
+    controllers.catalogStatusController = new CatalogStatusController(new GetCatalogSyncStatus(catalogMirrorRepo, {
+      mode: store ? 'direct' : 'mirror',
+      staleAfterSeconds: serviceConfig.catalogStaleSeconds
+    }));
+  }
 
   const workers = [];
   let alertStreamManager = null;
@@ -120,6 +140,16 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     // Procesos de fondo: expiración de reservas TTL y de lotes
     workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo), 60000));
     workers.push(new LotExpiryWorker(new ExpireLots(lotRepo), 60000));
+
+    // Con base propia, el portal recibe una copia del catálogo que la tienda le publica.
+    if (!portal && pool && serviceConfig.catalogSyncEnabled) {
+      workers.push(new CatalogSyncWorker({
+        reader: new PostgresCatalogSnapshotReader(pool),
+        transport: new HttpCatalogSyncTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey }),
+        intervalMs: serviceConfig.catalogSyncIntervalMs,
+        resyncMs: serviceConfig.catalogResyncMs
+      }));
+    }
 
     // La tienda es quien emite el latido: por HTTP hacia el portal, o en proceso en el monolito.
     if (serviceConfig.heartbeatEnabled) {

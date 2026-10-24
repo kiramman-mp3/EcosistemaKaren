@@ -1,5 +1,11 @@
 const MIN_KEY_LENGTH = 32;
 
+// Segundos configurables con un valor por defecto y un mínimo que protege al portal de ráfagas.
+function positiveSeconds(value, fallback, minimum) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= minimum ? Math.floor(parsed) : fallback;
+}
+
 function isWeakKey(key) {
   return !key || key.length < MIN_KEY_LENGTH || key.includes('change_me');
 }
@@ -12,20 +18,21 @@ function readServiceConfig({ store, portal }, env = process.env) {
   const storeServiceKey = (env.STORE_SERVICE_KEY || '').trim();
   const portalUrl = (env.PORTAL_URL || '').trim().replace(/\/+$/, '');
   const heartbeatEnabled = env.HEARTBEAT_ENABLED !== 'false';
+  const catalogSyncEnabled = env.CATALOG_SYNC_ENABLED !== 'false';
 
   if (split && production && isWeakKey(storeServiceKey)) {
     throw new Error(`STORE_SERVICE_KEY debe ser un secreto aleatorio de al menos ${MIN_KEY_LENGTH} caracteres en producción.`);
   }
 
-  if (store && !portal && heartbeatEnabled) {
+  if (store && !portal && (heartbeatEnabled || catalogSyncEnabled)) {
     if (!storeServiceKey) {
-      throw new Error('STORE_SERVICE_KEY es obligatorio para que store-api envíe el heartbeat al portal.');
+      throw new Error('STORE_SERVICE_KEY es obligatorio para que store-api se comunique con el portal.');
     }
     let parsed;
     try {
       parsed = new URL(portalUrl);
     } catch {
-      throw new Error('PORTAL_URL debe ser una URL http(s) válida para que store-api envíe el heartbeat.');
+      throw new Error('PORTAL_URL debe ser una URL http(s) válida para que store-api se comunique con el portal.');
     }
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       throw new Error('PORTAL_URL debe usar http o https.');
@@ -39,7 +46,12 @@ function readServiceConfig({ store, portal }, env = process.env) {
     storeServiceKey,
     portalUrl,
     storeId: (env.STORE_ID || 'tienda-principal').trim(),
-    heartbeatEnabled
+    heartbeatEnabled,
+    catalogSyncEnabled,
+    catalogSyncIntervalMs: positiveSeconds(env.CATALOG_SYNC_INTERVAL_SECONDS, 15, 5) * 1000,
+    catalogResyncMs: positiveSeconds(env.CATALOG_RESYNC_SECONDS, 600, 30) * 1000,
+    // Debe ser mayor que el reenvío completo: las secciones sin cambios solo se reenvían entonces.
+    catalogStaleSeconds: positiveSeconds(env.CATALOG_STALE_SECONDS, 1200, 60)
   };
 }
 
