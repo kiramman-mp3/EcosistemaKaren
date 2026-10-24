@@ -15,6 +15,21 @@ pérdida accidental de información.
 Los puertos pueden cambiarse con `DB_EXPOSED_PORT` y `PGADMIN_PORT`. Las credenciales de
 PostgreSQL y pgAdmin se leen desde `.env`; los valores incluidos son únicamente para desarrollo.
 
+## Servicios: store-api y portal-api
+
+El backend se está separando en dos servicios (ver
+[ADR-003](../docs/decisions/ADR-003-split-store-portal.md)). Mientras comparten base de datos
+conviven tres puntos de entrada:
+
+| Comando | Servicio | Puerto por defecto |
+|---|---|---|
+| `npm start` | Monolito de transición (store + portal) | `PORT` o 4000 |
+| `npm run start:store` | store-api (inventario, caja, alertas, Gemini) | `STORE_PORT`, `PORT` o 4000 |
+| `npm run start:portal` | portal-api (clientes, reservas, lectura de catálogo) | `PORTAL_PORT` o 4001 |
+
+Cada servicio solo registra las rutas que le corresponden. Los workers (expiración de
+reservas y de lotes, heartbeat de desarrollo) corren únicamente en store-api.
+
 ## Verificación
 
 ```powershell
