@@ -7,6 +7,7 @@
  * Usa la base de datos configurada (DB_*, PORTAL_DB_*) y, si no hay PostgreSQL, el respaldo en
  * memoria. Los procesos de fondo y la comunicación entre servicios se desactivan; esto solo mira rutas.
  */
+require('dotenv').config();
 const crypto = require('crypto');
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
