@@ -88,9 +88,14 @@ cancelación está en el [ADR-003](../docs/decisions/ADR-003-split-store-portal.
 ## Verificación
 
 ```powershell
-npm test
+npm test                   # pruebas unitarias y de contrato (no necesitan PostgreSQL)
+npm run test:migrations    # migraciones de tienda, portal y monolito contra PostgreSQL real
+npm run test:services      # cada servicio expone solo las rutas que le tocan
 docker compose config
 ```
+
+`test:migrations` crea y elimina bases `<DB_NAME>_verify_*`, sin tocar `DB_NAME`. El CI las ejecuta
+en el job `backend-services` con un servicio PostgreSQL.
 
 ## Autenticación y roles
 

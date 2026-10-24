@@ -90,9 +90,9 @@ graph TD
 
 ---
 
-## 4. Topología de despliegue (objetivo)
+## 4. Topología de despliegue
 
-El backend se separa en dos servicios con base de datos propia, según [ADR-003](docs/decisions/ADR-003-split-store-portal.md). Ambos reutilizan el mismo `domain` y `use-cases`; cada uno tiene su propia raíz de composición y su propio enrutador.
+El backend está separado en dos servicios con base de datos propia, según [ADR-003](docs/decisions/ADR-003-split-store-portal.md). Ambos reutilizan el mismo `domain` y `use-cases`; cada uno tiene su propia raíz de composición (`src/apps`), su propio enrutador y su propia documentación Swagger. Un monolito de transición (`npm start`) los une en un solo proceso y una sola base para desarrollo sencillo.
 
 ```mermaid
 graph LR
@@ -113,5 +113,16 @@ graph LR
 ```
 
 * **store-api** es la única autoridad de inventario y reservas (FEFO, anti-overbooking, caja, alertas SSE, Gemini y aprobación de promociones).
-* **portal-api** autentica clientes, publica una copia de lectura del catálogo, recibe las reservas como `PENDIENTE_SYNC` y bloquea nuevas reservas si no hay heartbeat vigente de la tienda.
-* Todo el tráfico entre ambos es saliente desde la tienda, bajo `/internal/v1` con API key de servicio.
+* **portal-api** autentica clientes, sirve una copia de lectura del catálogo, recibe las reservas como `PENDIENTE_SYNC` y bloquea nuevas reservas si no hay heartbeat vigente de la tienda.
+* Todo el tráfico entre ambos es saliente desde la tienda, bajo `/internal/v1` con API key de servicio (cabecera `x-store-key`).
+
+### Qué viaja entre los servicios
+
+| Sentido | Qué | Cómo |
+|---|---|---|
+| tienda → portal | Latido de la tienda | `POST /internal/v1/store/heartbeat` periódico; el portal bloquea reservas sin latido vigente |
+| tienda → portal | Catálogo, disponibilidad y promociones aprobadas | Snapshots por sección, solo cuando cambian (`POST /internal/v1/store/sync/catalog`) |
+| tienda ← portal | Reservas de los clientes | Cola durable de comandos en el portal, pedida por long-poll (`GET /internal/v1/store/commands`) |
+| tienda → portal | Resultado de cada comando y cambios de estado (confirmada, expirada) | Bandeja de salida con reintentos (`outbox_portal`) hacia `/commands/:id/result` y `/events` |
+
+La tienda sigue operando sin internet: solo se detienen la sincronización y la atención de reservas nuevas, y se reanudan al volver la conexión.
