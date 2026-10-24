@@ -5,6 +5,9 @@ const LotExpiryWorker = require('../../infrastructure/workers/LotExpiryWorker');
 const HeartbeatSenderWorker = require('../../infrastructure/workers/HeartbeatSenderWorker');
 const HttpHeartbeatTransport = require('../../infrastructure/heartbeat/HttpHeartbeatTransport');
 const LocalHeartbeatTransport = require('../../infrastructure/heartbeat/LocalHeartbeatTransport');
+const CatalogSyncWorker = require('../../infrastructure/workers/CatalogSyncWorker');
+const HttpCatalogSyncTransport = require('../../infrastructure/sync/HttpCatalogSyncTransport');
+const PostgresCatalogSnapshotReader = require('../../infrastructure/sync/PostgresCatalogSnapshotReader');
 const packageInfo = require('../../../package.json');
 const HeartbeatMonitor = require('../../infrastructure/heartbeat/HeartbeatMonitor');
 const PostgresHeartbeatStore = require('../../infrastructure/heartbeat/PostgresHeartbeatStore');
@@ -131,6 +134,16 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     // Procesos de fondo: expiración de reservas TTL y de lotes
     workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo), 60000));
     workers.push(new LotExpiryWorker(new ExpireLots(lotRepo), 60000));
+
+    // Con base propia, el portal recibe una copia del catálogo que la tienda le publica.
+    if (!portal && pool && serviceConfig.catalogSyncEnabled) {
+      workers.push(new CatalogSyncWorker({
+        reader: new PostgresCatalogSnapshotReader(pool),
+        transport: new HttpCatalogSyncTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey }),
+        intervalMs: serviceConfig.catalogSyncIntervalMs,
+        resyncMs: serviceConfig.catalogResyncMs
+      }));
+    }
 
     // La tienda es quien emite el latido: por HTTP hacia el portal, o en proceso en el monolito.
     if (serviceConfig.heartbeatEnabled) {

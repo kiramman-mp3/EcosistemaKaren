@@ -43,6 +43,12 @@ test('el esquema acepta un snapshot válido de cada sección', () => {
   assert.ok(schemas.catalogSyncBody.safeParse({ section: 'lotes', version: 1, items: [] }).success, 'un snapshot vacío es válido');
 });
 
+test('el esquema acepta cualquier UUID que PostgreSQL acepte, no solo los RFC 4122', () => {
+  // Variante 1 y versión 7 en posición no estándar: válido para PostgreSQL, inválido para z.uuid().
+  const looseId = 'f1b2c3d4-e5f6-7a8b-1c0d-1e2f3a4b5c6d';
+  assert.ok(schemas.catalogSyncBody.safeParse({ section: 'categorias', version: 1, items: [{ ...samples.categorias, id: looseId }] }).success);
+});
+
 test('el esquema rechaza campos internos que nunca deben salir de la tienda', () => {
   const withCost = { ...samples.lotes, costoUnitario: 0.8 };
   const withLocation = { ...samples.lotes, ubicacion: 'BODEGA' };

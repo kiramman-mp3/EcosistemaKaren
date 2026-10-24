@@ -49,7 +49,32 @@ test('readServiceConfig exige PORTAL_URL válida y https en producción para sto
   assert.equal(config.storeId, 'tienda-principal');
 });
 
-test('readServiceConfig permite desactivar el heartbeat con HEARTBEAT_ENABLED=false', () => {
-  const config = readServiceConfig({ store: true, portal: false }, { NODE_ENV: 'development', HEARTBEAT_ENABLED: 'false' });
+test('readServiceConfig permite desactivar el heartbeat y la sincronización de catálogo', () => {
+  const config = readServiceConfig(
+    { store: true, portal: false },
+    { NODE_ENV: 'development', HEARTBEAT_ENABLED: 'false', CATALOG_SYNC_ENABLED: 'false' }
+  );
   assert.equal(config.heartbeatEnabled, false);
+  assert.equal(config.catalogSyncEnabled, false);
+});
+
+test('la sincronización de catálogo por sí sola exige PORTAL_URL y clave aunque el heartbeat esté desactivado', () => {
+  assert.throws(
+    () => readServiceConfig({ store: true, portal: false }, { NODE_ENV: 'development', HEARTBEAT_ENABLED: 'false' }),
+    /STORE_SERVICE_KEY/
+  );
+});
+
+test('los intervalos de sincronización tienen valores por defecto y mínimos', () => {
+  const env = { NODE_ENV: 'development', STORE_SERVICE_KEY: KEY, PORTAL_URL: 'http://localhost:4001' };
+  const defaults = readServiceConfig({ store: true, portal: false }, env);
+  assert.equal(defaults.catalogSyncIntervalMs, 15000);
+  assert.equal(defaults.catalogResyncMs, 600000);
+
+  const custom = readServiceConfig({ store: true, portal: false }, { ...env, CATALOG_SYNC_INTERVAL_SECONDS: '30', CATALOG_RESYNC_SECONDS: '120' });
+  assert.equal(custom.catalogSyncIntervalMs, 30000);
+  assert.equal(custom.catalogResyncMs, 120000);
+
+  const tooFast = readServiceConfig({ store: true, portal: false }, { ...env, CATALOG_SYNC_INTERVAL_SECONDS: '1' });
+  assert.equal(tooFast.catalogSyncIntervalMs, 15000, 'un intervalo menor al mínimo vuelve al valor por defecto');
 });

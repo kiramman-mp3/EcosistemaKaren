@@ -34,13 +34,17 @@ const emptyToUndefined = (schema) => z.preprocess(val => (val === '' ? undefined
 
 const MAX_SYNC_ITEMS = 50000;
 
+// Igual que el tipo UUID de PostgreSQL: cualquier 8-4-4-4-12 hexadecimal. z.uuid() exige además
+// versión y variante RFC 4122, y rechazaría ids válidos de la base (p. ej. los de los datos semilla).
+const postgresUuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'El identificador no es un UUID válido.');
+
 // Valida cada sección del snapshot de catálogo con las mismas definiciones que usa el
 // repositorio espejo, de modo que el contrato vive en un solo lugar.
 function catalogItemSchema(spec) {
   const shape = {};
   for (const { key, sql, max, min, nullable } of spec.fields) {
     let schema;
-    if (sql === 'uuid') schema = z.uuid();
+    if (sql === 'uuid') schema = postgresUuid;
     else if (sql === 'text') schema = z.string().min(nullable ? 0 : 1).max(max);
     else if (sql === 'int') schema = z.number().int().min(min).max(max);
     else if (sql === 'numeric') schema = z.number().finite().min(min).max(max);

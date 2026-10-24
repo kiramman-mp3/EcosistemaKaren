@@ -52,7 +52,7 @@ class PostgresCatalogMirrorRepository {
       const current = await client.query('SELECT version FROM sync_estado WHERE seccion = $1', [section]);
       if (current.rows.length > 0 && Number(current.rows[0].version) >= version) {
         await client.query('ROLLBACK');
-        return { applied: false, count: items.length };
+        return { applied: false, count: items.length, currentVersion: Number(current.rows[0].version) };
       }
 
       if (items.length > 0) await client.query(this._upsertSql(spec), [rows]);
