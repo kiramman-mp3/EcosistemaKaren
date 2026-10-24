@@ -2,6 +2,39 @@ const { NotFoundException, ValidationException, ForbiddenException } = require('
 const Reservation = require('../../domain/entities/Reservation');
 const { RESERVATION_TTL_MINUTES } = require('../../domain/policies/BusinessRules');
 
+// Valida y normaliza las líneas de una reserva: agrupa productos repetidos y las ordena para que
+// todas las transacciones adquieran los bloqueos en el mismo orden.
+function normalizeReservationItems(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new ValidationException('La reserva debe contener al menos un producto.');
+  }
+
+  // Agrupar productos repetidos y ordenar los bloqueos evita asignaciones dobles
+  // dentro de la misma solicitud y reduce el riesgo de deadlocks concurrentes.
+  const quantitiesByProduct = new Map();
+  for (const item of items) {
+    if (!item || !item.productoId) {
+      throw new ValidationException('Cada item debe incluir productoId.');
+    }
+    const quantity = Number(item.cantidad);
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw new ValidationException(
+        `Cantidad inválida (${item.cantidad}) para el producto '${item.productoId}'.`
+      );
+    }
+    const key = `${item.productoId}::${item.promocionId || ''}`;
+    const current = quantitiesByProduct.get(key);
+    quantitiesByProduct.set(key, {
+      productoId: item.productoId,
+      promocionId: item.promocionId,
+      cantidad: (current?.cantidad || 0) + quantity
+    });
+  }
+
+  return [...quantitiesByProduct.values()]
+    .sort((a, b) => `${a.productoId}:${a.promocionId || ''}`.localeCompare(`${b.productoId}:${b.promocionId || ''}`));
+}
+
 class ReservarStock {
   constructor(reservationRepository, heartbeatMonitor) {
     this.reservationRepository = reservationRepository;
@@ -12,34 +45,7 @@ class ReservarStock {
     if (!usuarioId) {
       throw new ValidationException('El usuario autenticado es requerido para realizar la reserva.');
     }
-    if (!Array.isArray(items) || items.length === 0) {
-      throw new ValidationException('La reserva debe contener al menos un producto.');
-    }
-
-    // Agrupar productos repetidos y ordenar los bloqueos evita asignaciones dobles
-    // dentro de la misma solicitud y reduce el riesgo de deadlocks concurrentes.
-    const quantitiesByProduct = new Map();
-    for (const item of items) {
-      if (!item || !item.productoId) {
-        throw new ValidationException('Cada item debe incluir productoId.');
-      }
-      const quantity = Number(item.cantidad);
-      if (!Number.isInteger(quantity) || quantity <= 0) {
-        throw new ValidationException(
-          `Cantidad inválida (${item.cantidad}) para el producto '${item.productoId}'.`
-        );
-      }
-      const key = `${item.productoId}::${item.promocionId || ''}`;
-      const current = quantitiesByProduct.get(key);
-      quantitiesByProduct.set(key, {
-        productoId: item.productoId,
-        promocionId: item.promocionId,
-        cantidad: (current?.cantidad || 0) + quantity
-      });
-    }
-
-    const normalizedItems = [...quantitiesByProduct.values()]
-      .sort((a, b) => `${a.productoId}:${a.promocionId || ''}`.localeCompare(`${b.productoId}:${b.promocionId || ''}`));
+    const normalizedItems = normalizeReservationItems(items);
 
     // La reserva no puede comenzar si la tienda no ha reportado conectividad
     // recientemente. Se comprueba justo antes de abrir la transacción de stock.
@@ -119,6 +125,7 @@ class GetReservationsByUser {
 }
 
 module.exports = {
+  normalizeReservationItems,
   ReservarStock,
   GetReservationByCode,
   ConfirmReservation,
