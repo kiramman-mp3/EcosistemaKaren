@@ -47,8 +47,33 @@ dedicada, comparación con `timingSafeEqual`, secreto distinto de `JWT_SECRET`).
 | `POST /store/heartbeat` | Latido de la tienda: `{ storeId, version, pendingEvents }`. El portal registra la hora con su propio reloj. |
 | `GET /store/commands?wait=25` | Long-poll. Entrega comandos `RESERVATION_CREATE` y `RESERVATION_CANCEL`. |
 | `POST /store/commands/:id/result` | Resultado `ACCEPTED` o `REJECTED`. Idempotente por `commandId`. |
-| `POST /store/sync/catalog` | Snapshot o delta del catálogo con `version` monótona. |
+| `POST /store/sync/catalog` | Snapshot completo de una sección del catálogo (`categorias`, `productos`, `lotes`, `promociones`) con `version` monótona. El portal reemplaza su copia de esa sección e ignora versiones iguales o anteriores. |
 | `POST /store/events` | Reserva confirmada, expirada o cancelada, y cambios de disponibilidad. |
+
+### Sincronización del catálogo (implementada)
+
+La tienda lee cada ciclo (15 s por defecto) las cuatro secciones y envía solo las que cambiaron
+desde el último envío confirmado, y todas cada 10 minutos para que el portal se recupere si perdió
+datos. Se eligieron snapshots por sección y no deltas porque el catálogo es pequeño, no hay
+orden de eventos que preservar y un envío fallido se corrige solo con el siguiente.
+
+- **Qué viaja:** categorías, productos (sin stock mínimo), lotes vigentes con existencias
+  (`estado = ACTIVO`, no vencidos, `cantidad_disponible > 0`) y promociones aprobadas y activas
+  sobre esos lotes. Nunca costos, ubicación, fechas de elaboración, cantidades reservadas,
+  razones ni metadatos de IA, ni quién aprobó una promoción. El esquema rechaza cualquier campo
+  fuera del contrato.
+- **Copia en el portal:** tablas con el mismo nombre y forma que las de la tienda, de modo que los
+  repositorios de lectura funcionan sin cambios. Los campos internos quedan vacíos o con su valor
+  por defecto. `sync_estado` guarda la última versión y la hora de cada sección.
+- **Versiones:** la tienda usa una versión creciente; si el portal ya tiene una igual o mayor
+  (por ejemplo, por un reloj atrasado) responde `applied: false` con su `currentVersion` y la
+  tienda sube la suya y reenvía.
+- **Desactualización:** `GET /catalog/status` del portal informa `stale` si falta alguna sección
+  o la más antigua supera `CATALOG_STALE_SECONDS` (20 minutos por defecto, mayor que el reenvío
+  completo).
+- **Imágenes:** `imagen_url` se copia tal cual. Las imágenes locales (`/api/v1/media/...`) deben
+  estar también en la carpeta `public/media` del portal; sincronizar los archivos queda fuera de
+  esta fase.
 
 La tienda mantiene una tabla `outbox` con reintentos y backoff para que ningún evento se
 pierda si el portal no responde.

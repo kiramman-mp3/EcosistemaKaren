@@ -38,6 +38,36 @@ Permanece vigente durante 60 segundos por defecto. Si nunca se ha recibido un la
 último superó `HEARTBEAT_TIMEOUT_SECONDS`, `POST /reservations` responde
 `503 Service Unavailable` sin modificar el inventario. `GET /heartbeat` solo consulta el estado.
 
+### `GET /catalog/status` (portal)
+Público. Indica si la copia del catálogo y la disponibilidad que ve el cliente puede estar
+desactualizada, para que las apps lo avisen. Respuesta:
+
+```json
+{
+  "success": true,
+  "mode": "mirror",
+  "stale": false,
+  "lastSyncAt": "2026-10-24T15:00:00.000Z",
+  "secondsSinceSync": 42,
+  "staleAfterSeconds": 1200,
+  "missingSections": [],
+  "sections": [{ "seccion": "lotes", "version": 1792854000000, "elementos": 214, "sincronizadoAt": "2026-10-24T15:00:00.000Z" }]
+}
+```
+
+`stale` es `true` si falta alguna sección (`categorias`, `productos`, `lotes`, `promociones`) o la
+más antigua supera `staleAfterSeconds`. En el monolito de transición `mode` es `direct` y
+`stale` siempre es `false`. Este endpoint solo lo expone portal-api, no store-api.
+
+### Canal interno de sincronización (store-api → portal-api)
+`POST /internal/v1/store/sync/catalog`, autenticado con la cabecera `x-store-key` y fuera de la
+API pública. Cuerpo: `{ "section": "categorias|productos|lotes|promociones", "version": <entero creciente>, "items": [...] }`.
+Es un snapshot completo de la sección: el portal reemplaza su copia. Responde
+`{ "success": true, "section", "version", "applied", "count" }`; si ya tiene una versión igual o
+mayor, `applied` es `false` y devuelve `currentVersion`. Campos no incluidos en el contrato
+(costos, ubicación, razones de IA, etc.) se rechazan con `400`. Solo está disponible cuando
+portal-api tiene base de datos propia.
+
 ---
 
 ## 1. Productos (`/products`)

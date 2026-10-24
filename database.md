@@ -381,4 +381,4 @@ La base de **portal-api** (`ecosistema_karen_portal`, migraciones en `backend/in
 | `rate_limit_hits` | Límite de tasa distribuido entre réplicas. |
 | `tienda_heartbeat` | Último latido recibido de la tienda. |
 
-La copia de lectura del catálogo y la cola de reservas se agregarán al esquema del portal junto con la sincronización de catálogo y la cola de comandos. El monolito de transición aplica ambos conjuntos de migraciones sobre una sola base.
+La cola de reservas se agregará al esquema del portal junto con la cola de comandos. El monolito de transición aplica ambos conjuntos de migraciones sobre una sola base.

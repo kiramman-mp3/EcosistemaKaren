@@ -44,9 +44,22 @@ separadas:
 2. `docker compose --profile split up -d` (levanta además `postgres_portal` en el puerto 5434).
 3. `npm run start:store` y `npm run start:portal` en terminales distintas.
 
-Un despliegue solo del portal en la nube puede usar `DB_*` para su propia base. Mientras no
-estén hechas la sincronización de catálogo y la cola de reservas, el portal con base separada
-solo sirve auth, heartbeat y rate limit; el catálogo y las reservas siguen en el monolito.
+Un despliegue solo del portal en la nube puede usar `DB_*` para su propia base. Con base
+separada, el portal sirve auth, heartbeat, rate limit y la lectura del catálogo (categorías,
+productos, disponibilidad y promociones) desde la copia que le publica la tienda. Las reservas
+siguen en el monolito hasta que esté la cola de reservas.
+
+### Sincronización del catálogo
+
+store-api publica al portal `POST /internal/v1/store/sync/catalog` (ver
+[ADR-003](../docs/decisions/ADR-003-split-store-portal.md)). Cada ciclo envía solo las
+secciones que cambiaron (categorías, productos, lotes vigentes con existencias y promociones
+aprobadas) y todas cada `CATALOG_RESYNC_SECONDS`. Los costos, ubicaciones, reservas y datos de IA
+no salen de la tienda. `GET /api/v1/catalog/status` del portal indica si la copia está
+desactualizada.
+
+Las imágenes locales de productos (`/api/v1/media/...`) no se sincronizan: la carpeta
+`public/media` debe existir también en el portal.
 
 ## Verificación
 
@@ -80,9 +93,14 @@ Configuración del canal tienda → portal:
 | `PORTAL_URL` | store-api | URL del portal (`https` en producción) a la que se envía el latido. |
 | `STORE_ID` | store-api | Identificador informativo de la tienda (por defecto `tienda-principal`). |
 | `HEARTBEAT_ENABLED` | store-api | `false` desactiva el envío del latido. |
+| `CATALOG_SYNC_ENABLED` | store-api | `false` desactiva la sincronización del catálogo. |
+| `CATALOG_SYNC_INTERVAL_SECONDS` | store-api | Cada cuánto revisa cambios (15 por defecto, mínimo 5). |
+| `CATALOG_RESYNC_SECONDS` | store-api | Cada cuánto reenvía todo aunque no haya cambios (600, mínimo 30). |
+| `CATALOG_STALE_SECONDS` | portal-api | Antigüedad a partir de la cual la copia se marca como vieja (1200, mínimo 60; mayor que el reenvío completo). |
+| `INTERNAL_BODY_LIMIT` | portal-api | Tamaño máximo de un snapshot (`10mb`). |
 
-En el monolito de transición el latido se emite en proceso y no hace falta ninguna de estas
-variables.
+En el monolito de transición el latido se emite en proceso, el catálogo se comparte y no hace
+falta ninguna de estas variables.
 
 Los lotes con fecha de caducidad igual o anterior al día actual nunca participan en FEFO.
 Un worker los marca como `VENCIDO` al arrancar y cada 60 segundos; el filtro SQL de las
