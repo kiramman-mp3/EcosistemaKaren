@@ -41,6 +41,7 @@ const CatalogSyncController = require('../../adapters/controllers/CatalogSyncCon
 const PostgresCatalogMirrorRepository = require('../../adapters/repositories/PostgresCatalogMirrorRepository');
 const CatalogStatusController = require('../../adapters/controllers/CatalogStatusController');
 const wirePortalReservations = require('./wirePortalReservations');
+const wireStoreChannel = require('./wireStoreChannel');
 const { ApplyCatalogSnapshot, GetCatalogSyncStatus } = require('../../use-cases/catalog/CatalogSyncUseCases');
 
 // Instancia casos de uso, controladores y procesos de fondo. `store` agrega la autoridad de
@@ -132,7 +133,13 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       getInventoryMovementsUC: new GetInventoryMovements(lotRepo),
       getWastesUC: new GetWastes(lotRepo)
     };
-    confirmReservationUC = new ConfirmReservation(reservationRepo);
+    // Con la tienda separada del portal, atiende las reservas que éste le encarga y le avisa los cambios.
+    const storeChannel = !portal && pool && serviceConfig.reservationQueueEnabled
+      ? wireStoreChannel({ pool, reservationRepo, serviceConfig })
+      : null;
+    if (storeChannel) workers.push(...storeChannel.workers);
+    const reservationEvents = storeChannel ? storeChannel.eventPublisher : null;
+    confirmReservationUC = new ConfirmReservation(reservationRepo, reservationEvents);
 
     promotionUseCases = {
       generarPromocionesIAUC: new GenerarPromocionesIA(lotRepo, promotionRepo, geminiAdapter, promotionCache, productRepo),
@@ -149,7 +156,7 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     );
 
     // Procesos de fondo: expiración de reservas TTL y de lotes
-    workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo), 60000));
+    workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo, reservationEvents), 60000));
     workers.push(new LotExpiryWorker(new ExpireLots(lotRepo), 60000));
 
     // Con base propia, el portal recibe una copia del catálogo que la tienda le publica.
@@ -171,7 +178,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
         : new HttpHeartbeatTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey });
       workers.push(new HeartbeatSenderWorker(transport, intervalMs, {
         storeId: serviceConfig.storeId,
-        version: packageInfo.version
+        version: packageInfo.version,
+        getPendingEvents: storeChannel ? () => storeChannel.outbox.pendingCount() : undefined
       }));
     }
   }
