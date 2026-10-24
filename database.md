@@ -382,5 +382,7 @@ La base de **portal-api** (`ecosistema_karen_portal`, migraciones en `backend/in
 | `tienda_heartbeat` | Último latido recibido de la tienda. |
 | `categorias`, `productos`, `lotes`, `promociones_ia` | Copia de lectura del catálogo, con el mismo nombre y forma que en la tienda. Solo contiene lotes vigentes con existencias y promociones aprobadas; costos, ubicaciones, reservas y datos de IA quedan vacíos. La reemplaza la sincronización de catálogo. |
 | `sync_estado` | Última versión y hora de sincronización de cada sección de la copia. |
+| `reservas_portal` | Reservas de los clientes: estado (`PENDIENTE_SYNC`, `PENDIENTE`, `CONFIRMADA`, `EXPIRADA`, `CANCELADA`, `RECHAZADA`), líneas pedidas, líneas asignadas por la tienda y motivo de rechazo. Comparte `id` con la reserva de la tienda. |
+| `comandos_tienda` | Cola durable de comandos hacia la tienda (`RESERVATION_CREATE`, `RESERVATION_CANCEL`) con orden por `seq`, estado, intentos y hora de entrega. |
 
-La cola de reservas se agregará al esquema del portal junto con la cola de comandos. El monolito de transición aplica ambos conjuntos de migraciones sobre una sola base.
+En la base de la tienda, `reservas.usuario_id` ya no referencia a `usuarios` (los clientes del portal viven en la otra base), `reservas.cliente_nombre` guarda el nombre para caja y `outbox_portal` es la bandeja de salida hacia el portal (resultados de comandos y cambios de estado, con reintentos). El monolito de transición aplica ambos conjuntos de migraciones sobre una sola base.

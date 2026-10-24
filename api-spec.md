@@ -198,6 +198,27 @@ nombre de otra persona.
 La creación bloquea las filas de lotes candidatas con `SELECT ... FOR UPDATE`, siempre
 en un orden determinista por producto/lote. La confirmación, cancelación y expiración
 también bloquean la reserva y sus lotes dentro de una única transacción PostgreSQL.
+
+#### Con portal y tienda separados
+portal-api no descuenta stock: guarda la reserva y se la encarga a la tienda, que es la única
+autoridad sobre el inventario (ver [ADR-003](docs/decisions/ADR-003-split-store-portal.md)).
+Espera hasta `RESERVATION_SYNC_WAIT_SECONDS` (8 s por defecto) la respuesta y responde igual
+que siempre:
+
+* `201` con `codigoRetiro`, `fechaExpiracion` y `detalles` (lote, cantidad, precio y datos del
+  producto) si la tienda aceptó la reserva.
+* El error habitual si la rechazó: `409` sin stock suficiente, `400` (oferta no disponible o
+  reserva vencida), `404` (producto inexistente) o `503` (la tienda no pudo procesarla).
+* `202` con `"estado": "PENDIENTE_SYNC"` y sin `codigoRetiro` si la tienda tarda más. El
+  cliente consulta `GET /reservations/user/:userId` hasta que pase a `PENDIENTE` (aceptada con
+  su código) o `RECHAZADA` (con `motivoRechazo` y `mensajeRechazo`).
+* `503` sin guardar nada si no hay un heartbeat vigente de la tienda.
+
+Estados que puede ver el cliente: `PENDIENTE_SYNC`, `PENDIENTE`, `CONFIRMADA`, `EXPIRADA`,
+`CANCELADA` y `RECHAZADA`. `POST /reservations/:id/cancel` cancela de inmediato; el stock se
+libera cuando la tienda procesa el aviso. Si la reserva ya estaba confirmada en caja, el estado
+real de la tienda prevalece. La consulta por código (`GET /reservations/code/:code`) solo
+encuentra reservas aceptadas.
 Esto evita sobreventa, dobles confirmaciones y liberaciones duplicadas bajo concurrencia.
 
 ### `POST /reservations/:id/confirm`

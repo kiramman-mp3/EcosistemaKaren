@@ -45,9 +45,9 @@ separadas:
 3. `npm run start:store` y `npm run start:portal` en terminales distintas.
 
 Un despliegue solo del portal en la nube puede usar `DB_*` para su propia base. Con base
-separada, el portal sirve auth, heartbeat, rate limit y la lectura del catálogo (categorías,
-productos, disponibilidad y promociones) desde la copia que le publica la tienda. Las reservas
-siguen en el monolito hasta que esté la cola de reservas.
+separada, el portal sirve auth, heartbeat, rate limit, la lectura del catálogo (categorías,
+productos, disponibilidad y promociones) desde la copia que le publica la tienda, y las
+reservas, que encarga a la tienda.
 
 ### Sincronización del catálogo
 
@@ -60,6 +60,17 @@ desactualizada.
 
 Las imágenes locales de productos (`/api/v1/media/...`) no se sincronizan: la carpeta
 `public/media` debe existir también en el portal.
+
+### Reservas entre portal y tienda
+
+Con base separada, `POST /reservations` en portal-api guarda la reserva como `PENDIENTE_SYNC` y
+encola un comando; store-api lo toma por long-poll (`GET /internal/v1/store/commands`), reserva
+el stock con FEFO en su propia transacción e informa el resultado
+(`POST /internal/v1/store/commands/:id/result`). Las confirmaciones en caja y expiraciones se
+avisan por `POST /internal/v1/store/events`. Todo lo que la tienda debe comunicar pasa por la
+tabla `outbox_portal` y se reintenta con espera creciente si el portal no responde; el heartbeat
+informa cuántos avisos esperan (`pendingEvents`). El detalle de estados, idempotencia y
+cancelación está en el [ADR-003](../docs/decisions/ADR-003-split-store-portal.md).
 
 ## Verificación
 
@@ -99,8 +110,12 @@ Configuración del canal tienda → portal:
 | `CATALOG_STALE_SECONDS` | portal-api | Antigüedad a partir de la cual la copia se marca como vieja (1200, mínimo 60; mayor que el reenvío completo). |
 | `INTERNAL_BODY_LIMIT` | portal-api | Tamaño máximo de un snapshot (`10mb`). |
 
-En el monolito de transición el latido se emite en proceso, el catálogo se comparte y no hace
-falta ninguna de estas variables.
+| `RESERVATION_QUEUE_ENABLED` | store-api | `false` desactiva la atención de reservas del portal. |
+| `RESERVATION_POLL_WAIT_SECONDS` | store-api | Espera del long-poll con el que pide comandos al portal (25, entre 5 y 30). |
+| `RESERVATION_SYNC_WAIT_SECONDS` | portal-api | Cuánto espera la respuesta de la tienda antes de responder `202` (8, entre 0 y 25). |
+
+En el monolito de transición el latido se emite en proceso, el catálogo y las reservas se
+comparten y no hace falta ninguna de estas variables.
 
 Los lotes con fecha de caducidad igual o anterior al día actual nunca participan en FEFO.
 Un worker los marca como `VENCIDO` al arrancar y cada 60 segundos; el filtro SQL de las
