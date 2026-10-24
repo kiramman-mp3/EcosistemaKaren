@@ -14,7 +14,7 @@ class HeartbeatSenderWorker {
 
   async ping() {
     try {
-      await this.transport.send({ storeId: this.storeId, version: this.version, pendingEvents: await this._pendingEvents() });
+      await this.transport.send({ storeId: this.storeId, version: this.version, pendingEvents: this.getPendingEvents ? await this._pendingEvents() : 0 });
       if (this.consecutiveFailures > 0) {
         console.log(`💓 Heartbeat restablecido tras ${this.consecutiveFailures} fallo(s).`);
       }
