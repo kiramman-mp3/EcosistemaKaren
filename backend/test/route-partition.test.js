@@ -41,6 +41,12 @@ test('portal-api no expone inventario, alertas ni administración', () => {
   }
 });
 
+test('ningún servicio acepta latidos de usuarios por la API pública', () => {
+  for (const routes of [store, portal, monolith]) {
+    assert.ok(!routes.includes('POST /heartbeat'));
+  }
+});
+
 test('el monolito de transición es la unión de ambos servicios sin rutas duplicadas', () => {
   assert.deepEqual([...new Set(monolith)].sort(), [...new Set([...store, ...portal])].sort());
   assert.equal(monolith.length, new Set(monolith).size);

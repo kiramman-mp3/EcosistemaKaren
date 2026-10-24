@@ -1,4 +1,7 @@
 const createBaseApp = require('./createBaseApp');
+const { readServiceConfig } = require('./serviceConfig');
+const { createServiceAuth } = require('../../infrastructure/http/middlewares/serviceAuth');
+const createInternalRouter = require('../../infrastructure/http/routes/internalRouter');
 const buildRepositories = require('./buildRepositories');
 const buildWiring = require('./buildWiring');
 const setupSwagger = require('../../infrastructure/swagger/swaggerDoc');
@@ -13,9 +16,10 @@ const { createStoreRouter, createPortalRouter } = createApiRouter;
 async function createApp({ name, store = false, portal = false }) {
   if (!store && !portal) throw new Error('createApp requiere activar al menos store o portal.');
 
-  const { app, pool, dbConnected } = await createBaseApp();
+  const serviceConfig = readServiceConfig({ store, portal });
+  const { app, pool, dbConnected, httpSecurity } = await createBaseApp();
   const repos = buildRepositories(pool, dbConnected);
-  const wiring = buildWiring({ pool, repos, store, portal });
+  const wiring = buildWiring({ pool, repos, store, portal, serviceConfig });
 
   wiring.start();
 
@@ -34,6 +38,16 @@ async function createApp({ name, store = false, portal = false }) {
   if (!portal) createRouter = createStoreRouter;
   else if (!store) createRouter = createPortalRouter;
   app.use('/api/v1', createRouter(wiring.controllers, wiring.security));
+
+  // Canal interno que recibe las llamadas de store-api. Solo los intentos fallidos cuentan
+  // contra el límite, igual que en /auth, para frenar la fuerza bruta sobre la clave.
+  if (portal) {
+    app.use(
+      '/internal/v1',
+      httpSecurity.auth,
+      createInternalRouter(wiring.controllers, createServiceAuth(serviceConfig.storeServiceKey))
+    );
+  }
 
   // Root redirect & info
   app.get('/', (req, res) => {

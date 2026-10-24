@@ -67,7 +67,7 @@ async function createBaseApp() {
   app.use(httpSecurity.hpp);
   app.use(httpSecurity.rejectDangerousKeys);
 
-  return { app, pool, dbConnected };
+  return { app, pool, dbConnected, httpSecurity };
 }
 
 module.exports = createBaseApp;

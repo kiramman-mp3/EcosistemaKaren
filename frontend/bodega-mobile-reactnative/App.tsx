@@ -89,15 +89,6 @@ function BodegaAppContent() {
     }
   }, []);
 
-  const sendHeartbeat = useCallback(async () => {
-    try {
-      const hb = await api.sendHeartbeat();
-      setIsOnline(hb.status === 'ONLINE' && !hb.reservationsBlocked);
-    } catch {
-      setIsOnline(false);
-    }
-  }, []);
-
   // Compute alerts from lots
   const computeAlertsFromLots = (currentLots: BackendLot[], prods: BackendProduct[]): ExpiryAlertItem[] => {
     const result: ExpiryAlertItem[] = [];
@@ -156,13 +147,13 @@ function BodegaAppContent() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const heartbeatAction = currentUser.rol === 'PERCHERO' ? checkHeartbeat : sendHeartbeat;
-    void heartbeatAction();
+    // El latido lo emite el backend de la tienda; la app solo consulta su estado.
+    void checkHeartbeat();
     loadData();
     // Debe ser bastante menor que HEARTBEAT_TIMEOUT_SECONDS (30 s) del backend, o la tienda parpadearía a "Sin conexión".
-    const interval = setInterval(heartbeatAction, 10000);
+    const interval = setInterval(checkHeartbeat, 10000);
     return () => clearInterval(interval);
-  }, [loadData, checkHeartbeat, sendHeartbeat, currentUser]);
+  }, [loadData, checkHeartbeat, currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;

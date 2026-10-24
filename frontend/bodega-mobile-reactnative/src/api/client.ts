@@ -112,13 +112,6 @@ export const api = {
       return res.data;
   },
 
-  async sendHeartbeat(): Promise<HeartbeatStatus> {
-    const res = await axios.post<HeartbeatStatus>(
-      `${BASE_URL}/heartbeat`, {}, authorizedConfig(3500)
-    );
-    return res.data;
-  },
-
   // 2. Catálogo de Productos
   // El backend pagina de a 100: se recorren las páginas para tener el catálogo completo.
   async getProducts(): Promise<BackendProduct[]> {
