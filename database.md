@@ -365,3 +365,20 @@ CREATE INDEX idx_productos_codigo_barras ON productos (codigo_barras);
 CREATE INDEX idx_reservas_expiracion ON reservas (estado, fecha_expiracion) WHERE estado = 'PENDIENTE';
 CREATE INDEX idx_lotes_producto_ubicacion ON lotes (producto_id, ubicacion, fecha_caducidad ASC);
 ```
+
+---
+
+## 6. Bases de datos por servicio
+
+Según [ADR-003](docs/decisions/ADR-003-split-store-portal.md), cada servicio tiene su propia base de datos PostgreSQL. Todo lo descrito en las secciones 1 a 5 corresponde a la base de **store-api** (`ecosistema_karen`, migraciones en `backend/init-db/store`).
+
+La base de **portal-api** (`ecosistema_karen_portal`, migraciones en `backend/init-db/portal`) guarda solo lo que el servicio de la nube necesita:
+
+| Tabla | Descripción |
+|---|---|
+| `usuarios` | Clientes del portal. Las cuentas del personal viven en la base de la tienda. |
+| `tokens_revocados` | Revocación de JWT al cerrar sesión. |
+| `rate_limit_hits` | Límite de tasa distribuido entre réplicas. |
+| `tienda_heartbeat` | Último latido recibido de la tienda. |
+
+La copia de lectura del catálogo y la cola de reservas se agregarán al esquema del portal junto con la sincronización de catálogo y la cola de comandos. El monolito de transición aplica ambos conjuntos de migraciones sobre una sola base.
