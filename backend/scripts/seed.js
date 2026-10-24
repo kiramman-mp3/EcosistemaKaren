@@ -15,6 +15,9 @@
  *
  * Es re-ejecutable: elimina únicamente los datos generados por una corrida anterior
  * (lotes 'SEED-%' y usuarios '@demo.karen.ec') y actualiza el catálogo por código de barras.
+ *
+ * Todo se siembra en la base de la tienda (DB_*). Si portal-api usa una base distinta
+ * (PORTAL_DB_*), los clientes demo también se copian allí para poder iniciar sesión en el portal.
  */
 require('dotenv').config();
 const { applyBusinessTimezone, toDateOnly } = require('../src/domain/policies/BusinessDates');
@@ -24,7 +27,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { getPool } = require('../src/infrastructure/db/postgres');
+const { getPool, closePool, connectionSettings } = require('../src/infrastructure/db/postgres');
 const { runMigrations } = require('../src/infrastructure/db/migrations');
 
 const args = Object.fromEntries(process.argv.slice(2).map(arg => {
@@ -584,6 +587,27 @@ async function cleanPreviousSeed(client) {
   await client.query('DELETE FROM usuarios WHERE id IN (SELECT id FROM seed_users)');
 }
 
+// La base del portal solo guarda clientes: se copian con los mismos ids para que el cliente
+// autenticado en el portal sea el mismo que figura en las reservas de la tienda.
+async function seedPortalClients(portalPool, clients) {
+  await runMigrations(portalPool, { targets: ['portal'] });
+  const client = await portalPool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}'`);
+    await bulkInsert(client, 'usuarios', [
+      ['id', 'uuid'], ['nombre', 'text'], ['email', 'text'], ['rol', 'text', 'rol_usuario'],
+      ['password_hash', 'text'], ['created_at', 'timestamptz']
+    ], clients);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function upsertCatalog(client, catalog) {
   const categoryIds = new Map();
   for (const nombre of catalog.categorias) {
@@ -681,7 +705,14 @@ async function main() {
     ], promotions);
     await client.query('COMMIT');
 
-    const byState = (list, key) => list.reduce((acc, x) => { acc[x[key]] = (acc[x[key]] || 0) + 1; return acc; }, {});
+    const separatePortalDb = JSON.stringify(connectionSettings('portal')) !== JSON.stringify(connectionSettings('store'));
+    if (separatePortalDb) {
+      const portalPool = getPool('portal');
+      await seedPortalClients(portalPool, users.filter(u => u.rol === 'CLIENTE'));
+      console.log(`👥 ${users.filter(u => u.rol === 'CLIENTE').length} clientes demo copiados a la base del portal`);
+    }
+
+    const byState =(list, key) => list.reduce((acc, x) => { acc[x[key]] = (acc[x[key]] || 0) + 1; return acc; }, {});
     const confirmed = new Set(sim.reservations.filter(r => r.estado === 'CONFIRMADA').map(r => r.id));
     const revenue = sim.details.reduce((sum, d) => (confirmed.has(d.reserva_id) ? sum + d.cantidad * d.precio_unitario : sum), 0);
     console.log('\n✅ Seed completado en', ((Date.now() - started) / 1000).toFixed(1), 's');
@@ -708,7 +739,7 @@ async function main() {
     throw error;
   } finally {
     client.release();
-    await pool.end();
+    await closePool();
   }
 }
 
