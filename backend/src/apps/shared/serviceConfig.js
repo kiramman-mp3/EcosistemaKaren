@@ -6,6 +6,11 @@ function positiveSeconds(value, fallback, minimum) {
   return Number.isFinite(parsed) && parsed >= minimum ? Math.floor(parsed) : fallback;
 }
 
+function boundedSeconds(value, fallback, minimum, maximum) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum ? Math.floor(parsed) : fallback;
+}
+
 function isWeakKey(key) {
   return !key || key.length < MIN_KEY_LENGTH || key.includes('change_me');
 }
@@ -51,7 +56,9 @@ function readServiceConfig({ store, portal }, env = process.env) {
     catalogSyncIntervalMs: positiveSeconds(env.CATALOG_SYNC_INTERVAL_SECONDS, 15, 5) * 1000,
     catalogResyncMs: positiveSeconds(env.CATALOG_RESYNC_SECONDS, 600, 30) * 1000,
     // Debe ser mayor que el reenvío completo: las secciones sin cambios solo se reenvían entonces.
-    catalogStaleSeconds: positiveSeconds(env.CATALOG_STALE_SECONDS, 1200, 60)
+    catalogStaleSeconds: positiveSeconds(env.CATALOG_STALE_SECONDS, 1200, 60),
+    // Cuánto espera portal-api la respuesta de la tienda antes de devolver la reserva como PENDIENTE_SYNC.
+    reservationSyncWaitMs: boundedSeconds(env.RESERVATION_SYNC_WAIT_SECONDS, 8, 0, 25) * 1000
   };
 }
 

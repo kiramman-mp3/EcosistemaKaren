@@ -17,9 +17,13 @@ class ReservationController {
         usuarioId: req.user.id,
         items: req.body.items
       });
-      res.status(201).json({
+      // Con portal y tienda separados, la tienda puede tardar en responder: 202 y el cliente consulta después.
+      const awaitingStore = reservation.estado === 'PENDIENTE_SYNC';
+      res.status(awaitingStore ? 202 : 201).json({
         success: true,
-        message: 'Reserva de stock realizada con éxito. Presenta este código en caja SIACI para retirar tu compra.',
+        message: awaitingStore
+          ? 'Reserva recibida. La tienda la está confirmando; consulta su estado en unos segundos.'
+          : 'Reserva de stock realizada con éxito. Presenta este código en caja SIACI para retirar tu compra.',
         data: {
           id: reservation.id,
           codigoRetiro: reservation.codigoRetiro,

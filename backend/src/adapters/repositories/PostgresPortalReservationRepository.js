@@ -216,7 +216,9 @@ class PostgresPortalReservationRepository {
         RETURNING seq, id, tipo, reserva_id AS "reservaId", payload, intentos
       `, [limit, visibilityMs]);
       await client.query('COMMIT');
-      return claimed.rows.sort((a, b) => Number(a.seq) - Number(b.seq)).map(({ seq, ...command }) => command);
+      return claimed.rows
+        .sort((a, b) => Number(a.seq) - Number(b.seq))
+        .map(row => ({ id: row.id, tipo: row.tipo, reservaId: row.reservaId, payload: row.payload, intentos: row.intentos }));
     } catch (error) {
       await client.query('ROLLBACK').catch(() => {});
       throw error;

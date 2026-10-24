@@ -40,6 +40,7 @@ const HeartbeatController = require('../../adapters/controllers/HeartbeatControl
 const CatalogSyncController = require('../../adapters/controllers/CatalogSyncController');
 const PostgresCatalogMirrorRepository = require('../../adapters/repositories/PostgresCatalogMirrorRepository');
 const CatalogStatusController = require('../../adapters/controllers/CatalogStatusController');
+const wirePortalReservations = require('./wirePortalReservations');
 const { ApplyCatalogSnapshot, GetCatalogSyncStatus } = require('../../use-cases/catalog/CatalogSyncUseCases');
 
 // Instancia casos de uso, controladores y procesos de fondo. `store` agrega la autoridad de
@@ -97,6 +98,16 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
   }
 
   const workers = [];
+
+  // portal-api con base propia encola las reservas para la tienda en vez de descontar stock.
+  const portalReservations = portal && !store && pool
+    ? wirePortalReservations({ pool, heartbeatMonitor, serviceConfig })
+    : null;
+  if (portalReservations) {
+    controllers.storeChannelController = portalReservations.storeChannelController;
+    workers.push(...portalReservations.workers);
+  }
+
   let alertStreamManager = null;
   let lotUseCases = {};
   let confirmReservationUC;
@@ -175,13 +186,15 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     lotUseCases.getWastesUC
   );
 
-  controllers.reservationController = new ReservationController(
-    portal ? new ReservarStock(reservationRepo, heartbeatMonitor) : undefined,
-    getReservationByCodeUC,
-    confirmReservationUC,
-    portal ? new CancelReservation(reservationRepo) : undefined,
-    portal ? new GetReservationsByUser(reservationRepo) : undefined
-  );
+  controllers.reservationController = portalReservations
+    ? portalReservations.reservationController
+    : new ReservationController(
+      portal ? new ReservarStock(reservationRepo, heartbeatMonitor) : undefined,
+      getReservationByCodeUC,
+      confirmReservationUC,
+      portal ? new CancelReservation(reservationRepo) : undefined,
+      portal ? new GetReservationsByUser(reservationRepo) : undefined
+    );
 
   controllers.promotionController = new PromotionController(
     promotionUseCases.generarPromocionesIAUC,
