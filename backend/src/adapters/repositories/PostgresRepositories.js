@@ -430,7 +430,14 @@ class PostgresReservationRepository {
     this.pool = pool;
   }
 
-  async createWithLockedStock(reservation, items) {
+  /**
+   * Crea la reserva descontando stock FEFO en una sola transacción.
+   * `options.remote` ({ id, clienteNombre }) marca una reserva originada en portal-api: conserva
+   * el id que asignó el portal y guarda el nombre del cliente. Ese cliente no existe en la tabla
+   * local de usuarios, por lo que sus movimientos de inventario no llevan actor.
+   */
+  async createWithLockedStock(reservation, items, options = {}) {
+    const remote = options.remote || null;
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -520,11 +527,12 @@ class PostgresReservationRepository {
       }
 
       const reservationResult = await client.query(`
-        INSERT INTO reservas (usuario_id, codigo_retiro, estado, fecha_expiracion)
-        VALUES ($1, $2, 'PENDIENTE', $3)
+        INSERT INTO reservas (id, usuario_id, codigo_retiro, estado, fecha_expiracion, cliente_nombre)
+        VALUES (COALESCE($1::uuid, uuid_generate_v4()), $2, $3, 'PENDIENTE', $4, $5)
         RETURNING id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
                   estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
-      `, [reservation.usuarioId, reservation.codigoRetiro, reservation.fechaExpiracion]);
+      `, [remote ? remote.id : null, reservation.usuarioId, reservation.codigoRetiro,
+        reservation.fechaExpiracion, remote ? remote.clienteNombre || null : null]);
 
       const savedDetails = [];
       for (const detail of details) {
@@ -542,9 +550,12 @@ class PostgresReservationRepository {
           reservadaAntes: detail.reservadaAntes,
           reservadaDespues: detail.reservadaAntes + detail.cantidad,
           ubicacionOrigen: detail.ubicacion, ubicacionDestino: detail.ubicacion,
-          motivo: 'Stock asignado a reserva', actorId: reservation.usuarioId,
+          motivo: 'Stock asignado a reserva', actorId: remote ? null : reservation.usuarioId,
           reservaId: reservationResult.rows[0].id,
-          metadata: detail.promocionId ? { promocionId: detail.promocionId } : {}
+          metadata: {
+            ...(detail.promocionId ? { promocionId: detail.promocionId } : {}),
+            ...(remote ? { clienteId: reservation.usuarioId, origen: 'PORTAL' } : {})
+          }
         });
       }
 
@@ -650,8 +661,9 @@ class PostgresReservationRepository {
       }
 
       const details = await this._findDetails(client, reservationId);
+      // Un cliente del portal (`actor.remote`) no existe en la tabla local de usuarios: sin actor.
       await this._releaseLockedDetails(client, details, {
-        tipo: 'LIBERACION', actorId: actor.id, reservaId: reservationId,
+        tipo: 'LIBERACION', actorId: actor.remote ? null : actor.id, reservaId: reservationId,
         motivo: 'Liberación por cancelación o expiración durante cancelación'
       });
       expired = new Date(reservationRow.fechaExpiracion) <= new Date();
@@ -696,7 +708,7 @@ class PostgresReservationRepository {
 
       if (reservationIds.length === 0) {
         await client.query('COMMIT');
-        return { countLiberadas: 0 };
+        return { countLiberadas: 0, reservaIds: [] };
       }
 
       const detailsResult = await client.query(`
@@ -743,7 +755,7 @@ class PostgresReservationRepository {
         WHERE id = ANY($1::uuid[])
       `, [reservationIds]);
       await client.query('COMMIT');
-      return { countLiberadas: reservationIds.length };
+      return { countLiberadas: reservationIds.length, reservaIds: reservationIds };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -867,9 +879,9 @@ class PostgresReservationRepository {
     const heads = await this.pool.query(`
       SELECT r.id, r.usuario_id as "usuarioId", r.codigo_retiro as "codigoRetiro",
              r.estado, r.fecha_expiracion as "fechaExpiracion", r.created_at, r.updated_at,
-             u.nombre as "clienteNombre"
+             COALESCE(u.nombre, r.cliente_nombre) as "clienteNombre"
       FROM reservas r
-      JOIN usuarios u ON u.id = r.usuario_id
+      LEFT JOIN usuarios u ON u.id = r.usuario_id
       WHERE ${where}
       ORDER BY r.created_at DESC, r.id${paging}
     `, limit === null ? params : [...params, limit, offset]);
