@@ -29,7 +29,10 @@ class RequestReservation {
     this.portalReservationRepository = portalReservationRepository;
     this.heartbeatMonitor = heartbeatMonitor;
     this.waitMs = options.waitMs ?? 8000;
-    this.pollMs = options.pollMs ?? 200;
+    // La espera entre consultas crece (x1,5) desde `pollMs` hasta `maxPollMs`: la mayoría de las reservas se
+    // resuelven en milisegundos y las lentas no multiplican las consultas a la base.
+    this.pollMs = options.pollMs ?? 100;
+    this.maxPollMs = options.maxPollMs ?? 500;
     this.sleep = options.sleep || defaultSleep;
     this.clock = options.clock || (() => Date.now());
   }
@@ -50,8 +53,10 @@ class RequestReservation {
     });
 
     const deadline = this.clock() + this.waitMs;
+    let delay = this.pollMs;
     while (reservation.estado === 'PENDIENTE_SYNC' && this.clock() < deadline) {
-      await this.sleep(this.pollMs);
+      await this.sleep(delay);
+      delay = Math.min(this.maxPollMs, Math.ceil(delay * 1.5));
       reservation = (await this.portalReservationRepository.findById(reservation.id)) || reservation;
     }
 

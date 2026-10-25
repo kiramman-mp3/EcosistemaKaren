@@ -11,7 +11,10 @@ class LotController {
 
   async getPublicAvailability(req, res, next) {
     try {
-      const lots = await this.getPublicLotAvailabilityUC.execute();
+      const lots = await this.getPublicLotAvailabilityUC.execute({ productoId: req.query?.productoId });
+      // La disponibilidad cambia con cada reserva pero se sincroniza cada pocos segundos: una caché corta
+      // absorbe las consultas repetidas de muchos clientes sin mostrar datos viejos.
+      res.set('Cache-Control', 'public, max-age=5');
       res.json({ success: true, count: lots.length, data: lots });
     } catch (err) {
       next(err);
