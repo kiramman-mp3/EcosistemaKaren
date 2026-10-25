@@ -215,12 +215,18 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     }
 
     // La tienda es quien emite el latido: por HTTP hacia el portal, o en proceso en el monolito.
+    // En store-api, cada latido aceptado por el portal también se registra en su monitor local, así
+    // GET /heartbeat de la tienda informa si el enlace con el portal (las reservas web) está activo.
     if (serviceConfig.heartbeatEnabled) {
       const timeoutSec = Number(process.env.HEARTBEAT_TIMEOUT_SECONDS) || 60;
       const intervalMs = Math.min(25000, Math.max(5000, Math.floor((timeoutSec * 1000) / 2)));
       const transport = portal
         ? new LocalHeartbeatTransport(heartbeatMonitor)
-        : new HttpHeartbeatTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey });
+        : new HttpHeartbeatTransport({
+          baseUrl: serviceConfig.portalUrl,
+          apiKey: serviceConfig.storeServiceKey,
+          onDelivered: () => heartbeatMonitor.recordHeartbeat()
+        });
       workers.push(new HeartbeatSenderWorker(transport, intervalMs, {
         storeId: serviceConfig.storeId,
         version: packageInfo.version,
