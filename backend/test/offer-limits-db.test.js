@@ -115,7 +115,7 @@ test('el límite por pedido rechaza la línea completa y no toca el stock', asyn
   await assert.rejects(() => reserve(repo, target, 3), (error) => error instanceof OfferLimitException && /hasta 2/.test(error.message));
   const first = await reserve(repo, target, 2);
   assert.equal(first.detalles[0].promocionId, target.promotionId);
-  await assert.rejects(() => reserve(repo, target, 2), /Solo quedan 1/);
+  await assert.rejects(() => reserve(repo, target, 2), /Solo queda 1 unidad/);
   const lot = (await pool.query('SELECT cantidad_disponible d FROM lotes WHERE id = $1', [target.lotId])).rows[0];
   assert.equal(lot.d, 18);
 

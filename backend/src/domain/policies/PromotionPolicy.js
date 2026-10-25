@@ -76,6 +76,8 @@ function assertOfferTerms({ stockOferta, vigenteHasta }, lot, referenceDate = ne
   }
 }
 
+const units = (n) => `${n} ${n === 1 ? 'unidad' : 'unidades'}`;
+
 /**
  * Motivo por el que una línea de reserva no puede llevarse con descuento, o null si cabe.
  * `committed` son las unidades de la oferta ya comprometidas por otras reservas (pendientes o confirmadas).
@@ -85,14 +87,13 @@ function offerLimitViolation(offer, quantity, committed, referenceDate = new Dat
     return 'La oferta ya terminó.';
   }
   if (offer.limitePorPedido && quantity > offer.limitePorPedido) {
-    return `Esta oferta admite hasta ${offer.limitePorPedido} unidad(es) por pedido.`;
+    return `Esta oferta admite hasta ${units(offer.limitePorPedido)} por pedido.`;
   }
   if (offer.stockOferta) {
     const remaining = Math.max(0, offer.stockOferta - committed);
     if (quantity > remaining) {
-      return remaining === 0
-        ? 'Las unidades de esta oferta ya se agotaron.'
-        : `Solo quedan ${remaining} unidad(es) con este descuento.`;
+      if (remaining === 0) return 'Las unidades de esta oferta ya se agotaron.';
+      return `${remaining === 1 ? 'Solo queda' : 'Solo quedan'} ${units(remaining)} con este descuento.`;
     }
   }
   return null;

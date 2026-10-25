@@ -37,8 +37,8 @@ test('las reglas de la línea: vigencia, límite por pedido y unidades de oferta
   const now = new Date('2026-10-25T12:00:00Z');
   const offer = { limitePorPedido: 2, stockOferta: 3, vigenteHasta: '2026-10-25T18:00:00Z' };
   assert.equal(offerLimitViolation(offer, 2, 0, now), null);
-  assert.match(offerLimitViolation(offer, 3, 0, now), /hasta 2 unidad/);
-  assert.match(offerLimitViolation(offer, 2, 2, now), /Solo quedan 1/);
+  assert.match(offerLimitViolation(offer, 3, 0, now), /hasta 2 unidades/);
+  assert.match(offerLimitViolation(offer, 2, 2, now), /Solo queda 1 unidad/);
   assert.match(offerLimitViolation(offer, 1, 3, now), /agotaron/);
   assert.match(offerLimitViolation(offer, 1, 0, new Date('2026-10-25T18:00:00Z')), /terminó/);
   assert.equal(offerLimitViolation({}, 500, 10_000, now), null, 'sin topes vale todo el lote');
@@ -104,7 +104,7 @@ test('en memoria: la reserva respeta el límite y el stock de oferta, y una canc
   await assert.rejects(() => reserve(3), OfferLimitException);
   const first = await reserve(2);
   assert.equal(first.detalles[0].promocionId, offer.id);
-  await assert.rejects(() => reserve(2), /Solo quedan 1/);
+  await assert.rejects(() => reserve(2), /Solo queda 1 unidad/);
   assert.equal((await memory.promotionRepository.findAllApproved()).find(item => item.id === offer.id).unidadesRestantes, 1);
   await reserve(1);
   assert.equal((await memory.promotionRepository.findAllApproved()).some(item => item.id === offer.id), false, 'agotada: sale del catálogo');
@@ -120,13 +120,13 @@ test('en memoria: la reserva respeta el límite y el stock de oferta, y una canc
 test('la tienda informa OFFER_LIMIT y el portal lo traduce al mismo error para el cliente', async () => {
   const repo = {
     findById: async () => null,
-    createWithLockedStock: async () => { throw new OfferLimitException('Esta oferta admite hasta 2 unidad(es) por pedido.'); }
+    createWithLockedStock: async () => { throw new OfferLimitException('Esta oferta admite hasta 2 unidades por pedido.'); }
   };
   const result = await new ProcessStoreCommand(repo).execute({
     tipo: 'RESERVATION_CREATE', reservaId: '00000000-0000-4000-8000-000000000001',
     payload: { clienteId: 'c', fechaExpiracion: new Date(Date.now() + HOUR).toISOString(), items: [{ productoId: 'p', cantidad: 3, promocionId: 'o' }] }
   });
-  assert.deepEqual(result, { status: 'REJECTED', reason: 'OFFER_LIMIT', message: 'Esta oferta admite hasta 2 unidad(es) por pedido.' });
+  assert.deepEqual(result, { status: 'REJECTED', reason: 'OFFER_LIMIT', message: 'Esta oferta admite hasta 2 unidades por pedido.' });
   assert.ok(schemas.storeCommandResultBody.safeParse(result).success);
 
   const portalRepo = {
