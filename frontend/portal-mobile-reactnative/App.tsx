@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ActivityIndicator, AppState, StatusBar, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
@@ -12,6 +12,7 @@ import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
 import { ChatBotModal } from './src/components/ChatBotModal';
 import { PrivacyPolicyModal } from './src/components/PrivacyPolicyModal';
+import { ServerConfigModal } from './src/components/ServerConfigModal';
 import { PopPressable } from './src/components/motion';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -20,12 +21,14 @@ import { OffersScreen } from './src/screens/OffersScreen';
 import { ReservationsScreen } from './src/screens/ReservationsScreen';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './src/types';
 import { api, BackendReservation, mediaUrl } from './src/api/client';
+import { getServerUrl, loadServerUrl, onServerUrlChange, SERVER_CONFIG_ENABLED } from './src/api/serverConfig';
+import { describeServerUrl } from './src/api/serverUrl';
 import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
 import { isAwaitingStore, waitForStoreResolution } from './src/reservations/awaitStore';
 import { formatDate } from './src/utils/dates';
 import { notify } from './src/utils/dialogs';
 import { getErrorMessage, getErrorStatus, getServerMessage } from './src/utils/errors';
-import { colors, themed } from './src/theme/tokens';
+import { colors, fonts, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
@@ -69,6 +72,8 @@ function PortalAppContent() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isServerOpen, setIsServerOpen] = useState(false);
+  const [serverUrl, setServerUrl] = useState(getServerUrl());
 
   const syncReservations = useCallback(async (user: { id: string; nombre: string }) => {
     setSyncingReservations(true);
@@ -162,22 +167,30 @@ function PortalAppContent() {
   }, [loadBackendData]);
 
   useEffect(() => {
-    void api.restoreSession().then(user => {
-      if (user) {
-        setCurrentUser(user);
-        void syncReservations(user);
-      }
+    let cancelled = false;
+    // Primero la dirección guardada del servidor: la sesión y los datos se piden a ese servidor.
+    void loadServerUrl().then(() => {
+      if (cancelled) return;
+      void api.restoreSession().then(user => {
+        if (user && !cancelled) {
+          setCurrentUser(user);
+          void syncReservations(user);
+        }
+      });
+      void loadBackendData();
     });
     const unsubscribe = api.onSessionExpired(() => {
       setCurrentUser(null);
       setPass(null);
       setReservations([]);
     });
-    void loadBackendData();
+    const unsubscribeServer = onServerUrlChange(setServerUrl);
     const interval = setInterval(checkHeartbeat, 15000);
     return () => {
+      cancelled = true;
       clearInterval(interval);
       unsubscribe();
+      unsubscribeServer();
     };
   }, [loadBackendData, checkHeartbeat, syncReservations]);
 
@@ -341,6 +354,17 @@ function PortalAppContent() {
     if (tab === 'reservas' && currentUser) void syncReservations(currentUser);
   };
 
+  // Otro servidor es otra base de clientes: la sesión, el carrito y los datos cargados ya no valen.
+  const handleServerChanged = () => {
+    void api.logout();
+    setCurrentUser(null);
+    setPass(null);
+    setReservations([]);
+    setCart([]);
+    setDataState('loading');
+    void loadBackendData();
+  };
+
   const { isDark } = useTheme();
 
   if (!fontsLoaded && !fontError) {
@@ -366,6 +390,17 @@ function PortalAppContent() {
         userName={currentUser?.nombre}
         isOnline={isOnline}
       />
+
+      {SERVER_CONFIG_ENABLED && (
+        <TouchableOpacity
+          style={styles.serverBar}
+          onPress={() => setIsServerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`Servidor ${describeServerUrl(serverUrl)}. Cambiar`}
+        >
+          <Text style={styles.serverBarText} numberOfLines={1}>Servidor: {describeServerUrl(serverUrl)}  ·  cambiar</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.body}>
           {activeTab === 'inicio' && (
@@ -479,6 +514,9 @@ function PortalAppContent() {
 
         <ChatBotModal visible={isChatOpen} onClose={() => setIsChatOpen(false)} />
         <PrivacyPolicyModal visible={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+        {SERVER_CONFIG_ENABLED && (
+          <ServerConfigModal visible={isServerOpen} onClose={() => setIsServerOpen(false)} onChanged={handleServerChanged} />
+        )}
       </SafeAreaView>
   );
 }
@@ -498,6 +536,8 @@ const styles = themed(() => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.card },
   body: { flex: 1, backgroundColor: colors.aisle },
   tabs: { backgroundColor: colors.card },
+  serverBar: { backgroundColor: colors.mora, paddingVertical: 5, paddingHorizontal: 12, alignItems: 'center' },
+  serverBarText: { fontFamily: fonts.medium, fontSize: 11, color: '#FFFFFF' },
   chatFab: { position: 'absolute', right: 14, bottom: 14 },
   chatFabBody: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
 }));

@@ -1,33 +1,24 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
 import { clearSession, loadSession, saveSession, StoredUser } from '../auth/secureSession';
-
-const getBaseUrl = (): string => {
-  // Expo solo inlinea la variable si se lee literalmente como process.env.EXPO_PUBLIC_API_URL.
-  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (configuredUrl) return configuredUrl.replace(/\/$/, '');
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:4000/api/v1';
-  }
-  return 'http://localhost:4000/api/v1';
-};
-
-export const BASE_URL = getBaseUrl();
+import { getServerUrl, onServerUrlChange } from './serverConfig';
 
 /** Las imágenes llegan como rutas del backend (/api/v1/media/...); la app necesita la URL completa. */
 export function mediaUrl(path?: string | null): string | null {
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return BASE_URL.replace(/\/api\/v1$/, '') + path;
+  return getServerUrl().replace(/\/api\/v1$/, '') + path;
 }
 
 export const apiClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: getServerUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 6000,
 });
+
+// La dirección puede cambiarse desde la app (ver ServerConfigModal): las peticiones siguientes usan la nueva.
+onServerUrlChange(url => { apiClient.defaults.baseURL = url; });
 
 let inMemoryToken: string | null = null;
 let inMemoryUser: StoredUser | null = null;

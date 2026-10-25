@@ -38,3 +38,4 @@ Thumbs.db
 
 # Imágenes descargadas por el seed (npm run db:seed)
 backend/public/media/productos/
+dist-mobile/

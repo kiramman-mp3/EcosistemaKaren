@@ -1,4 +1,21 @@
 {
+  "name": "Bodega Karen",
+  "icon": "./assets/icon.png",
+  "slug": "bodega-mobile-karen",
+  "version": "1.0.0",
+  "android": {
+    "package": "com.ecosistemakaren.bodega",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
+      "backgroundColor": "#FFFFFF"
+    }
+  },
+  "ios": {
+    "bundleIdentifier": "com.ecosistemakaren.bodega",
+    "infoPlist": {
+      "ITSAppUsesNonExemptEncryption": false
+    }
+  },
   "plugins": [
     [
       "expo-camera",

@@ -1,4 +1,21 @@
 {
+  "name": "Supermercado Karen",
+  "icon": "./assets/icon.png",
+  "slug": "portal-mobile-karen",
+  "version": "1.0.0",
+  "android": {
+    "package": "com.ecosistemakaren.portal",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
+      "backgroundColor": "#FFFFFF"
+    }
+  },
+  "ios": {
+    "bundleIdentifier": "com.ecosistemakaren.portal",
+    "infoPlist": {
+      "ITSAppUsesNonExemptEncryption": false
+    }
+  },
   "plugins": [
     "expo-secure-store",
     "expo-font"
