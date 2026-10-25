@@ -61,22 +61,27 @@ class IngresarLote {
     newLot.productoNombre = product.nombre;
     newLot.codigoBarras = product.codigoBarras;
 
-    const savedLot = await this.lotRepository.save(newLot, actor.id);
-
-    // Generar alerta de caducidad si vence pronto
-    const dias = savedLot.calcularDiasParaVencer();
-    const nivel = classifyExpiryDays(dias);
-    if (isExpiryAlertLevel(nivel)) {
-      const alert = new Alert({
-        loteId: savedLot.id,
+    // Alerta de caducidad si el lote vence pronto.
+    const buildAlert = (lot) => {
+      const dias = lot.calcularDiasParaVencer();
+      const nivel = classifyExpiryDays(dias);
+      if (!isExpiryAlertLevel(nivel)) return null;
+      return new Alert({
+        loteId: lot.id,
         diasParaVencer: dias,
-        nivel: nivel,
-        numeroLote: savedLot.numeroLote,
+        nivel,
+        numeroLote: lot.numeroLote,
         productoNombre: product.nombre,
-        ubicacion: savedLot.ubicacion
+        ubicacion: lot.ubicacion
       });
+    };
 
-      if (this.alertRepository) {
+    // El repositorio de PostgreSQL guarda lote y alerta en una sola transacción; los demás
+    // (en memoria) la guardan después por separado.
+    const savedLot = await this.lotRepository.save(newLot, actor.id, buildAlert);
+    const alert = 'alertaGenerada' in savedLot ? savedLot.alertaGenerada : buildAlert(savedLot);
+    if (alert) {
+      if (!('alertaGenerada' in savedLot) && this.alertRepository) {
         await this.alertRepository.save(alert);
       }
 
@@ -87,8 +92,8 @@ class IngresarLote {
           loteId: savedLot.id,
           numeroLote: savedLot.numeroLote,
           productoNombre: product.nombre,
-          diasParaVencer: dias,
-          nivel: nivel,
+          diasParaVencer: alert.diasParaVencer,
+          nivel: alert.nivel,
           ubicacion: savedLot.ubicacion
         });
       }

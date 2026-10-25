@@ -221,7 +221,13 @@ class PostgresLotRepository {
     return { countExpired: Number(res.rows[0].count) };
   }
 
-  async save(lot, actorId) {
+  /**
+   * Guarda el lote y su movimiento de ingreso. Si se pasa `buildAlert` (función que recibe el lote
+   * guardado y devuelve una Alert o null), la alerta de caducidad se guarda en la misma transacción:
+   * así un fallo no deja un lote sin su alerta, y reintentar no duplica el lote. La alerta queda en
+   * `saved.alertaGenerada` (propiedad no enumerable, no se publica por la API).
+   */
+  async save(lot, actorId, buildAlert = null) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -245,10 +251,24 @@ class PostgresLotRepository {
         reservadaAntes: 0, reservadaDespues: Number(row.cantidadReservada),
         ubicacionDestino: row.ubicacion, motivo: 'Ingreso inicial de lote', actorId
       });
-      await client.query('COMMIT');
       const saved = new Lot(row);
       saved.productoNombre = lot.productoNombre;
       saved.codigoBarras = lot.codigoBarras;
+      if (typeof buildAlert === 'function') {
+        const alert = buildAlert(saved);
+        let storedAlert = null;
+        if (alert) {
+          const alertRes = await client.query(
+            `INSERT INTO alertas_caducidad (lote_id, dias_para_vencer, nivel, atendida)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id, lote_id as "loteId", dias_para_vencer as "diasParaVencer", nivel, atendida, created_at`,
+            [alert.loteId, alert.diasParaVencer, alert.nivel, alert.atendida]
+          );
+          storedAlert = new Alert({ ...alert, ...alertRes.rows[0] });
+        }
+        Object.defineProperty(saved, 'alertaGenerada', { value: storedAlert, enumerable: false });
+      }
+      await client.query('COMMIT');
       return saved;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -618,8 +638,9 @@ class PostgresReservationRepository {
           await client.query(`
             UPDATE lotes
             SET cantidad_reservada = cantidad_reservada - $1,
+                -- Solo un lote ACTIVO pasa a AGOTADO: uno VENCIDO vendido por completo conserva su estado.
                 estado = CASE
-                  WHEN cantidad_disponible = 0 AND cantidad_reservada - $1 = 0 THEN 'AGOTADO'::estado_lote
+                  WHEN estado = 'ACTIVO' AND cantidad_disponible = 0 AND cantidad_reservada - $1 = 0 THEN 'AGOTADO'::estado_lote
                   ELSE estado
                 END,
                 updated_at = CURRENT_TIMESTAMP
