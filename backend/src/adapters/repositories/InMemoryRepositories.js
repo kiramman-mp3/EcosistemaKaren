@@ -245,6 +245,16 @@ class InMemoryRepositories {
         const cambio = this._applyPriceChange(id, precioVenta, { origen: 'MANUAL', actorId });
         return { producto: this.products.find(p => p.id === id), cambio };
       },
+      updateDetails: async (id, fields, { actorId }) => {
+        const prod = this.products.find(p => p.id === id);
+        if (!prod) throw new NotFoundException(`Producto con ID '${id}' no fue encontrado.`);
+        Object.assign(prod, {
+          categoriaId: fields.categoriaId, nombre: fields.nombre, descripcion: fields.descripcion,
+          impuestoPorcentaje: fields.impuestoPorcentaje, minStockAlerta: fields.minStockAlerta, updated_at: new Date()
+        });
+        const cambio = this._applyPriceChange(id, fields.precioVenta, { origen: 'MANUAL', actorId });
+        return { producto: prod, cambio };
+      },
       findPriceHistory: async (id, limit = 20) => this.priceHistory
         .filter(entry => entry.productoId === id).slice(-limit).reverse()
     };

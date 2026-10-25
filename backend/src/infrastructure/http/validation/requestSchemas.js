@@ -122,6 +122,15 @@ const schemas = {
   productPriceBody: z.strictObject({
     precioVenta: money
   }),
+  // Edición completa de un producto: el código de barras no cambia (da nombre a su foto y lo usan las apps).
+  productUpdateBody: z.strictObject({
+    categoriaId: entityId,
+    nombre: text(3, 150, 'El nombre'),
+    descripcion: text(1, 1000, 'La descripción').nullable().optional(),
+    precioVenta: money,
+    impuestoPorcentaje: z.coerce.number().finite().min(0).max(100),
+    minStockAlerta: z.coerce.number().int().min(0).max(10_000_000)
+  }),
   productQuery: z.strictObject({
     q: emptyToUndefined(z.string().trim().max(120).optional()),
     categoriaId: emptyToUndefined(entityId.optional()),

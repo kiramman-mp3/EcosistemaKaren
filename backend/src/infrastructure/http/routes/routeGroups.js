@@ -30,6 +30,7 @@ function catalogAdminRoutes(router, { categoryController, productController }, {
   router.post('/categories', authenticate, authorize('ADMIN'), validate({ body: schemas.categoryBody }), (req, res, next) => categoryController.createCategory(req, res, next));
   router.post('/products', authenticate, authorize('ADMIN'), validate({ body: schemas.productBody }), (req, res, next) => productController.createProduct(req, res, next));
   router.patch('/products/:id', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams, body: schemas.productPriceBody }), (req, res, next) => productController.updatePrice(req, res, next));
+  router.put('/products/:id', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams, body: schemas.productUpdateBody }), (req, res, next) => productController.updateProduct(req, res, next));
   router.get('/products/:id/price-history', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams }), (req, res, next) => productController.getPriceHistory(req, res, next));
   // Foto del producto (binario, p. ej. directo de la cámara): se autentica antes de leer el cuerpo.
   router.put(

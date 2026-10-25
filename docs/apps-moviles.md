@@ -30,6 +30,14 @@ sale en ~300 KB— y el servidor la vuelve a comprimir (máx. 1024 px), la guard
 Usa los módulos nativos `expo-image-picker` y `expo-image-manipulator`: **hay que volver a compilar el APK** de bodega para tener
 esta función (un APK anterior no la trae). El permiso de cámara ya lo pedía la app para escanear códigos.
 
+## Registrar y editar productos (ADMIN)
+
+En **Catálogo**, el ADMIN registra un producto con **Registrar producto** (escanea el EAN) y lo edita tocándolo en la lista. Los dos
+usan el mismo formulario: pasillo, nombre, marca y contenido, PVP, IVA, stock mínimo y **foto opcional** (cámara o galería). La foto
+elegida se reduce igual que arriba y se sube al guardar; si la subida falla el producto queda guardado y la app avisa para repetirla
+desde la miniatura. El **código EAN no se puede cambiar** al editar. Si el PVP cambia, queda en la bitácora de precios
+(`PUT /products/:id`). No agrega módulos nativos, pero el APK lleva el código de la app: **hay que recompilarlo** para tener el formulario.
+
 ## Reportes de bodega (PDF y Excel)
 
 En **Reportes**, los botones **PDF** y **Excel** exportan los movimientos y mermas. En el navegador el PDF abre el diálogo de

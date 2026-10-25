@@ -184,6 +184,28 @@ class PostgresProductRepository {
     } finally { client.release(); }
   }
 
+  /** Edición del producto por el ADMIN: datos y PVP (con su bitácora) en una sola transacción. */
+  async updateDetails(id, fields, { actorId }) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const res = await client.query(
+        `UPDATE productos
+         SET categoria_id = $2, nombre = $3, descripcion = $4, impuesto_porcentaje = $5, min_stock_alerta = $6,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [id, fields.categoriaId, fields.nombre, fields.descripcion, fields.impuestoPorcentaje, fields.minStockAlerta]
+      );
+      if (!res.rowCount) throw new NotFoundException(`Producto con ID '${id}' no fue encontrado.`);
+      const cambio = await applyPriceChange(client, id, fields.precioVenta, { origen: 'MANUAL', actorId });
+      await client.query('COMMIT');
+      return { producto: await this.findById(id), cambio };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release(); }
+  }
+
   /** Últimos cambios de PVP del producto, del más reciente al más antiguo. */
   async findPriceHistory(id, limit = 20) {
     const res = await this.pool.query(`

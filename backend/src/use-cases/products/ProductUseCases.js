@@ -133,6 +133,37 @@ class UpdateProductPrice {
   }
 }
 
+// Edición de los datos del producto (nombre, descripción, pasillo, IVA, stock mínimo y PVP). Solo el ADMIN, igual
+// que el alta. Si el PVP cambia, queda en la bitácora dentro de la misma operación. El código de barras y la foto
+// no se tocan aquí.
+class UpdateProduct {
+  constructor(productRepository, categoryRepository) {
+    this.productRepository = productRepository;
+    this.categoryRepository = categoryRepository;
+  }
+
+  async execute(productId, data = {}, actor) {
+    if (!actor || actor.rol !== 'ADMIN') throw new ForbiddenException('Solo el ADMIN puede editar productos.');
+    const current = await this.productRepository.findById(productId);
+    if (!current) throw new NotFoundException(`Producto con ID '${productId}' no fue encontrado.`);
+    if (data.categoriaId !== current.categoriaId) {
+      const category = await this.categoryRepository.findById(data.categoriaId);
+      if (!category) throw new NotFoundException(`La categoría con ID '${data.categoriaId}' no existe.`);
+    }
+
+    // La entidad aplica las mismas reglas que el alta (precio, IVA, stock mínimo, nombre).
+    const next = new Product({ ...current, ...data, id: current.id, codigoBarras: current.codigoBarras, imagenUrl: current.imagenUrl });
+    return this.productRepository.updateDetails(current.id, {
+      categoriaId: next.categoriaId,
+      nombre: next.nombre,
+      descripcion: next.descripcion,
+      impuestoPorcentaje: next.impuestoPorcentaje,
+      minStockAlerta: next.minStockAlerta,
+      precioVenta: next.precioVenta
+    }, { actorId: actor.id });
+  }
+}
+
 class GetProductPriceHistory {
   constructor(productRepository) {
     this.productRepository = productRepository;
@@ -152,6 +183,7 @@ module.exports = {
   CreateProduct,
   SetProductImage,
   UpdateProductPrice,
+  UpdateProduct,
   GetProductPriceHistory,
   assertCanChangePrice,
   assertValidPrice
