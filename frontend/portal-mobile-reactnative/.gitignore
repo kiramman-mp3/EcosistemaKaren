@@ -3,5 +3,3 @@
 android/
 ios/
 
-# Configuración de builds personalizados de EAS (el patrón build/ de la raíz la ignoraría).
-!.eas/build/
