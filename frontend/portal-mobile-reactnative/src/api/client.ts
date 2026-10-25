@@ -104,6 +104,15 @@ export interface BackendPromotion {
   unidadesRestantes?: number | null;
 }
 
+export interface CatalogStatus {
+  success: boolean;
+  mode: 'mirror' | 'direct';
+  /** true si falta alguna sección o la copia lleva demasiado sin sincronizarse con la tienda. */
+  stale: boolean;
+  lastSyncAt: string | null;
+  message?: string;
+}
+
 export interface CreateReservationRequest {
   usuarioId: string;
   /** Cuánto tiempo se aparta (el backend acepta de 15 a 240 minutos; la app ofrece de 30 a 120). Sin él, 30. */
@@ -181,6 +190,16 @@ export const api = {
       const items = res.data.data || [];
       all.push(...items);
       if (items.length < pageSize || all.length >= Number(res.data.total ?? all.length)) return all;
+    }
+  },
+
+  // Estado de la copia del catálogo que mantiene el portal (ADR-003). Si el backend no lo expone, se ignora.
+  async getCatalogStatus(): Promise<CatalogStatus | null> {
+    try {
+      const res = await apiClient.get<CatalogStatus>('/catalog/status', { timeout: 4000 });
+      return res.data;
+    } catch {
+      return null;
     }
   },
 

@@ -65,6 +65,7 @@ function PortalAppContent() {
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol?: string } | null>(null);
 
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [catalogStale, setCatalogStale] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [reservingOfferId, setReservingOfferId] = useState<string | null>(null);
   const [dataState, setDataState] = useState<DataLoadState>('loading');
@@ -108,6 +109,7 @@ function PortalAppContent() {
     setDataError(undefined);
     try {
       await checkHeartbeat();
+      void api.getCatalogStatus().then(status => setCatalogStale(Boolean(status?.stale)));
       const [backendCats, backendProds, backendLots, backendPromos] = await Promise.all([
         api.getCategories(), api.getProducts(), api.getLots(), api.getPromotions(),
       ]);
@@ -415,6 +417,13 @@ function PortalAppContent() {
         isOnline={isOnline}
       />
 
+      {isOnline && catalogStale && (
+        <View style={styles.staleBar} accessibilityRole="alert">
+          <Ionicons name="warning-outline" size={16} color={colors.mora} />
+          <Text style={styles.staleText}>El stock que ves puede no estar al día. Si algo ya no está, te avisaremos al apartar.</Text>
+        </View>
+      )}
+
       {SERVER_CONFIG_ENABLED && (
         <TouchableOpacity
           style={styles.serverBar}
@@ -563,6 +572,8 @@ const styles = themed(() => StyleSheet.create({
   body: { flex: 1, backgroundColor: colors.aisle },
   tabs: { backgroundColor: colors.card },
   serverBar: { backgroundColor: colors.mora, paddingVertical: 5, paddingHorizontal: 12, alignItems: 'center' },
+  staleBar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.sticker, paddingVertical: 6, paddingHorizontal: 14, borderBottomWidth: 2, borderBottomColor: colors.mora },
+  staleText: { flex: 1, fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16, color: colors.mora },
   serverBarText: { fontFamily: fonts.medium, fontSize: 11, color: '#FFFFFF' },
   chatFab: { position: 'absolute', right: 14, bottom: 14 },
   chatFabBody: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
