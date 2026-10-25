@@ -244,6 +244,7 @@ function BodegaAppContent() {
           {activeTab === 'ingreso' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
             <IngresoLoteScreen
               products={products}
+              canChangePrice={currentUser.rol === 'ADMIN'}
               onLotCreated={loadData}
               onOpenCatalog={() => setActiveTab('catalogo')}
               onRefresh={loadData}

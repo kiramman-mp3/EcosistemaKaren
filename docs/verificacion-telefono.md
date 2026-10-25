@@ -24,6 +24,7 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-10 | Reportes → PDF | Se genera el PDF y se abre el menú de compartir; el encabezado dice Supermercado Karen, Patricia Rodríguez, RUC 1850410612001 y la dirección de Quero. |
 | TEL-11 | Reportes → Excel | Se comparte un CSV que abre en Excel o Sheets con tildes correctas y los mismos datos del encabezado. |
 | TEL-12 | Reportes en pantalla → Hoy, Últimos 7 días, Últimos 30 días | Las cuatro cifras cambian juntas con el período, caben en una línea y usan separador de miles (por ejemplo `$8,580.67`). El PDF y el Excel indican el período elegido. |
+| TEL-18 | Recibir con `admin@demo.karen.ec` → escribir un nuevo PVP → Registrar lote | Pide confirmar "de $X a $Y"; al aceptar, el mensaje dice "PVP actualizado" y el portal muestra el nuevo precio en unos segundos. Con `bodega@demo.karen.ec` el campo no aparece. |
 
 ## Portal (app del cliente)
 

@@ -181,6 +181,14 @@ export interface CreateLotPayload {
   costoUnitario: number;
   cantidadIngresada: number;
   ubicacion: UbicacionLote;
+  /** Solo ADMIN: nuevo PVP del producto, guardado en la misma transacción que el lote. */
+  nuevoPrecioVenta?: number;
+}
+
+/** Cambio de PVP aplicado por el servidor. */
+export interface PriceChange {
+  anterior: number;
+  nuevo: number;
 }
 
 export interface WasteAuditResult {

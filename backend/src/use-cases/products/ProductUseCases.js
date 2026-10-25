@@ -1,5 +1,5 @@
 const crypto = require('node:crypto');
-const { NotFoundException, ValidationException, ConflictException } = require('../../domain/exceptions/DomainExceptions');
+const { NotFoundException, ValidationException, ConflictException, ForbiddenException } = require('../../domain/exceptions/DomainExceptions');
 const Product = require('../../domain/entities/Product');
 const { MEDIA_URL_PREFIX, isMediaPath } = require('../../infrastructure/media/mediaPaths');
 
@@ -104,9 +104,55 @@ class SetProductImage {
   }
 }
 
+// El PVP solo lo cambia el ADMIN y siempre de forma explícita. Las reservas ya hechas conservan el
+// precio con el que se apartaron (reserva_detalles.precio_unitario); el portal ve el nuevo en la
+// siguiente sincronización del catálogo.
+function assertCanChangePrice(actor) {
+  if (!actor || actor.rol !== 'ADMIN') throw new ForbiddenException('Solo el ADMIN puede cambiar el PVP.');
+}
+
+function assertValidPrice(value) {
+  const price = Number(value);
+  if (!Number.isFinite(price) || price <= 0 || price > 1_000_000) {
+    throw new ValidationException('El PVP debe ser un monto mayor a 0 y hasta 1.000.000.');
+  }
+  return price;
+}
+
+class UpdateProductPrice {
+  constructor(productRepository) {
+    this.productRepository = productRepository;
+  }
+
+  async execute(productId, { precioVenta } = {}, actor) {
+    assertCanChangePrice(actor);
+    const price = assertValidPrice(precioVenta);
+    const product = await this.productRepository.findById(productId);
+    if (!product) throw new NotFoundException(`Producto con ID '${productId}' no fue encontrado.`);
+    return this.productRepository.updatePriceWithAudit(product.id, price, { actorId: actor.id });
+  }
+}
+
+class GetProductPriceHistory {
+  constructor(productRepository) {
+    this.productRepository = productRepository;
+  }
+
+  async execute(productId, actor) {
+    assertCanChangePrice(actor);
+    const product = await this.productRepository.findById(productId);
+    if (!product) throw new NotFoundException(`Producto con ID '${productId}' no fue encontrado.`);
+    return this.productRepository.findPriceHistory(product.id);
+  }
+}
+
 module.exports = {
   GetProducts,
   GetProductByBarcode,
   CreateProduct,
-  SetProductImage
+  SetProductImage,
+  UpdateProductPrice,
+  GetProductPriceHistory,
+  assertCanChangePrice,
+  assertValidPrice
 };
