@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 import { CountUp } from './ui/CountUp';
 import { Illustration } from './ui/Illustration';
 import { categoryTone } from '../lib/categoryTone';
+import { STORE_INFO } from '../config/storeInfo';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -156,7 +157,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   ))}
                 </div>
                 <p className="text-[11px] text-ink-muted">
-                  Guardamos tus productos {selectedTtl} min en la Sucursal Matriz. Puedes extender más tiempo luego con tu código.
+                  Guardamos tus productos {selectedTtl} min en {STORE_INFO.tradeName}. Puedes extender más tiempo luego con tu código.
                 </p>
               </div>
 

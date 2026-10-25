@@ -29,7 +29,7 @@ interface HomeScreenProps {
 const STEPS = [
   { title: 'Elige en línea', text: 'Ves el stock real de la tienda.' },
   { title: 'Te lo apartamos 30 minutos', text: 'Recibes un código y nadie más se lleva esas unidades.' },
-  { title: 'Pagas y retiras en caja', text: 'Muestra el código en la Sucursal Matriz.' },
+  { title: 'Pagas y retiras en caja', text: 'Muestra el código en caja y paga ahí.' },
 ];
 
 // Inclinaciones y tiempos fijos: parecen pegadas a mano, pero son iguales en cada carga.

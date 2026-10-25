@@ -1,5 +1,6 @@
 import type { BackendReservation } from '../api/client';
 import type { ReservationPass } from '../types';
+import { STORE_INFO } from '../config/storeInfo';
 
 export function secondsUntil(expiration: string, now = Date.now()): number {
   const timestamp = new Date(expiration).getTime();
@@ -22,7 +23,7 @@ export function reservationToPass(reservation: BackendReservation, now = Date.no
     code: reservation.codigoRetiro ?? '',
     status: reservation.estado,
     remainingSeconds: secondsUntil(reservation.fechaExpiracion, now),
-    storeLocation: 'Sucursal Matriz',
+    storeLocation: STORE_INFO.tradeName,
     items: reservation.detalles.map(detail => ({
       productName: detail.productoNombre || `Producto reservado · lote ${detail.loteId.slice(0, 8)}`,
       quantity: Number(detail.cantidad),

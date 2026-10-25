@@ -24,6 +24,7 @@ import { reservationToPass, selectActiveReservation } from './reservations/recov
 import { isAwaitingStore, waitForStoreResolution } from './reservations/awaitStore';
 import { daysUntil, formatDate } from './utils/dates';
 import { getErrorMessage } from './utils/errors';
+import { STORE_INFO } from './config/storeInfo';
 
 // Foto neutra si un producto aún no tiene imagen propia.
 const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -396,7 +397,7 @@ export const App: React.FC = () => {
         initialSeconds: remainingSeconds,
         remainingSeconds,
         customerName: currentUser.nombre,
-        storeLocation: 'Sucursal Matriz',
+        storeLocation: STORE_INFO.tradeName,
         items: cart.map(i => ({ productName: i.product.name, quantity: i.quantity, price: i.product.price, lotCode: 'FEFO' })),
         total,
       });

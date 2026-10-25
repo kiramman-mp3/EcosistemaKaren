@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
-import { MapPin, Navigation, ExternalLink, Clock, Car, Check, Copy } from 'lucide-react';
+import { MapPin, Navigation, ExternalLink, Clock, Check, Copy } from 'lucide-react';
 import { Button } from './Button';
+import { STORE_FULL_ADDRESS, STORE_INFO } from '../../config/storeInfo';
 
 interface StoreMapProps {
   className?: string;
   showTitle?: boolean;
 }
 
-const STORE_COORDS = { lat: -2.1894, lng: -79.8891 };
-const STORE_ADDRESS = 'Av. Principal 1024 y Calle 4ta, Guayaquil, Ecuador';
+const { lat, lng } = STORE_INFO.coords;
+// Encuadre de unos 700 m alrededor de la tienda para el mapa embebido.
+const BBOX = [lng - 0.004, lat - 0.003, lng + 0.004, lat + 0.003].map(n => n.toFixed(5)).join(',');
 
 export const StoreMap: React.FC<StoreMapProps> = ({ className = '', showTitle = true }) => {
   const [copied, setCopied] = useState(false);
 
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${STORE_COORDS.lat},${STORE_COORDS.lng}+(Supermercado+Karen)`;
-  const wazeUrl = `https://waze.com/ul?ll=${STORE_COORDS.lat},${STORE_COORDS.lng}&navigate=yes`;
-  const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=-79.897,-2.195,-79.881,-2.183&layer=mapnik&marker=${STORE_COORDS.lat},${STORE_COORDS.lng}`;
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+  const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${BBOX}&layer=mapnik&marker=${lat},${lng}`;
 
   const copyAddress = async () => {
     try {
-      await navigator.clipboard.writeText(STORE_ADDRESS);
+      await navigator.clipboard.writeText(STORE_FULL_ADDRESS);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -37,7 +39,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({ className = '', showTitle = 
             </span>
             <div>
               <h3 className="font-display font-extrabold text-base leading-none text-mora">Nuestra Ubicación</h3>
-              <span className="text-xs font-semibold text-mora/80">Sucursal Matriz Guayaquil</span>
+              <span className="text-xs font-semibold text-mora/80">{STORE_INFO.city}</span>
             </div>
           </div>
           <button
@@ -54,7 +56,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({ className = '', showTitle = 
       {/* Mapa interactivo OpenStreetMap */}
       <div className="relative w-full h-56 sm:h-64 bg-aisle border-b-2 border-aisle-rule overflow-hidden">
         <iframe
-          title="Mapa de ubicación Supermercado Karen"
+          title={`Mapa de ubicación ${STORE_INFO.tradeName}`}
           src={osmEmbedUrl}
           className="w-full h-full border-0"
           loading="lazy"
@@ -63,7 +65,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({ className = '', showTitle = 
         {/* Marcador destacado flotante */}
         <div className="absolute top-3 left-3 bg-surface/95 backdrop-blur-sm border-2 border-mora rounded-lg px-3 py-1.5 shadow-pop-sm flex items-center gap-2 pointer-events-none">
           <span className="w-3 h-3 rounded-full bg-karen animate-ping shrink-0" />
-          <span className="font-display font-extrabold text-xs text-mora">Supermercado Karen</span>
+          <span className="font-display font-extrabold text-xs text-mora">{STORE_INFO.tradeName}</span>
         </div>
       </div>
 
@@ -72,20 +74,14 @@ export const StoreMap: React.FC<StoreMapProps> = ({ className = '', showTitle = 
         <div className="flex items-start gap-3 text-sm text-ink">
           <MapPin className="w-5 h-5 text-karen-text shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold">{STORE_ADDRESS}</p>
-            <p className="text-xs text-ink-muted mt-0.5">Junto a la estación central · Zona comercial</p>
+            <p className="font-bold">{STORE_INFO.address}</p>
+            <p className="text-xs text-ink-muted mt-0.5">{STORE_INFO.city}, Ecuador</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-ink-soft pt-1 border-t border-aisle-rule">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-aguacate shrink-0" />
-            <span>Lun a Sáb: 07:00 – 21:00 · Dom: 08:00 – 19:00</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Car className="w-4 h-4 text-naranja shrink-0" />
-            <span>Parqueadero vigilado gratuito (45 puestos)</span>
-          </div>
+        <div className="flex items-center gap-2 text-xs text-ink-soft pt-3 border-t border-aisle-rule">
+          <Clock className="w-4 h-4 text-aguacate shrink-0" />
+          <span>{STORE_INFO.hours.short}</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-aisle-rule">

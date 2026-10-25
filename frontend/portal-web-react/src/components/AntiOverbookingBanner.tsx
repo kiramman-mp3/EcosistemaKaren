@@ -15,7 +15,7 @@ const STEPS = [
   {
     icon: Store,
     title: 'Pagas y retiras en caja',
-    text: 'Muestra el código en la Sucursal Matriz, paga ahí y llévate tu compra.',
+    text: 'Muestra el código en caja, paga ahí y llévate tu compra.',
   },
 ];
 
