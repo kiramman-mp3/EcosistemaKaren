@@ -106,6 +106,8 @@ export interface BackendPromotion {
 
 export interface CreateReservationRequest {
   usuarioId: string;
+  /** Cuánto tiempo se aparta (el backend acepta de 15 a 240 minutos; la app ofrece de 30 a 120). Sin él, 30. */
+  ttlMinutos?: number;
   items: {
     productoId: string;
     cantidad: number;

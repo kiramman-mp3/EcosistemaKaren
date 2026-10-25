@@ -33,7 +33,7 @@ import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { bestSellerIds, isNewProduct } from './src/config/catalogRules';
 import { offerEnded, offerUnitsAvailable } from './src/config/offerRules';
 import { STORE_INFO } from './src/config/storeInfo';
-import { RESERVATION_EXTENSION_MINUTES } from './src/config/reservationRules';
+import { DEFAULT_RESERVATION_MINUTES, RESERVATION_EXTENSION_MINUTES } from './src/config/reservationRules';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
@@ -281,7 +281,7 @@ function PortalAppContent() {
     notify('Tu reserva está en proceso', 'Aparecerá en Mis reservas apenas la tienda la confirme.');
   };
 
-  const handleConfirmReservation = async () => {
+  const handleConfirmReservation = async (ttlMinutos: number = DEFAULT_RESERVATION_MINUTES) => {
     if (cart.length === 0) return;
     if (!currentUser) {
       setIsCartOpen(false);
@@ -292,6 +292,7 @@ function PortalAppContent() {
     try {
       const created = await api.createReservation({
         usuarioId: currentUser.id,
+        ttlMinutos,
         items: cart.map(i => ({ productoId: i.product.id, cantidad: i.quantity })),
       });
       const reservation = await settleReservation(created, currentUser);
@@ -306,6 +307,7 @@ function PortalAppContent() {
       await openPassFor(reservation.codigoRetiro, {
         code: reservation.codigoRetiro,
         status: reservation.estado,
+        initialSeconds: ttlMinutos * 60,
         remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
         storeLocation: STORE_INFO.tradeName,
         customerName: currentUser.nombre,
@@ -513,7 +515,7 @@ function PortalAppContent() {
           onClose={() => setIsCartOpen(false)}
           items={cart}
           onUpdateQuantity={handleUpdateQuantity}
-          onConfirmReservation={() => void handleConfirmReservation()}
+          onConfirmReservation={ttl => void handleConfirmReservation(ttl)}
           isSubmitting={isSubmitting}
           isLoggedIn={Boolean(currentUser)}
           isOnline={isOnline}

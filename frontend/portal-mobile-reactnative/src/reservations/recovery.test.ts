@@ -28,4 +28,10 @@ describe('recuperación móvil de reservas', () => {
     const atLimit = { ...active, created_at: '2026-10-09T08:10:00.000Z', fechaExpiracion: '2026-10-09T12:10:00.000Z' };
     expect(reservationToPass(atLimit, NOW).canExtend).toBe(false);
   });
+
+  test('la barra de tiempo parte de la duración total de la reserva', () => {
+    const twoHours = { ...active, created_at: '2026-10-09T10:05:00.000Z' };
+    expect(reservationToPass(twoHours, NOW).initialSeconds).toBe(7200);
+    expect(reservationToPass(active, NOW).initialSeconds).toBeUndefined();
+  });
 });
