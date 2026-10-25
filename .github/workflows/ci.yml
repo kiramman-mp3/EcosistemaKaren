@@ -80,6 +80,7 @@ jobs:
           psql -h localhost -U karen_user -d ecosistema_karen -c "CREATE DATABASE ecosistema_karen_portal"
       - run: npm run test:services
       - run: npm run test:http-errors
+      - run: npm run test:e2e-split
       - run: node --test test/schema-limits.test.js
 
   portal-web:
