@@ -32,6 +32,7 @@ import { colors, fonts, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { bestSellerIds, isNewProduct } from './src/config/catalogRules';
 import { offerEnded, offerUnitsAvailable } from './src/config/offerRules';
+import { STORE_INFO } from './src/config/storeInfo';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
@@ -305,7 +306,7 @@ function PortalAppContent() {
         code: reservation.codigoRetiro,
         status: reservation.estado,
         remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
-        storeLocation: 'Sucursal Matriz',
+        storeLocation: STORE_INFO.tradeName,
         customerName: currentUser.nombre,
         items: cart.map(i => ({ productName: i.product.name, quantity: i.quantity, price: i.product.price })),
         total,
@@ -347,7 +348,7 @@ function PortalAppContent() {
         code: reservation.codigoRetiro,
         status: reservation.estado,
         remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
-        storeLocation: 'Sucursal Matriz',
+        storeLocation: STORE_INFO.tradeName,
         customerName: currentUser.nombre,
         items: [{ productName: product.name, quantity: 1, price: offer.price }],
         total: offer.price,
