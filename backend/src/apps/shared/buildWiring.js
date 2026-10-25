@@ -161,9 +161,12 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     const storeChannel = !portal && pool && serviceConfig.reservationQueueEnabled
       ? wireStoreChannel({ pool, reservationRepo, serviceConfig })
       : null;
-    if (storeChannel) workers.push(...storeChannel.workers);
-    const reservationEvents = storeChannel ? storeChannel.eventPublisher : null;
-    confirmReservationUC = new ConfirmReservation(reservationRepo, reservationEvents);
+    if (storeChannel) {
+      workers.push(...storeChannel.workers);
+      // Los cambios de estado quedan en la bandeja de salida dentro de la misma transacción que el cambio.
+      reservationRepo.enableStateEvents?.();
+    }
+    confirmReservationUC = new ConfirmReservation(reservationRepo);
 
     promotionUseCases = {
       generarPromocionesIAUC: new GenerarPromocionesIA(lotRepo, promotionRepo, geminiAdapter, promotionCache, productRepo),
@@ -180,7 +183,7 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     );
 
     // Procesos de fondo: expiración de reservas TTL y de lotes
-    workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo, reservationEvents), 60000));
+    workers.push(new ReservationCleanerWorker(new CleanExpiredReservations(reservationRepo), 60000));
     workers.push(new LotExpiryWorker(new ExpireLots(lotRepo), 60000));
 
     // Con base propia, el portal recibe una copia del catálogo que la tienda le publica.
@@ -237,7 +240,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       portal ? new ReservarStock(reservationRepo, heartbeatMonitor) : undefined,
       getReservationByCodeUC,
       confirmReservationUC,
-      portal ? new CancelReservation(reservationRepo) : undefined,
+      // El ADMIN cancela reservas desde la tienda (los clientes lo hacen en el portal).
+      new CancelReservation(reservationRepo),
       portal ? new GetReservationsByUser(reservationRepo) : undefined
     );
 

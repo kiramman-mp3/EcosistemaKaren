@@ -202,15 +202,22 @@ store-api y portal-api no arrancan si quedan cuentas de demostración con su con
 store-api tampoco expone el registro público: el personal se da de alta con `npm run user:create`
 y los clientes se registran únicamente en portal-api.
 
+## Avisos de estado y cancelación por el ADMIN
+
+Cada cambio de estado que ocurre en la tienda (confirmada en caja, expirada, o cancelada por un ADMIN) escribe su
+aviso en `outbox_portal` **dentro de la misma transacción** que el cambio y el movimiento de stock
+(`PostgresReservationRepository.enableStateEvents`): o quedan los dos o ninguno, y el portal siempre llega a
+enterarse aunque la tienda caiga justo después. Las cancelaciones que pide el propio portal (comando
+`RESERVATION_CANCEL`) no generan aviso, porque el portal ya conoce ese estado.
+
+El ADMIN opera desde la tienda, así que `POST /reservations/:id/cancel` existe también en store-api, solo para
+`ADMIN` (el cliente cancela en el portal). La tienda libera el stock y el portal pasa la reserva a `CANCELADA`
+cuando recibe el aviso.
+
 ## Pendiente conocido
 
-- Las imágenes locales de productos (`/api/v1/media/...`) no se sincronizan: la carpeta
-  `public/media` debe existir también en el portal.
-- ADMIN no puede cancelar reservas con los servicios separados: su ruta de cancelación vive en el
-  portal, donde no tiene cuenta, y la tienda no expone una.
-- El aviso de confirmación o expiración se encola justo después de confirmar en la tienda; si la
-  base cae en ese instante, el portal tarda en enterarse. Mientras tanto, una reserva aceptada cuyo
-  plazo pasó se publica con `vencidaSinConfirmar: true`, sin cambiar su estado.
+- Una reserva aceptada cuyo plazo pasó y de la que el portal aún no recibe aviso (tienda sin conexión) se
+  publica con `vencidaSinConfirmar: true`, sin cambiar su estado, hasta que la tienda informe.
 - El portal móvil no muestra el aviso de catálogo desactualizado que sí muestra el portal web.
 - La verificación de punta a punta con dos instancias reales de PostgreSQL y HTTP entre los servicios
   la hace el CI (`backend-services`); localmente se validó con una base embebida.

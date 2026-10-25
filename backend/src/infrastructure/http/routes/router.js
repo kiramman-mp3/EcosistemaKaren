@@ -9,6 +9,7 @@ const STORE_GROUPS = [
   groups.catalogAdminRoutes,
   groups.inventoryRoutes,
   groups.reservationLookupRoutes,
+  groups.adminReservationCancelRoutes,
   groups.storeReservationRoutes,
   groups.alertRoutes,
   groups.publicPromotionRoutes,
@@ -41,8 +42,9 @@ const createStoreRouter = (controllers, security) => composeRouter(STORE_GROUPS,
 const createPortalRouter = (controllers, security) => composeRouter(PORTAL_GROUPS, controllers, security);
 
 // Monolito de transición: la unión de ambos servicios, con cada grupo registrado una sola vez.
+// La cancelación de la tienda (solo ADMIN) se omite: la de los clientes ya admite al ADMIN y es la misma ruta.
 const createApiRouter = (controllers, security) =>
-  composeRouter([...STORE_GROUPS, ...PORTAL_GROUPS], controllers, security);
+  composeRouter([...STORE_GROUPS.filter(group => group !== groups.adminReservationCancelRoutes), ...PORTAL_GROUPS], controllers, security);
 
 module.exports = createApiRouter;
 module.exports.createStoreRouter = createStoreRouter;

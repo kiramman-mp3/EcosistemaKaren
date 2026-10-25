@@ -76,48 +76,26 @@ class GetReservationByCode {
 }
 
 class ConfirmReservation {
-  // `eventPublisher` (opcional) avisa al portal los cambios de estado cuando la tienda va separada.
-  constructor(reservationRepository, eventPublisher = null) {
+  // El aviso al portal lo deja el repositorio en la misma transacción (ver enableStateEvents).
+  constructor(reservationRepository) {
     this.reservationRepository = reservationRepository;
-    this.eventPublisher = eventPublisher;
   }
 
   async execute(reservationId, actor) {
     if (!actor || !['BODEGUERO', 'ADMIN'].includes(actor.rol)) {
       throw new ForbiddenException('Solo BODEGUERO o ADMIN puede confirmar ventas reservadas.');
     }
-    let reservation;
-    try {
-      reservation = await this.reservationRepository.confirmWithLockedStock(reservationId, actor);
-    } catch (error) {
-      // Confirmar una reserva vencida la deja EXPIRADA con su stock liberado: el portal debe saberlo.
-      if (this.eventPublisher) {
-        const current = await this.reservationRepository.findById(reservationId).catch(() => null);
-        if (current?.estado === 'EXPIRADA') {
-          await this.eventPublisher.publishStateChange({ reservaId: reservationId, estado: 'EXPIRADA' });
-        }
-      }
-      throw error;
-    }
-    await this.eventPublisher?.publishStateChange({ reservaId: reservationId, estado: 'CONFIRMADA' });
-    return reservation;
+    return this.reservationRepository.confirmWithLockedStock(reservationId, actor);
   }
 }
 
 class CleanExpiredReservations {
-  constructor(reservationRepository, eventPublisher = null) {
+  constructor(reservationRepository) {
     this.reservationRepository = reservationRepository;
-    this.eventPublisher = eventPublisher;
   }
 
   async execute() {
-    const result = await this.reservationRepository.expirePendingWithLockedStock();
-    if (this.eventPublisher) {
-      for (const reservaId of result.reservaIds || []) {
-        await this.eventPublisher.publishStateChange({ reservaId, estado: 'EXPIRADA' });
-      }
-    }
-    return result;
+    return this.reservationRepository.expirePendingWithLockedStock();
   }
 }
 

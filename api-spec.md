@@ -23,7 +23,7 @@ la app de bodega con Bearer.
 | Cambiar ubicación o registrar merma | `BODEGUERO`, `PERCHERO`, `ADMIN` |
 | Crear reservas | `CLIENTE` |
 | Consultar reservas | Propietario, `BODEGUERO`, `PERCHERO` o `ADMIN` |
-| Cancelar reservas | Propietario o `ADMIN` |
+| Cancelar reservas | Propietario (en el portal) o `ADMIN` (en el portal o en la tienda) |
 | Confirmar reservas | `BODEGUERO`, `ADMIN` |
 | Alertas y generación de promociones | `BODEGUERO`, `PERCHERO`, `ADMIN` |
 

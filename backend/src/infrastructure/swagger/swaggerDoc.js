@@ -367,7 +367,7 @@ const swaggerDocument = {
       post: {
         tags: ['Reservaciones'],
         summary: 'Cancelar una reserva pendiente y liberar su stock',
-        description: 'Solo el cliente propietario o un ADMIN. La liberación usa una transacción con bloqueo de filas.',
+        description: 'En portal-api, el cliente propietario o un ADMIN; en store-api, solo un ADMIN (la tienda libera el stock y avisa al portal). La liberación usa una transacción con bloqueo de filas.',
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
@@ -636,7 +636,6 @@ const OPERATION_OWNERS = [
   ['/auth/register', ['post'], 'portal'],
   ['/reservations', ['post'], 'portal'],
   ['/reservations/user/{userId}', null, 'portal'],
-  ['/reservations/{id}/cancel', null, 'portal'],
   ['/catalog/status', null, 'portal']
 ];
 

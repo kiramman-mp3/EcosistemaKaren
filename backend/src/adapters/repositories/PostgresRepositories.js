@@ -448,6 +448,27 @@ class PostgresLotRepository {
 class PostgresReservationRepository {
   constructor(pool) {
     this.pool = pool;
+    this.publishStateEvents = false;
+  }
+
+  /**
+   * Con la tienda separada del portal (ADR-003), cada cambio de estado hecho en la tienda (confirmada,
+   * expirada o cancelada por un administrador) deja su aviso en la bandeja de salida `outbox_portal`
+   * dentro de la misma transacción que el cambio: o ocurren los dos o ninguno, así el portal nunca se
+   * queda sin enterarse. Las cancelaciones que pide el propio portal no generan aviso (ya lo sabe).
+   */
+  enableStateEvents() {
+    this.publishStateEvents = true;
+  }
+
+  async _enqueueStateEvent(client, reservaId, estado) {
+    if (!this.publishStateEvents) return;
+    await client.query(
+      `INSERT INTO outbox_portal (tipo, clave, payload)
+       VALUES ('RESERVATION_STATE', $1, $2::jsonb)
+       ON CONFLICT (clave) DO NOTHING`,
+      [`state:${reservaId}:${estado}`, JSON.stringify({ reservaId, estado, at: new Date().toISOString() })]
+    );
   }
 
   /**
@@ -626,6 +647,7 @@ class PostgresReservationRepository {
         await client.query(`
           UPDATE reservas SET estado = 'EXPIRADA', updated_at = CURRENT_TIMESTAMP WHERE id = $1
         `, [reservationId]);
+        await this._enqueueStateEvent(client, reservationId, 'EXPIRADA');
         expired = true;
         await client.query('COMMIT');
       } else {
@@ -661,6 +683,7 @@ class PostgresReservationRepository {
           RETURNING id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
                     estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
         `, [reservationId]);
+        await this._enqueueStateEvent(client, reservationId, 'CONFIRMADA');
         await client.query('COMMIT');
         const updated = new Reservation(updatedResult.rows[0]);
         updated.detalles = details;
@@ -709,6 +732,7 @@ class PostgresReservationRepository {
         RETURNING id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
                   estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
       `, [nextState, reservationId]);
+      if (!actor.remote) await this._enqueueStateEvent(client, reservationId, nextState);
 
       await client.query('COMMIT');
       if (!expired) {
@@ -788,6 +812,7 @@ class PostgresReservationRepository {
         SET estado = 'EXPIRADA', updated_at = CURRENT_TIMESTAMP
         WHERE id = ANY($1::uuid[])
       `, [reservationIds]);
+      for (const reservaId of reservationIds) await this._enqueueStateEvent(client, reservaId, 'EXPIRADA');
       await client.query('COMMIT');
       return { countLiberadas: reservationIds.length, reservaIds: reservationIds };
     } catch (error) {

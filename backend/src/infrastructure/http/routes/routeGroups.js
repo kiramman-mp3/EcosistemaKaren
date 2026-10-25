@@ -45,6 +45,12 @@ function customerReservationRoutes(router, { reservationController }, { authenti
   router.post('/reservations/:id/cancel', authenticate, authorize('CLIENTE', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => reservationController.cancel(req, res, next));
 }
 
+// El ADMIN cancela reservas desde la tienda, que es quien libera el stock y avisa al portal. Solo el ADMIN:
+// los clientes cancelan en el portal (el monolito usa la ruta de los clientes, que ya admite al ADMIN).
+function adminReservationCancelRoutes(router, { reservationController }, { authenticate, authorize }) {
+  router.post('/reservations/:id/cancel', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => reservationController.cancel(req, res, next));
+}
+
 function reservationLookupRoutes(router, { reservationController }, { authenticate }) {
   router.get('/reservations/code/:code', authenticate, validate({ params: schemas.reservationCodeParams }), (req, res, next) => reservationController.getByCode(req, res, next));
 }
@@ -110,6 +116,7 @@ module.exports = {
   catalogStatusRoutes,
   inventoryRoutes,
   customerReservationRoutes,
+  adminReservationCancelRoutes,
   reservationLookupRoutes,
   storeReservationRoutes,
   alertRoutes,

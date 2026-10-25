@@ -116,6 +116,8 @@ async function provisionStore() {
   const hash = await bcrypt.hash(PASSWORD, 4);
   const staffEmail = `e2e.bodega.${STAMP}@example.test`;
   await storeDb.query("INSERT INTO usuarios (nombre, email, rol, password_hash) VALUES ('Bodega E2E', $1, 'BODEGUERO', $2)", [staffEmail, hash]);
+  const adminEmail = `e2e.admin.${STAMP}@example.test`;
+  await storeDb.query("INSERT INTO usuarios (nombre, email, rol, password_hash) VALUES ('Admin E2E', $1, 'ADMIN', $2)", [adminEmail, hash]);
   const category = (await storeDb.query('INSERT INTO categorias (nombre) VALUES ($1) RETURNING id', [`Categoría E2E ${STAMP}`])).rows[0].id;
   fs.mkdirSync(path.join(MEDIA_DIR, 'productos'), { recursive: true });
   fs.writeFileSync(path.join(MEDIA_DIR, 'productos', PHOTO_NAME), PHOTO);
@@ -128,7 +130,7 @@ async function provisionStore() {
      VALUES ($1, $2, CURRENT_DATE - 5, CURRENT_DATE + 60, 1.2, 50, 50) RETURNING id`,
     [product, `E2E-${STAMP}`]
   )).rows[0].id;
-  return { staffEmail, productId: product, lotId: lot };
+  return { staffEmail, adminEmail, productId: product, lotId: lot };
 }
 
 async function run() {
@@ -220,6 +222,22 @@ async function run() {
   check('no se guardó ninguna reserva nueva', reservations === 12, `${reservations} reservas del cliente`);
   startStore();
   check('al volver la tienda el portal vuelve a ONLINE', Boolean(await waitFor(async () => (await portal('GET', '/heartbeat')).body.status === 'ONLINE', 30000)));
+
+  console.log('');
+  console.log('Cancelación por el administrador');
+  const admin = (await store('POST', '/auth/login', { email: data.adminEmail, password: PASSWORD })).body.data?.token;
+  const toCancel = await portal('POST', '/reservations', { items: [{ productoId: data.productId, cantidad: 1 }] }, client);
+  const toCancelId = toCancel.body.data?.id;
+  const reserved = await stockOf(data.lotId);
+  check('el cliente reserva una unidad más', toCancel.status === 201 && reserved.r > 0, String(toCancel.status));
+  check('un cliente no puede cancelar por la tienda (solo el ADMIN)', [401, 403].includes((await store('POST', `/reservations/${toCancelId}/cancel`, {}, client)).status));
+  check('el bodeguero no puede cancelar (solo el ADMIN)', (await store('POST', `/reservations/${toCancelId}/cancel`, {}, staff)).status === 403);
+  const byAdmin = await store('POST', `/reservations/${toCancelId}/cancel`, {}, admin);
+  check('el ADMIN cancela desde la tienda', byAdmin.status === 200 && byAdmin.body.data?.estado === 'CANCELADA', String(byAdmin.status));
+  const afterAdmin = await stockOf(data.lotId);
+  check('la tienda libera el stock', afterAdmin.r === reserved.r - 1 && afterAdmin.d === reserved.d + 1);
+  check('el portal pasa a CANCELADA por el aviso de la tienda', Boolean(await waitFor(async () => (await portalDb.query('SELECT estado FROM reservas_portal WHERE id = $1', [toCancelId])).rows[0].estado === 'CANCELADA', 15000)));
+  check('el cliente ve la reserva cancelada', (await portal('GET', `/reservations/code/${toCancel.body.data?.codigoRetiro}`, null, client)).body.data?.estado === 'CANCELADA');
 }
 
 async function main() {
