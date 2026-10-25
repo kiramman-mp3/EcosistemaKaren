@@ -271,6 +271,47 @@ async function run() {
   check('la reserva de 4 horas conserva su plazo', Math.abs((await minutesAlive(atLimit.body.data?.id)) - 240) <= 1);
 
   console.log('');
+  console.log('Oferta con límite por pedido 2 y stock de oferta 3');
+  const offerProduct = (await storeDb.query(
+    "INSERT INTO productos (categoria_id, codigo_barras, nombre, precio_venta) SELECT categoria_id, $1, 'Producto oferta E2E', 4.00 FROM productos WHERE id = $2 RETURNING id",
+    [`9${String(STAMP).slice(-12)}`, data.productId]
+  )).rows[0].id;
+  const offerLot = (await storeDb.query(
+    `INSERT INTO lotes (producto_id, numero_lote, fecha_elaboracion, fecha_caducidad, costo_unitario, cantidad_ingresada, cantidad_disponible)
+     VALUES ($1, $2, CURRENT_DATE - 20, CURRENT_DATE + 3, 2, 20, 20) RETURNING id`,
+    [offerProduct, `E2E-OF-${STAMP}`]
+  )).rows[0].id;
+  const offerEnds = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const offerId = (await storeDb.query(
+    `INSERT INTO promociones_ia (lote_id, descuento_porcentaje, frase_promocional, razon_ia, estado, activa, aprobada_at,
+                                 limite_por_pedido, stock_oferta, vigente_hasta)
+     VALUES ($1, 25, 'Oferta E2E', 'Lote por vencer', 'APROBADA', TRUE, CURRENT_TIMESTAMP, 2, 3, $2) RETURNING id`,
+    [offerLot, offerEnds]
+  )).rows[0].id;
+  const publishedOffer = async () => (await portal('GET', '/promotions')).body.data?.find(item => item.id === offerId);
+  const firstSeen = await waitFor(async () => (await publishedOffer())?.unidadesRestantes === 3 ? publishedOffer() : null, 20000);
+  check('el portal publica el límite, el stock y la hora de fin de la oferta', Boolean(firstSeen) && firstSeen.limitePorPedido === 2
+    && firstSeen.stockOferta === 3 && new Date(firstSeen.vigenteHasta).getTime() === offerEnds.getTime());
+  const offerLine = (cantidad) => ({ items: [{ productoId: offerProduct, cantidad, promocionId: offerId }] });
+  const overLimit3 = await portal('POST', '/reservations', offerLine(3), client);
+  check('pedir 3 unidades de la oferta se rechaza con 409 y el motivo de la oferta', overLimit3.status === 409
+    && overLimit3.body.error === 'OfferLimitException' && /hasta 2/.test(overLimit3.body.message || ''), `${overLimit3.status} ${overLimit3.body.message || ''}`);
+  const offerTwo = await portal('POST', '/reservations', offerLine(2), client);
+  check('2 unidades se reservan con el 25 % de descuento', offerTwo.status === 201 && offerTwo.body.data?.detalles?.[0]?.precioUnitario === 3, String(offerTwo.status));
+  const offerTwoMore = await portal('POST', '/reservations', offerLine(2), client);
+  check('otras 2 se rechazan: solo queda 1 con descuento', offerTwoMore.status === 409 && /Solo queda 1 unidad/.test(offerTwoMore.body.message || ''), `${offerTwoMore.status} ${offerTwoMore.body.message || ''}`);
+  check('el portal muestra 1 unidad restante', Boolean(await waitFor(async () => (await publishedOffer())?.unidadesRestantes === 1, 20000)));
+  const offerLast = await portal('POST', '/reservations', offerLine(1), client);
+  check('la última unidad se reserva', offerLast.status === 201, String(offerLast.status));
+  check('agotada, la oferta desaparece del portal', Boolean(await waitFor(async () => (await portal('GET', '/promotions')).status === 200 && !(await publishedOffer()), 20000)));
+  const offerUnits = (await storeDb.query(`
+    SELECT COALESCE(SUM(rd.cantidad), 0)::int AS n FROM reserva_detalles rd JOIN reservas r ON r.id = rd.reserva_id
+    WHERE rd.promocion_id = $1 AND r.estado IN ('PENDIENTE', 'CONFIRMADA')`, [offerId])).rows[0].n;
+  check('la tienda tiene exactamente 3 unidades con descuento', offerUnits === 3, `${offerUnits} unidades`);
+  const normal = await portal('POST', '/reservations', { items: [{ productoId: offerProduct, cantidad: 2 }] }, client);
+  check('sin la oferta el mismo producto se reserva a precio normal', normal.status === 201 && normal.body.data?.detalles?.[0]?.precioUnitario === 4, String(normal.status));
+
+  console.log('');
   console.log('Foto tomada con la cámara');
   // Foto de 12 MP con ruido (no comprime bien) y orientación EXIF, como la que entrega un teléfono.
   const camera = await sharp(crypto.randomBytes(4000 * 3000 * 3), { raw: { width: 4000, height: 3000, channels: 3 } })
