@@ -33,4 +33,8 @@ build:
         name: Subir el .ipa
         inputs:
           type: application-archive
-          path: SupermercadoKaren-unsigned.ipa
+          # El paso de subida resuelve la ruta desde la raíz del repositorio, no desde el proyecto;
+          # se listan ambas y la que no exista se ignora.
+          path: |
+            frontend/portal-mobile-reactnative/SupermercadoKaren-unsigned.ipa
+            SupermercadoKaren-unsigned.ipa
