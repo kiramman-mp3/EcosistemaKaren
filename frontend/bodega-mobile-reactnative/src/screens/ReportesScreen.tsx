@@ -1,19 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { formatDateTime } from '../utils/dates';
 import { InventoryMovement, InventoryWaste } from '../types';
 import { Button, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
-import { getServerMessage } from '../utils/errors';
+import { getErrorMessage, getServerMessage } from '../utils/errors';
+import { buildCsv, buildReportHtml, money, MOVEMENT_LABEL } from '../utils/reportExport';
+import { exportCsvFile, exportPdfFile } from '../utils/exportReport';
+import { notify } from '../utils/dialogs';
 
-const money = (value?: number | null) => value == null ? 'No registrado' : `$${Number(value).toFixed(2)}`;
-
-const MOVEMENT_LABEL: Record<string, string> = {
-  INGRESO: 'Ingreso', TRASLADO: 'Traslado', MERMA: 'Merma', RESERVA: 'Reserva web',
-  LIBERACION: 'Liberación', VENTA: 'Venta', VENCIMIENTO: 'Vencimiento', AJUSTE: 'Ajuste',
-};
 const LOCATION_LABEL: Record<string, string> = { BODEGA: 'Bodega', PERCHA: 'Percha' };
 
 export const ReportesScreen: React.FC = () => {
@@ -41,167 +38,19 @@ export const ReportesScreen: React.FC = () => {
   }), [movements, wastes]);
   const selectedWaste = selectedMovement ? wastes.find(item => item.movimientoId === selectedMovement.id) : undefined;
 
-  const exportPDF = () => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
-      const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Reporte de Movimientos y Mermas - Supermercado Karen</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 32px; color: #2A1D14; background: #FFF; margin: 0; }
-            .header { border-bottom: 3px solid #2A1D14; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
-            .brand { font-size: 28px; font-weight: 800; color: #C42418; margin: 0; }
-            .sub { color: #6E5E50; font-size: 13px; margin-top: 4px; }
-            .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
-            .kpi { background: #FBF6EC; border: 2px solid #2A1D14; border-radius: 12px; padding: 14px; }
-            .kpi-val { font-size: 26px; font-weight: 900; margin-bottom: 4px; color: #2A1D14; }
-            .kpi-lbl { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #6E5E50; }
-            .alert { color: #C42418; font-weight: bold; }
-            .sec-title { font-size: 18px; font-weight: 800; margin: 28px 0 12px; border-left: 5px solid #FFD400; padding-left: 10px; color: #2A1D14; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
-            th { background: #FFD400; border: 1.5px solid #2A1D14; padding: 10px; text-align: left; font-weight: 800; }
-            td { border: 1px solid #EADFCB; padding: 8px 10px; }
-            tr:nth-child(even) { background: #FBF6EC; }
-            .footer { margin-top: 40px; border-top: 1px solid #EADFCB; padding-top: 12px; font-size: 11px; color: #9A8A76; text-align: center; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <h1 class="brand">Supermercado Karen S.A.</h1>
-              <div class="sub">Sistema de Bodega · Reporte Oficial de Movimientos y Bajas</div>
-            </div>
-            <div style="text-align: right; font-size: 12px; color: #54443A;">
-              <div><strong>Fecha de emisión:</strong> ${new Date().toLocaleDateString('es-EC')} ${new Date().toLocaleTimeString('es-EC')}</div>
-              <div><strong>Sucursal:</strong> Matriz Guayaquil · RUC 0992345678001</div>
-            </div>
-          </div>
-
-          <div class="kpis">
-            <div class="kpi">
-              <div class="kpi-val">${totals.ingresos}</div>
-              <div class="kpi-lbl">Unidades Recibidas</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi-val">${totals.ventas}</div>
-              <div class="kpi-lbl">Unidades Vendidas</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi-val">${totals.mermas}</div>
-              <div class="kpi-lbl">Unidades de Merma</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi-val alert">$${totals.costoMerma.toFixed(2)}</div>
-              <div class="kpi-lbl">Costo Total Merma</div>
-            </div>
-          </div>
-
-          <div class="sec-title">Bajas Registradas y Mermas (${wastes.length})</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Lote</th>
-                <th>Motivo / Razón</th>
-                <th>Cantidad</th>
-                <th>Costo Total</th>
-                <th>Fecha y Hora</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${wastes.map(item => `
-                <tr>
-                  <td><strong>${item.productoNombre || 'Sin nombre'}</strong></td>
-                  <td>${item.numeroLote || item.loteId.slice(0, 8)}</td>
-                  <td>${item.razon}</td>
-                  <td class="alert">-${item.cantidad}</td>
-                  <td>${money(item.costoTotal)}</td>
-                  <td>${formatDateTime(item.created_at)}</td>
-                </tr>
-              `).join('')}
-              ${wastes.length === 0 ? '<tr><td colspan="6" style="text-align:center;">Sin bajas registradas</td></tr>' : ''}
-            </tbody>
-          </table>
-
-          <div class="sec-title">Últimos Movimientos de Inventario (${movements.length})</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Tipo</th>
-                <th>Producto</th>
-                <th>Lote</th>
-                <th>Cantidad</th>
-                <th>Ubicación</th>
-                <th>Fecha y Hora</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${movements.map(item => `
-                <tr>
-                  <td><strong>${MOVEMENT_LABEL[item.tipo] || item.tipo}</strong></td>
-                  <td>${item.productoNombre || 'Sin nombre'}</td>
-                  <td>${item.numeroLote || item.loteId.slice(0, 8)}</td>
-                  <td>${item.cantidad}</td>
-                  <td>${item.ubicacionOrigen || '—'} → ${item.ubicacionDestino || '—'}</td>
-                  <td>${formatDateTime(item.created_at)}</td>
-                </tr>
-              `).join('')}
-              ${movements.length === 0 ? '<tr><td colspan="6" style="text-align:center;">Sin movimientos</td></tr>' : ''}
-            </tbody>
-          </table>
-
-          <div class="footer">
-            Documento oficial generado por Supermercado Karen S.A.
-          </div>
-        </body>
-        </html>
-      `;
-      printWindow.document.write(html);
-      printWindow.document.close();
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    }
-  };
-
-  const exportExcel = () => {
-    const lines: string[] = [];
-    lines.push('SUPERMERCADO KAREN S.A. - REPORTE DE MOVIMIENTOS Y MERMAS');
-    lines.push(`Fecha de emision,${new Date().toLocaleString('es-EC')}`);
-    lines.push('Sucursal,Matriz Guayaquil');
-    lines.push('');
-    lines.push('RESUMEN DE METRICAS');
-    lines.push(`Unidades Recibidas,${totals.ingresos}`);
-    lines.push(`Unidades Vendidas,${totals.ventas}`);
-    lines.push(`Unidades de Merma,${totals.mermas}`);
-    lines.push(`Costo Total de Merma,${totals.costoMerma.toFixed(2)}`);
-    lines.push('');
-    lines.push('BAJAS Y MERMAS');
-    lines.push('ID,Producto,Lote,Motivo,Cantidad,Costo Total,Responsable,Fecha');
-    wastes.forEach(item => {
-      lines.push(`"${item.id}","${(item.productoNombre || '').replace(/"/g, '""')}","${item.numeroLote || item.loteId}","${(item.razon || '').replace(/"/g, '""')}",-${item.cantidad},${Number(item.costoTotal || 0).toFixed(2)},"${(item.registradaPorNombre || '').replace(/"/g, '""')}","${item.created_at}"`);
-    });
-    lines.push('');
-    lines.push('MOVIMIENTOS DE INVENTARIO');
-    lines.push('ID,Tipo,Producto,Codigo Barras,Lote,Cantidad,Disponible Antes,Disponible Despues,Ubicacion Origen,Ubicacion Destino,Costo Unitario,PVP,Responsable,Fecha');
-    movements.forEach(item => {
-      lines.push(`"${item.id}","${item.tipo}","${(item.productoNombre || '').replace(/"/g, '""')}","${item.codigoBarras || ''}","${item.numeroLote || item.loteId}",${item.cantidad},${item.disponibleAntes},${item.disponibleDespues},"${item.ubicacionOrigen || ''}","${item.ubicacionDestino || ''}",${Number(item.costoUnitario || 0).toFixed(2)},${Number(item.precioVenta || 0).toFixed(2)},"${(item.actorNombre || '').replace(/"/g, '""')}","${item.created_at}"`);
-    });
-
-    const csvContent = '\uFEFF' + lines.join('\r\n');
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `reporte_bodega_karen_${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  // PDF y Excel (CSV): en el navegador se descargan o imprimen; en el teléfono abren la hoja de compartir.
+  const [exporting, setExporting] = useState<'pdf' | 'csv' | null>(null);
+  const exportReport = async (kind: 'pdf' | 'csv') => {
+    if (exporting) return;
+    setExporting(kind);
+    try {
+      const report = { totals, wastes, movements, issuedAt: new Date() };
+      if (kind === 'pdf') await exportPdfFile(buildReportHtml(report));
+      else await exportCsvFile(buildCsv(report), `reporte_bodega_karen_${new Date().toISOString().slice(0, 10)}.csv`);
+    } catch (cause: unknown) {
+      notify('No se pudo exportar el reporte', getErrorMessage(cause, 'Inténtalo de nuevo.'));
+    } finally {
+      setExporting(null);
     }
   };
 
@@ -218,20 +67,22 @@ export const ReportesScreen: React.FC = () => {
         <View style={styles.actionsBar}>
           <TouchableOpacity
             style={[styles.exportBtn, styles.pdfBtn]}
-            onPress={exportPDF}
+            onPress={() => void exportReport('pdf')}
+            disabled={exporting !== null}
             accessibilityRole="button"
             accessibilityLabel="Exportar PDF"
           >
-            <Ionicons name="document-text-outline" size={16} color="#FFFFFF" />
+            {exporting === 'pdf' ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="document-text-outline" size={16} color="#FFFFFF" />}
             <Text style={styles.exportBtnText}>PDF</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.exportBtn, styles.excelBtn]}
-            onPress={exportExcel}
+            onPress={() => void exportReport('csv')}
+            disabled={exporting !== null}
             accessibilityRole="button"
-            accessibilityLabel="Exportar Excel"
+            accessibilityLabel="Exportar a Excel (CSV)"
           >
-            <Ionicons name="grid-outline" size={16} color="#FFFFFF" />
+            {exporting === 'csv' ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="grid-outline" size={16} color="#FFFFFF" />}
             <Text style={styles.exportBtnText}>Excel</Text>
           </TouchableOpacity>
         </View>
