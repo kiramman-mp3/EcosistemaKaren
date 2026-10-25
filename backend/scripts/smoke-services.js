@@ -15,6 +15,10 @@ process.env.STORE_SERVICE_KEY = process.env.STORE_SERVICE_KEY || crypto.randomBy
 process.env.HEARTBEAT_ENABLED = 'false';
 process.env.CATALOG_SYNC_ENABLED = 'false';
 process.env.RESERVATION_QUEUE_ENABLED = 'false';
+// Las comprobaciones provocan 400/401 a propósito; con los límites normales, varias corridas seguidas
+// llegarían a 429 porque el contador de intentos fallidos se guarda en la base de datos.
+process.env.AUTH_RATE_LIMIT_MAX = '1000000';
+process.env.RATE_LIMIT_MAX = '1000000';
 
 const { testConnection, closePool } = require('../src/infrastructure/db/postgres');
 

@@ -19,8 +19,8 @@ async function setup(t) {
     return null;
   }
   const category = await pool.query('SELECT id FROM categorias ORDER BY id LIMIT 1');
-  const actor = await pool.query("SELECT id FROM usuarios WHERE rol = 'BODEGUERO' ORDER BY id LIMIT 1");
-  const customer = await pool.query("SELECT id, nombre FROM usuarios WHERE rol = 'CLIENTE' ORDER BY id LIMIT 1");
+  const actor = await pool.query("SELECT id FROM usuarios WHERE email = 'bodega@karen.com'");
+  const customer = await pool.query("SELECT id, nombre FROM usuarios WHERE email = 'cliente@karen.com'");
   if (!category.rowCount || !actor.rowCount || !customer.rowCount) {
     t.skip('Faltan semillas de categoría, bodeguero o cliente');
     return null;

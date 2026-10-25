@@ -198,7 +198,7 @@ test('vender el último stock reservado de un lote vencido no lo cambia a AGOTAD
 
   // El lote vence entre la reserva y el cobro en caja.
   await pool.query("UPDATE lotes SET estado = 'VENCIDO' WHERE id = $1", [lotId]);
-  const staff = (await pool.query("SELECT id FROM usuarios WHERE rol IN ('BODEGUERO', 'ADMIN') LIMIT 1")).rows[0];
+  const staff = (await pool.query("SELECT id FROM usuarios WHERE email = 'bodega@karen.com'")).rows[0];
   if (!staff) return t.skip('No hay un usuario de personal para confirmar');
   await store.confirmWithLockedStock(reservation.id, { id: staff.id, rol: 'BODEGUERO' });
 
