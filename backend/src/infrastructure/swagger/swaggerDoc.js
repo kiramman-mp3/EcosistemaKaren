@@ -74,6 +74,34 @@ const swaggerDocument = {
         }
       }
     },
+    '/products/{id}': {
+      patch: {
+        tags: ['Productos'],
+        summary: 'Cambiar el PVP de un producto (solo ADMIN)',
+        description: 'El cambio queda en la bitácora de precios. Las reservas ya hechas conservan el precio con el que se apartaron; el portal ve el nuevo PVP en la siguiente sincronización.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', required: ['precioVenta'], additionalProperties: false, properties: { precioVenta: { type: 'number', example: 2.75 } } } } }
+        },
+        responses: {
+          '200': { description: 'Producto actualizado y cambioPrecio { anterior, nuevo } (null si el precio no cambió)' },
+          '400': { description: 'Precio no válido' },
+          '403': { description: 'Solo el ADMIN cambia el PVP' },
+          '404': { description: 'Producto inexistente' }
+        }
+      }
+    },
+    '/products/{id}/price-history': {
+      get: {
+        tags: ['Productos'],
+        summary: 'Últimos cambios de PVP de un producto (solo ADMIN)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'precioAnterior, precioNuevo, origen (MANUAL o INGRESO_LOTE), loteId, actor y fecha' } }
+      }
+    },
     '/products/{id}/image': {
       put: {
         tags: ['Productos'],
@@ -204,7 +232,8 @@ const swaggerDocument = {
                   fechaCaducidad: { type: 'string', format: 'date', example: '2026-09-25' },
                   costoUnitario: { type: 'number', example: 1.25, description: 'Costo real de adquisición por unidad' },
                   cantidadIngresada: { type: 'integer', example: 50 },
-                  ubicacion: { type: 'string', enum: ['BODEGA', 'PERCHA'], example: 'BODEGA' }
+                  ubicacion: { type: 'string', enum: ['BODEGA', 'PERCHA'], example: 'BODEGA' },
+                  nuevoPrecioVenta: { type: 'number', example: 2.75, description: 'Opcional, solo ADMIN: nuevo PVP del producto, guardado en la misma transacción que el lote' }
                 }
               }
             }
@@ -683,6 +712,8 @@ function swaggerBasicAuth(username, password) {
 const OPERATION_OWNERS = [
   ['/categories', ['post'], 'store'],
   ['/products', ['post'], 'store'],
+  ['/products/{id}', null, 'store'],
+  ['/products/{id}/price-history', null, 'store'],
   ['/products/{id}/image', null, 'store'],
   ['/lots', null, 'store'],
   ['/lots/{id}/location', null, 'store'],

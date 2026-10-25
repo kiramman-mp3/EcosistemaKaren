@@ -125,6 +125,21 @@ Crea un nuevo producto en catálogo.
 }
 ```
 
+### `PATCH /products/:id`
+Cambia el PVP de un producto. Solo `ADMIN` y solo store-api; el portal lo recibe en la siguiente
+sincronización del catálogo (unos 15 s).
+* **Body Payload**: `{ "precioVenta": 2.75 }` (mayor a 0 y hasta 1.000.000; no admite otros campos).
+* **Respuesta (200)**: `{ "success": true, "data": <producto>, "cambioPrecio": { "anterior": 2.5, "nuevo": 2.75 } }`.
+  Si el precio es el mismo, `cambioPrecio` es `null` y no se anota nada.
+* Cada cambio queda en `productos_precio_historial` con el precio anterior, el nuevo, el origen (`MANUAL`), el
+  ADMIN que lo hizo y la fecha.
+* Las reservas ya hechas conservan el precio con el que se apartaron (`reserva_detalles.precio_unitario`).
+* Errores: `400` precio no válido, `401`/`403` sin sesión o sin rol ADMIN, `404` producto inexistente.
+
+### `GET /products/:id/price-history`
+Últimos 20 cambios de PVP del producto, del más reciente al más antiguo (`ADMIN`). Cada uno trae
+`precioAnterior`, `precioNuevo`, `origen` (`MANUAL` o `INGRESO_LOTE`), `loteId`, `actorNombre` y `created_at`.
+
 ### `PUT /products/:id/image`
 Sube o reemplaza la foto del producto (`ADMIN` o `BODEGUERO`; solo store-api). El cuerpo es la **foto en
 binario**, tal como sale de la cámara, con `Content-Type` `image/jpeg`, `image/png`, `image/webp`,
@@ -160,9 +175,13 @@ Registra un nuevo lote de producto recibido en bodega.
   "fechaCaducidad": "2026-09-05",
   "costoUnitario": 1.25,
   "cantidadIngresada": 50,
-  "ubicacion": "BODEGA"
+  "ubicacion": "BODEGA",
+  "nuevoPrecioVenta": 2.75
 }
 ```
+* `nuevoPrecioVenta` es opcional y solo lo puede enviar el `ADMIN` (un `BODEGUERO` recibe `403` y el lote no se
+  guarda). Se aplica en la misma transacción que el lote: si el lote falla, el precio no cambia. La respuesta
+  incluye `cambioPrecio: { anterior, nuevo }` y el cambio queda en la bitácora con origen `INGRESO_LOTE`.
 
 ### `PATCH /lots/:id/location`
 Actualiza la ubicación física del lote (`BODEGA` -> `PERCHA`).
