@@ -10,6 +10,8 @@
  */
 require('dotenv').config();
 const { spawn } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
@@ -23,6 +25,10 @@ const PORTAL_DB = process.env.PORTAL_DB_NAME;
 const SERVICE_KEY = crypto.randomBytes(24).toString('hex');
 const STAMP = Date.now();
 const PASSWORD = 'ClaveSegura123';
+// Carpeta de fotos propia de la prueba: no toca backend/public/media.
+const MEDIA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'karen-e2e-media-'));
+const PHOTO_NAME = `e2e-${STAMP}.jpg`;
+const PHOTO = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), crypto.randomBytes(2048)]);
 
 if (!PORTAL_DB || PORTAL_DB === STORE_DB) {
   console.error('Defina PORTAL_DB_NAME con una base distinta de DB_NAME para el portal.');
@@ -48,6 +54,8 @@ const serviceEnv = {
   PORTAL_URL: `http://127.0.0.1:${PORTAL_PORT}`,
   HEARTBEAT_TIMEOUT_SECONDS: '10',
   CATALOG_SYNC_INTERVAL_SECONDS: '5',
+  MEDIA_DIR,
+  MEDIA_SYNC_INTERVAL_SECONDS: '10',
   RESERVATION_SYNC_WAIT_SECONDS: '3',
   SWAGGER_ENABLED: 'false',
   RATE_LIMIT_MAX: '1000000',
@@ -109,9 +117,11 @@ async function provisionStore() {
   const staffEmail = `e2e.bodega.${STAMP}@example.test`;
   await storeDb.query("INSERT INTO usuarios (nombre, email, rol, password_hash) VALUES ('Bodega E2E', $1, 'BODEGUERO', $2)", [staffEmail, hash]);
   const category = (await storeDb.query('INSERT INTO categorias (nombre) VALUES ($1) RETURNING id', [`Categoría E2E ${STAMP}`])).rows[0].id;
+  fs.mkdirSync(path.join(MEDIA_DIR, 'productos'), { recursive: true });
+  fs.writeFileSync(path.join(MEDIA_DIR, 'productos', PHOTO_NAME), PHOTO);
   const product = (await storeDb.query(
-    "INSERT INTO productos (categoria_id, codigo_barras, nombre, precio_venta) VALUES ($1, $2, 'Producto E2E', 2.5) RETURNING id",
-    [category, String(STAMP).padStart(13, '7')]
+    "INSERT INTO productos (categoria_id, codigo_barras, nombre, precio_venta, imagen_url) VALUES ($1, $2, 'Producto E2E', 2.5, $3) RETURNING id",
+    [category, String(STAMP).padStart(13, '7'), `/api/v1/media/productos/${PHOTO_NAME}`]
   )).rows[0].id;
   const lot = (await storeDb.query(
     `INSERT INTO lotes (producto_id, numero_lote, fecha_elaboracion, fecha_caducidad, costo_unitario, cantidad_ingresada, cantidad_disponible)
@@ -137,6 +147,18 @@ async function run() {
   check('el lote creado en la tienda aparece en la disponibilidad del portal', Boolean(synced));
   const mirrored = (await portalDb.query('SELECT costo_unitario, fecha_elaboracion, cantidad_reservada FROM lotes WHERE id = $1', [data.lotId])).rows[0];
   check('no viajan costos, fecha de elaboración ni reservas al portal', mirrored && mirrored.costo_unitario === null && mirrored.fecha_elaboracion === null && mirrored.cantidad_reservada === 0);
+
+  console.log('');
+  console.log('Fotos de productos');
+  const photoUrl = `http://127.0.0.1:${PORTAL_PORT}/api/v1/media/productos/${PHOTO_NAME}`;
+  const photo = await waitFor(async () => {
+    const response = await fetch(photoUrl).catch(() => null);
+    return response && response.status === 200 ? response : null;
+  }, 45000);
+  check('la foto del producto llega al portal y se sirve como imagen', Boolean(photo) && photo.headers.get('content-type') === 'image/jpeg');
+  check('el portal sirve exactamente los bytes de la tienda', Boolean(photo) && Buffer.from(await photo.arrayBuffer()).equals(PHOTO));
+  check('una foto inexistente responde 404 en el portal', (await fetch(`http://127.0.0.1:${PORTAL_PORT}/api/v1/media/productos/no-existe.jpg`)).status === 404);
+  check('el portal no acepta fotos sin la clave de servicio', (await fetch(`http://127.0.0.1:${PORTAL_PORT}/internal/v1/store/sync/media?ruta=${encodeURIComponent('/api/v1/media/productos/x.jpg')}`, { method: 'PUT', body: PHOTO })).status === 401);
 
   console.log('\nCuentas');
   const registered = await portal('POST', '/auth/register', { nombre: 'Cliente E2E', email: `e2e.cliente.${STAMP}@example.test`, password: PASSWORD });
@@ -211,6 +233,7 @@ async function main() {
     await stopService('portal');
     await storeDb.end();
     await portalDb.end();
+    fs.rmSync(MEDIA_DIR, { recursive: true, force: true });
     const warnings = logs.join('').split('\n').filter(line => /Error no controlado|❌/.test(line)).slice(0, 5);
     if (warnings.length) {
       console.log('\nErrores no controlados en los servicios:');
