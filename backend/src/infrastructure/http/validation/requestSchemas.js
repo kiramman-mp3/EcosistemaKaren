@@ -119,6 +119,8 @@ const schemas = {
     offset: z.coerce.number().int().min(0).max(1_000_000).default(0)
   }),
   barcodeParams: z.strictObject({ barcode }),
+  // Parámetros desconocidos se ignoran (p. ej. los que añaden proxies o clientes para evitar la caché).
+  availabilityQuery: z.object({ productoId: emptyToUndefined(entityId.optional()) }),
   lotBody: z.strictObject({
     productoId: entityId,
     numeroLote: text(1, 50, 'El número de lote').regex(/^[\p{L}\p{N}._/-]+$/u, 'El número de lote contiene caracteres no válidos.'),

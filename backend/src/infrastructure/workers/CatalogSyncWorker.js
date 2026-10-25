@@ -5,7 +5,7 @@ const { SECTION_ORDER } = require('../sync/catalogSections');
 // envía las que cambiaron desde el último envío confirmado (o todas cada `resyncMs`, para que
 // el portal se recupere si perdió datos). Una falla se registra y el siguiente ciclo reintenta.
 class CatalogSyncWorker {
-  constructor({ reader, transport, intervalMs = 15000, resyncMs = 600000, clock = () => Date.now() }) {
+  constructor({ reader, transport, intervalMs = 15000, resyncMs = 600000, warnBytes = 2 * 1024 * 1024, clock = () => Date.now() }) {
     this.reader = reader;
     this.transport = transport;
     this.intervalMs = intervalMs;
@@ -16,6 +16,21 @@ class CatalogSyncWorker {
     this.version = 0;
     this.sent = new Map();
     this.consecutiveFailures = 0;
+    this.warnBytes = warnBytes;
+    this.warned = new Map();
+    // Tamaño (bytes) del último snapshot enviado de cada sección, para medir cuánto crece el catálogo.
+    this.stats = new Map();
+  }
+
+  // Avisa (como máximo una vez por hora y sección) si un snapshot se acerca al límite del canal interno;
+  // es la señal para pasar de snapshots completos a cambios parciales.
+  _watchSize(section, bytes, now) {
+    this.stats.set(section, bytes);
+    if (bytes < this.warnBytes) return;
+    const lastWarning = this.warned.get(section);
+    if (lastWarning !== undefined && now - lastWarning < 60 * 60 * 1000) return;
+    this.warned.set(section, now);
+    console.warn(`⚠️ El snapshot de '${section}' pesa ${(bytes / 1048576).toFixed(1)} MB; considere sincronizar solo los cambios.`);
   }
 
   _nextVersion() {
@@ -29,7 +44,9 @@ class CatalogSyncWorker {
     try {
       for (const section of SECTION_ORDER) {
         const items = await this.reader.read(section);
-        const hash = crypto.createHash('sha256').update(JSON.stringify(items)).digest('hex');
+        const serialized = JSON.stringify(items);
+        const hash = crypto.createHash('sha256').update(serialized).digest('hex');
+        this._watchSize(section, Buffer.byteLength(serialized), this.clock());
         const previous = this.sent.get(section);
         const now = this.clock();
         if (previous && previous.hash === hash && now - previous.at < this.resyncMs) continue;

@@ -19,9 +19,10 @@ class GetPublicLotAvailability {
     this.lotRepository = lotRepository;
   }
 
-  async execute() {
+  async execute({ productoId } = {}) {
     const lots = await this.lotRepository.findAllActive();
     return lots
+      .filter(lot => !productoId || lot.productoId === productoId)
       .filter(lot => lot.calcularDiasParaVencer() > 0 && lot.cantidadDisponible > 0)
       .map(lot => ({
         id: lot.id,

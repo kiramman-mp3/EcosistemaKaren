@@ -21,7 +21,7 @@ function catalogReadRoutes(router, { categoryController, productController, lotC
   router.get('/categories', (req, res, next) => categoryController.getCategories(req, res, next));
   router.get('/products', validate({ query: schemas.productQuery }), (req, res, next) => productController.getProducts(req, res, next));
   router.get('/products/barcode/:barcode', validate({ params: schemas.barcodeParams }), (req, res, next) => productController.getProductByBarcode(req, res, next));
-  router.get('/availability', (req, res, next) => lotController.getPublicAvailability(req, res, next));
+  router.get('/availability', validate({ query: schemas.availabilityQuery }), (req, res, next) => lotController.getPublicAvailability(req, res, next));
 }
 
 function catalogAdminRoutes(router, { categoryController, productController }, { authenticate, authorize }) {

@@ -126,7 +126,9 @@ function createSecurityMiddlewares(env = process.env, { pool = null } = {}) {
     windowMs: positiveInteger(env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     limit: positiveInteger(env.RATE_LIMIT_MAX, 300),
     message: 'Demasiadas solicitudes. Intente nuevamente más tarde.',
-    store: createStore('gen:'),
+    // En memoria por instancia: escribir un contador en PostgreSQL en cada petición de lectura cargaba la base
+    // sin proteger nada crítico. Los límites de autenticación, reservas e IA sí se comparten entre instancias.
+    store: undefined,
   });
   const auth = limiter({
     windowMs: positiveInteger(env.AUTH_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
