@@ -83,6 +83,32 @@ jobs:
       - run: npm run test:e2e-split
       - run: node --test test/schema-limits.test.js
 
+  # La imagen de producción compila, corre sin privilegios de root y el compose de ejemplo es válido.
+  backend-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t karen-backend backend
+      - name: La imagen no corre como root
+        run: test "$(docker run --rm --entrypoint id karen-backend -u)" != "0"
+      - name: El compose de ejemplo es válido
+        env:
+          DB_NAME: karen
+          DB_USER: karen
+          DB_PASSWORD: ci
+          STORE_JWT_SECRET: ci
+          STORE_SERVICE_KEY: ci
+          PORTAL_URL: https://portal.example
+          STORE_CORS_ORIGINS: http://tienda.local
+          STORE_BIND: 127.0.0.1
+          PORTAL_DB_NAME: karen_portal
+          PORTAL_DB_USER: karen_portal
+          PORTAL_DB_PASSWORD: ci
+          PORTAL_JWT_SECRET: ci
+          PORTAL_CORS_ORIGINS: https://portal.example
+          PORTAL_TRUST_PROXY_HOPS: 1
+        run: docker compose -f docker-compose.prod.example.yml --profile store --profile portal config -q
+
   portal-web:
     runs-on: ubuntu-latest
     defaults:

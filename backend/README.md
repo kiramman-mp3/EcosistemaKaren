@@ -169,6 +169,9 @@ consultas de inventario actúa además como protección inmediata entre barridos
 
 ## Seguridad HTTP en producción
 
+Despliegue, secretos, proxy, copias de seguridad y sondas (`/healthz`, `/readyz`): ver
+[docs/operacion.md](../docs/operacion.md).
+
 El backend incorpora Helmet, identificadores `X-Request-Id`, protección contra parameter
 pollution y prototype pollution, límite configurable para JSON y rate limiting por IP.
 Autenticación, reservas y generación con IA tienen límites adicionales independientes.

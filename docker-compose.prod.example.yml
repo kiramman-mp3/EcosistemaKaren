@@ -1,0 +1,109 @@
+# Ejemplo de despliegue (ADR-003). Cada servicio va en su propio equipo, con su propia base de datos:
+#
+#   en la tienda (red local):  docker compose -f docker-compose.prod.example.yml --env-file .env.store  --profile store  up -d
+#   en la nube (portal):       docker compose -f docker-compose.prod.example.yml --env-file .env.portal --profile portal up -d
+#
+# Diferencias con docker-compose.yml de desarrollo: sin pgAdmin, sin datos de demostración (las
+# cuentas se crean con `npm run user:create`), sin puertos de Postgres publicados y todos los
+# secretos obligatorios (`:?` aborta si falta alguno). Las contraseñas no tienen valor por defecto.
+# Copiar a un archivo propio y ajustar; ver docs/operacion.md.
+name: karen
+
+x-backend: &backend
+  build: ./backend
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  store_db:
+    profiles: ["store"]
+    image: postgres:14-alpine@sha256:727876d274666da0b92a445390ba093c84b8e9f8343e1c53cd4e9a7ab2d85310
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?}
+      POSTGRES_USER: ${DB_USER:?}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?}
+    volumes:
+      - store_data:/var/lib/postgresql/data
+      # Solo el esquema. No se monta init-db/dev (cuentas con contraseña conocida).
+      - ./backend/init-db/store:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  store_api:
+    <<: *backend
+    profiles: ["store"]
+    command: ["node", "index.store.js"]
+    depends_on:
+      store_db: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      STORE_PORT: 4000
+      HEALTHCHECK_PORT: 4000
+      DB_HOST: store_db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:?}
+      DB_USER: ${DB_USER:?}
+      DB_PASSWORD: ${DB_PASSWORD:?}
+      JWT_SECRET: ${STORE_JWT_SECRET:?}
+      STORE_SERVICE_KEY: ${STORE_SERVICE_KEY:?}
+      PORTAL_URL: ${PORTAL_URL:?}
+      CORS_ORIGINS: ${STORE_CORS_ORIGINS:?}
+      TRUST_PROXY_HOPS: ${STORE_TRUST_PROXY_HOPS:-0}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      # IP de la tienda en la red local; nunca 0.0.0.0 si el equipo tiene salida pública.
+      - "${STORE_BIND:?}:4000:4000"
+
+  portal_db:
+    profiles: ["portal"]
+    image: postgres:14-alpine@sha256:727876d274666da0b92a445390ba093c84b8e9f8343e1c53cd4e9a7ab2d85310
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PORTAL_DB_NAME:?}
+      POSTGRES_USER: ${PORTAL_DB_USER:?}
+      POSTGRES_PASSWORD: ${PORTAL_DB_PASSWORD:?}
+    volumes:
+      - portal_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  portal_api:
+    <<: *backend
+    profiles: ["portal"]
+    command: ["node", "index.portal.js"]
+    depends_on:
+      portal_db: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      PORTAL_PORT: 4001
+      HEALTHCHECK_PORT: 4001
+      PORTAL_DB_HOST: portal_db
+      PORTAL_DB_PORT: 5432
+      PORTAL_DB_NAME: ${PORTAL_DB_NAME:?}
+      PORTAL_DB_USER: ${PORTAL_DB_USER:?}
+      PORTAL_DB_PASSWORD: ${PORTAL_DB_PASSWORD:?}
+      JWT_SECRET: ${PORTAL_JWT_SECRET:?}
+      STORE_SERVICE_KEY: ${STORE_SERVICE_KEY:?}
+      CORS_ORIGINS: ${PORTAL_CORS_ORIGINS:?}
+      # Cuántos proxies (balanceador, CDN) hay delante; ver docs/operacion.md.
+      TRUST_PROXY_HOPS: ${PORTAL_TRUST_PROXY_HOPS:?}
+    ports:
+      # Detrás de un proxy inverso con TLS; el portal no se publica directamente.
+      - "127.0.0.1:4001:4001"
+
+volumes:
+  store_data:
+  portal_data:
