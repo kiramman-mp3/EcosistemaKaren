@@ -212,6 +212,17 @@ export const api = {
     return res.data.data;
   },
 
+  /**
+   * Suma tiempo a una reserva por retirar. La tienda confirma el nuevo vencimiento y el servidor puede tardar
+   * hasta ~8 s en recibir su respuesta, por eso el plazo es mayor que el de las demás solicitudes.
+   */
+  async extendReservation(id: string, minutosAdicionales: number): Promise<BackendReservation> {
+    const res = await apiClient.post<{ success: boolean; data: BackendReservation }>(
+      `/reservations/${encodeURIComponent(id)}/extend`, { minutosAdicionales }, { timeout: 15000 }
+    );
+    return res.data.data;
+  },
+
   async getUserReservations(userId: string): Promise<BackendReservation[]> {
     const res = await apiClient.get<{ success: boolean; data: BackendReservation[] }>(`/reservations/user/${userId}`);
     return res.data.data || [];
