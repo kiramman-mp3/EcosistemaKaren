@@ -19,5 +19,11 @@
   "plugins": [
     "expo-secure-store",
     "expo-font"
-  ]
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "6e2be6bb-f6c9-42cd-87ad-ac2c314f67a0"
+    }
+  },
+  "owner": "kiramman"
 }

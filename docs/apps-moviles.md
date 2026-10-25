@@ -39,13 +39,29 @@ depuración que genera Expo: sirve para instalar en tus teléfonos, **no** para 
 `-PreactNativeArchitectures=arm64-v8a` compila solo para teléfonos de 64 bits (casi todos); quítalo para
 incluir también 32 bits y emuladores x86.
 
+
 ## iOS (.ipa)
 
-Xcode solo existe en macOS, así que desde Windows se compila en GitHub Actions:
-**Actions > Build iOS IPA > Run workflow** (`.github/workflows/build-ios-ipa.yml`). El runner de macOS
-ejecuta `expo prebuild`, archiva con Xcode **sin firmar** y publica el `.ipa` como artefacto (14 días).
-Ese `.ipa` se instala con AltStore o Sideloadly, que lo firman con tu Apple ID; con un Apple ID gratuito
-la firma caduca a los 7 días y hay que renovarla desde AltStore.
+Xcode solo existe en macOS, así que desde Windows se compila en la nube. La vía principal es un
+**build personalizado de EAS** (`frontend/portal-mobile-reactnative/.eas/build/ios-altstore.yml`): corre
+`expo prebuild` y `xcodebuild archive` **sin firmar** en un Mac de Expo y publica el `.ipa`. Como no firma,
+no necesita cuenta de pago de Apple ni credenciales en EAS. Se instala con AltStore o Sideloadly, que lo
+firman con tu Apple ID; con un Apple ID gratuito la firma caduca a los 7 días y hay que renovarla.
 
-Si algún día se publica en App Store/TestFlight, hará falta una cuenta de pago del Apple Developer Program
-y compilar con EAS Build (`eas build -p ios`), que gestiona los certificados.
+```bash
+cd frontend/portal-mobile-reactnative
+npx eas-cli login                          # una sola vez
+npx eas-cli build -p ios -e ios-altstore
+```
+
+El enlace del `.ipa` aparece en la salida y en expo.dev (proyecto `portal-mobile-karen`). El perfil
+`ios-altstore` de `eas.json` fija `KAREN_ALLOW_CLEARTEXT=1` y `EXPO_PUBLIC_SERVER_CONFIG=1`.
+
+EAS solo sube lo que está **commiteado**. La regla `build/` del `.gitignore` raíz ocultaba `.eas/build/`;
+por eso hay una excepción `!**/.eas/build/`. Si el build falla en `PARSE_CUSTOM_WORKFLOW_CONFIG` con
+"ENOENT … ios-altstore.yml", el archivo no llegó a EAS.
+
+Alternativa sin cuenta de EAS: el workflow de GitHub Actions **Build iOS IPA**
+(`.github/workflows/build-ios-ipa.yml`, se lanza a mano en Actions > Run workflow) hace lo mismo en un runner
+de macOS. Para publicar en App Store/TestFlight haría falta una cuenta de pago del Apple Developer Program y un
+`eas build -p ios` normal, que gestiona los certificados.

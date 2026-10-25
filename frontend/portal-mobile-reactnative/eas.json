@@ -1,0 +1,19 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "ios-altstore": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true,
+        "config": "ios-altstore.yml"
+      },
+      "env": {
+        "KAREN_ALLOW_CLEARTEXT": "1",
+        "EXPO_PUBLIC_SERVER_CONFIG": "1"
+      }
+    }
+  }
+}
