@@ -61,6 +61,9 @@ function readServiceConfig({ store, portal }, env = process.env) {
     catalogResyncMs: positiveSeconds(env.CATALOG_RESYNC_SECONDS, 600, 30) * 1000,
     // Debe ser mayor que el reenvío completo: las secciones sin cambios solo se reenvían entonces.
     catalogStaleSeconds: positiveSeconds(env.CATALOG_STALE_SECONDS, 1200, 60),
+    // Limpieza periódica de tablas de apoyo y días que se conservan los comandos de reserva ya resueltos.
+    maintenanceIntervalMs: boundedSeconds(env.MAINTENANCE_INTERVAL_MINUTES, 60, 1, 1440) * 60 * 1000,
+    retentionDays: boundedSeconds(env.RETENTION_DAYS, 30, 1, 3650),
     // Cuánto espera portal-api la respuesta de la tienda antes de devolver la reserva como PENDIENTE_SYNC.
     reservationSyncWaitMs: boundedSeconds(env.RESERVATION_SYNC_WAIT_SECONDS, 8, 0, 25) * 1000
   };

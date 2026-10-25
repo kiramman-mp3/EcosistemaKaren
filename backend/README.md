@@ -152,6 +152,8 @@ Configuración del canal tienda → portal:
 | `CATALOG_STALE_SECONDS` | portal-api | Antigüedad a partir de la cual la copia se marca como vieja (1200, mínimo 60; mayor que el reenvío completo). |
 | `INTERNAL_BODY_LIMIT` | portal-api | Tamaño máximo de un snapshot (`10mb`). |
 
+| `MAINTENANCE_INTERVAL_MINUTES` | ambos | Cada cuánto se limpian tokens revocados vencidos, contadores de límite de tasa vencidos y (portal) comandos resueltos (60, entre 1 y 1440). |
+| `RETENTION_DAYS` | portal-api | Días que se conservan los comandos de reserva resueltos antes de borrarlos (30). Las reservas no se borran. |
 | `RESERVATION_QUEUE_ENABLED` | store-api | `false` desactiva la atención de reservas del portal. |
 | `RESERVATION_POLL_WAIT_SECONDS` | store-api | Espera del long-poll con el que pide comandos al portal (25, entre 5 y 30). |
 | `RESERVATION_SYNC_WAIT_SECONDS` | portal-api | Cuánto espera la respuesta de la tienda antes de responder `202` (8, entre 0 y 25). |
