@@ -24,6 +24,12 @@ test('store-api expone inventario, caja, alertas y administración de promocione
   }
 });
 
+test('el ADMIN cancela desde la tienda y el cliente desde el portal, con la ruta registrada una sola vez en el monolito', () => {
+  assert.ok(store.includes('POST /reservations/:id/cancel'), 'store-api debe permitir al ADMIN cancelar');
+  assert.ok(portal.includes('POST /reservations/:id/cancel'));
+  assert.equal(monolith.filter(route => route === 'POST /reservations/:id/cancel').length, 1);
+});
+
 test('store-api no recibe reservas de clientes', () => {
   assert.ok(!store.includes('POST /reservations'));
   assert.ok(!store.includes('GET /reservations/user/:userId'));
