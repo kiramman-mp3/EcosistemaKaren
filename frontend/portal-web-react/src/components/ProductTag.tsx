@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Check, Plus, Flame, Sparkles, Clock, ShieldAlert } from 'lucide-react';
+import { Check, Plus } from 'lucide-react';
 import { FlashOffer, Product } from '../types';
 import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui/Tag';
 import { Button } from './ui/Button';
@@ -56,21 +56,6 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
           </span>
         )}
 
-        {/* Badges de Más vendido o Nuevo */}
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 pointer-events-none">
-          {product.isBestSeller && (
-            <span className="inline-flex items-center gap-1 rounded-tag bg-naranja border border-mora/60 px-2 py-0.5 text-[11px] font-extrabold text-mora shadow-pop-xs">
-              <Flame className="w-3 h-3 text-karen-text fill-karen-text" />
-              Más vendido
-            </span>
-          )}
-          {product.isNew && (
-            <span className="inline-flex items-center gap-1 rounded-tag bg-aguacate-solid border border-mora/60 px-2 py-0.5 text-[11px] font-extrabold text-white shadow-pop-xs">
-              <Sparkles className="w-3 h-3 text-limon" />
-              Nuevo
-            </span>
-          )}
-        </div>
       </div>
 
       <div className="flex flex-1 flex-col px-1.5 pt-3 pb-1">
@@ -87,12 +72,6 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
               title={`Pasillo: ${product.category}`}
               aria-label={`Color de pasillo: ${product.category}`}
             />
-          )}
-          {offer && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-karen-text bg-karen-tint px-2 py-0.5 rounded-tag border border-karen/25">
-              <ShieldAlert className="w-3 h-3" />
-              Máx {offer.maxUnitsPerOrder || product.maxOfferLimit || 3} un.
-            </span>
           )}
         </div>
 
@@ -112,10 +91,6 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
         {offer && (
           <div className="mt-2 space-y-1">
             <ExpiryStamp date={offer.expiresOn} />
-            <div className="flex items-center gap-1 text-[11px] font-bold text-ink-muted">
-              <Clock className="w-3 h-3 text-karen-text" />
-              <span>{offer.timeLimitText || 'Oferta por tiempo limitado'}</span>
-            </div>
           </div>
         )}
 
@@ -183,10 +158,6 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
               <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
               {offer.category}
             </span>
-            <span className="inline-flex items-center gap-1 bg-white/90 text-mora px-2 py-0.5 rounded-tag text-[11px] font-extrabold border border-mora/20">
-              <ShieldAlert className="w-3 h-3 text-karen-text" />
-              Máx {offer.maxUnitsPerOrder || 3} un.
-            </span>
           </div>
 
           <h3 className="font-display text-lg font-extrabold leading-snug line-clamp-2">{offer.productName || offer.title}</h3>
@@ -201,7 +172,7 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
           <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
             <ExpiryStamp date={offer.expiresOn} onColor />
             <span className="text-sm font-bold tabular">
-              Stock oferta: {offer.stockAvailable} {offer.stockLimit ? `/ ${offer.stockLimit}` : ''}
+              Stock oferta: {offer.stockAvailable}
             </span>
           </div>
 
@@ -217,11 +188,7 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
             <div className="h-full rounded-full bg-karen transition-[width] duration-700" style={{ width: `${soldPercent}%` }} />
           </div>
 
-          <div className="mt-2 flex items-center justify-between text-xs font-semibold opacity-90">
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-karen-text" />
-              {offer.timeLimitText || 'Tiempo límite hoy'}
-            </span>
+          <div className="mt-2 text-right text-xs font-semibold opacity-90">
             <span>{soldPercent}% asignado</span>
           </div>
 

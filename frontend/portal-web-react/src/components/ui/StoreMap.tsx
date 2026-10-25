@@ -95,7 +95,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({ className = '', showTitle = 
             rel="noopener noreferrer"
             className="flex-1 min-w-[140px]"
           >
-            <Button variant="primary" size="sm" className="w-full justify-center">
+            <Button variant="primary" className="w-full justify-center">
               <Navigation className="w-3.5 h-3.5" />
               <span>Google Maps</span>
               <ExternalLink className="w-3 h-3 ml-auto opacity-70" />
@@ -107,7 +107,7 @@ export const StoreMap: React.FC<StoreMapProps> = ({ className = '', showTitle = 
             rel="noopener noreferrer"
             className="flex-1 min-w-[140px]"
           >
-            <Button variant="surface" size="sm" className="w-full justify-center">
+            <Button variant="surface" className="w-full justify-center">
               <Navigation className="w-3.5 h-3.5 text-[#33CCFF]" />
               <span>Abrir en Waze</span>
               <ExternalLink className="w-3 h-3 ml-auto opacity-70" />

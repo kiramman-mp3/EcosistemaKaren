@@ -75,7 +75,7 @@ export const App: React.FC = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
-  const [termsCategory, setTermsCategory] = useState<'todos' | 'reservas' | 'privacidad'>('todos');
+  const [termsCategory, setTermsCategory] = useState<'todos' | 'privacidad' | 'reservas' | 'fefo' | 'pagos'>('todos');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Un solo temporizador: un toast nuevo no debe cerrarse por el temporizador del anterior.
@@ -144,7 +144,7 @@ export const App: React.FC = () => {
       }
       setStockByProduct(stockMap);
 
-      const mappedProducts: Product[] = pageRes.items.map((bp, idx) => {
+      const mappedProducts: Product[] = pageRes.items.map(bp => {
         const catName = categoryById.get(bp.categoriaId) || 'Sin categoría';
         return {
           id: bp.id,
@@ -157,8 +157,6 @@ export const App: React.FC = () => {
           unit: 'Unidad',
           description: describe(bp.descripcion),
           barcode: bp.codigoBarras,
-          isBestSeller: idx % 3 === 0,
-          isNew: idx % 5 === 1,
         };
       });
       setProducts(mappedProducts);
@@ -187,9 +185,6 @@ export const App: React.FC = () => {
           loteId: promo.loteId,
           productId: product.id,
           razonIa: promo.razonIa,
-          maxUnitsPerOrder: 3,
-          stockLimit: lot.cantidadDisponible,
-          timeLimitText: 'Hasta 21:00',
         }];
       });
       setOffers(mappedOffers);
@@ -248,7 +243,7 @@ export const App: React.FC = () => {
       });
       setTotalProducts(res.total);
       const categoryById = new Map(backendCategories.map(c => [c.id, c.nombre]));
-      const mappedProducts: Product[] = res.items.map((bp, idx) => {
+      const mappedProducts: Product[] = res.items.map(bp => {
         const catName = categoryById.get(bp.categoriaId) || 'Sin categoría';
         return {
           id: bp.id,
@@ -261,8 +256,6 @@ export const App: React.FC = () => {
           unit: 'Unidad',
           description: describe(bp.descripcion),
           barcode: bp.codigoBarras,
-          isBestSeller: (idx + page * pageSize) % 3 === 0,
-          isNew: (idx + page * pageSize) % 5 === 1,
         };
       });
       setProducts(mappedProducts);
@@ -311,16 +304,9 @@ export const App: React.FC = () => {
 
   const handleAddToCart = (product: Product, { silent = false } = {}) => {
     if (product.stock <= 0) return;
-    const maxAllowed = product.isOffer && product.maxOfferLimit
-      ? Math.min(product.stock, product.maxOfferLimit)
-      : product.stock;
     const existing = cart.find(item => item.product.id === product.id);
-    if (existing && existing.quantity >= maxAllowed) {
-      if (product.isOffer && product.maxOfferLimit && existing.quantity >= product.maxOfferLimit) {
-        showToast(`Límite por oferta: máximo ${product.maxOfferLimit} unidades de ${product.name}.`);
-      } else {
-        showToast(`Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
-      }
+    if (existing && existing.quantity >= product.stock) {
+      showToast(`Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
       return;
     }
     setCart(prev => existing
@@ -333,10 +319,7 @@ export const App: React.FC = () => {
     setCart(prev => prev
       .map(item => {
         if (item.product.id !== productId) return item;
-        const maxAllowed = item.product.isOffer && item.product.maxOfferLimit
-          ? Math.min(item.product.stock, item.product.maxOfferLimit)
-          : item.product.stock;
-        const next = Math.min(item.quantity + delta, maxAllowed);
+        const next = Math.min(item.quantity + delta, item.product.stock);
         return next > 0 ? { ...item, quantity: next } : null;
       })
       .filter(Boolean) as CartItem[]);
@@ -446,9 +429,6 @@ export const App: React.FC = () => {
       price: offer.price,
       originalPrice: offer.originalPrice,
       stock: offer.stockAvailable,
-      maxOfferLimit: offer.maxUnitsPerOrder || 3,
-      offerStockLimit: offer.stockLimit,
-      offerTimeLimit: offer.timeLimitText,
       badge: offer.discountBadge,
     });
   };

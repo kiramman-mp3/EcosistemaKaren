@@ -236,29 +236,14 @@ export const api = {
     }
   },
 
-  async consultReservationByCode(code: string): Promise<BackendReservation> {
-    try {
-      const res = await apiClient.get<{ success: boolean; data: BackendReservation }>(`/reservations/consult/${encodeURIComponent(code.trim().toUpperCase())}`);
-      return res.data.data;
-    } catch (err: any) {
-      if (err.response?.data?.message) {
-        throw new Error(err.response.data.message);
-      }
-      throw new Error('No se pudo consultar el código de reserva ingresado.');
-    }
-  },
-
   async extendReservation(id: string, minutosAdicionales = 30): Promise<BackendReservation> {
     try {
       const res = await apiClient.post<{ success: boolean; data: BackendReservation }>(`/reservations/${encodeURIComponent(id)}/extend`, {
         minutosAdicionales
       });
       return res.data.data;
-    } catch (err: any) {
-      if (err.response?.data?.message) {
-        throw new Error(err.response.data.message);
-      }
-      throw new Error('No se pudo extender el tiempo de la reserva.');
+    } catch (err: unknown) {
+      throw new Error(getServerMessage(err) ?? 'No se pudo extender el tiempo de la reserva.');
     }
   },
 

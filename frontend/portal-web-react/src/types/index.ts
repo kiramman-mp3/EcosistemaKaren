@@ -19,11 +19,6 @@ export interface Product {
   promotionId?: string;
   offerLotId?: string;
   isOffer?: boolean;
-  isNew?: boolean;
-  isBestSeller?: boolean;
-  maxOfferLimit?: number;
-  offerStockLimit?: number;
-  offerTimeLimit?: string;
 }
 
 export interface FlashOffer {
@@ -44,9 +39,6 @@ export interface FlashOffer {
   loteId?: string;
   productId?: string;
   razonIa?: string;
-  maxUnitsPerOrder?: number;
-  stockLimit?: number;
-  timeLimitText?: string;
 }
 
 export interface CategoryItem {

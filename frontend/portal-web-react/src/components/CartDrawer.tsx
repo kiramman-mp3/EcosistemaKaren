@@ -70,9 +70,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <div className="flex-1 overflow-y-auto px-4 pt-4">
               <ul className="space-y-3">
                 {items.map(({ product, quantity }) => {
-                  const maxOffer = product.isOffer && product.maxOfferLimit ? product.maxOfferLimit : undefined;
-                  const maxAllowed = maxOffer ? Math.min(product.stock, maxOffer) : product.stock;
-                  const isAtLimit = quantity >= maxAllowed;
+                  const isAtLimit = quantity >= product.stock;
 
                   return (
                     <li key={product.id} className="flex gap-3 p-3 rounded-block bg-surface border-2 border-aisle-rule animate-fly-in">
@@ -84,16 +82,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-extrabold font-display text-ink leading-snug line-clamp-2">{product.name}</p>
-                        {product.isOffer && (
-                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                            <span className="text-xs font-bold text-karen-text">Precio de oferta</span>
-                            {maxOffer && (
-                              <span className="text-[10px] font-black uppercase tracking-wider text-mora bg-limon px-1.5 py-0.5 rounded-full">
-                                Máx. {maxOffer} un.
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        {product.isOffer && <p className="text-xs font-bold text-karen-text">Precio de oferta</p>}
                         <div className="mt-2 flex items-center justify-between gap-2">
                           <div className="flex items-center rounded-full border-2 border-mora">
                             <button
@@ -109,7 +98,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                               disabled={isAtLimit}
                               className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-ink rounded-full hover:bg-limon hover:text-mora disabled:text-ink-faint disabled:hover:bg-transparent"
                               aria-label={`Agregar una unidad de ${product.name}`}
-                              title={isAtLimit ? (maxOffer ? `Límite de oferta: máx. ${maxOffer}` : 'Sin más stock') : undefined}
+                              title={isAtLimit ? 'Sin más stock' : undefined}
                             >
                               <Plus className="w-4 h-4" />
                             </button>
