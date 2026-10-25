@@ -27,7 +27,7 @@ En **Catálogo**, el ADMIN y el BODEGUERO tocan la miniatura de un producto para
 galería. La app reduce la foto en el teléfono (lado largo 1280 px, JPEG al 75 %) antes de subirla —una foto de cámara de 10 MB
 sale en ~300 KB— y el servidor la vuelve a comprimir (máx. 1024 px), la guarda y la sincroniza con el portal.
 
-Usa los módulos nativos  y : **hay que volver a compilar el APK** de bodega para tener
+Usa los módulos nativos `expo-image-picker` y `expo-image-manipulator`: **hay que volver a compilar el APK** de bodega para tener
 esta función (un APK anterior no la trae). El permiso de cámara ya lo pedía la app para escanear códigos.
 
 ## Android (.apk)
