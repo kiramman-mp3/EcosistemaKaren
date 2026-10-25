@@ -434,6 +434,26 @@ class PostgresLotRepository {
     return result.rows;
   }
 
+  /** Unidades recibidas y vendidas (movimientos) y merma con su costo (bajas) entre desde y hasta, ambos incluidos. */
+  async summarizeInventory({ desde, hasta }) {
+    const [movements, wastes] = await Promise.all([
+      this.pool.query(`
+        SELECT COALESCE(SUM(cantidad) FILTER (WHERE tipo = 'INGRESO'), 0)::int AS ingresos,
+               COALESCE(SUM(cantidad) FILTER (WHERE tipo = 'VENTA'), 0)::int AS ventas
+        FROM inventario_movimientos
+        WHERE created_at >= $1 AND created_at <= $2
+      `, [desde, hasta]),
+      this.pool.query(`
+        SELECT COALESCE(SUM(cantidad), 0)::int AS mermas,
+               COALESCE(SUM(costo_total), 0)::float8 AS "costoMerma"
+        FROM mermas
+        WHERE created_at >= $1 AND created_at <= $2
+      `, [desde, hasta])
+    ]);
+    const { costoMerma, mermas } = wastes.rows[0];
+    return { ...movements.rows[0], mermas, costoMerma: Math.round(costoMerma * 100) / 100 };
+  }
+
   async _lockLot(client, lotId) {
     const result = await client.query(`
       SELECT id, producto_id as "productoId", numero_lote as "numeroLote", fecha_elaboracion as "fechaElaboracion",

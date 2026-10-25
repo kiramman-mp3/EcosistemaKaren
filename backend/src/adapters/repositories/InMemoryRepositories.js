@@ -343,6 +343,18 @@ class InMemoryRepositories {
             costoUnitario: lot?.costoUnitario, fechaElaboracion: lot?.fechaElaboracion,
             fechaCaducidad: lot?.fechaCaducidad };
         }),
+      summarizeInventory: async ({ desde, hasta }) => {
+        const inRange = item => new Date(item.created_at) >= desde && new Date(item.created_at) <= hasta;
+        const sum = (list, pick) => list.reduce((total, item) => total + (Number(pick(item)) || 0), 0);
+        const movements = this.movements.filter(inRange);
+        const wastes = this.wastes.filter(inRange);
+        return {
+          ingresos: sum(movements.filter(m => m.tipo === 'INGRESO'), m => m.cantidad),
+          ventas: sum(movements.filter(m => m.tipo === 'VENTA'), m => m.cantidad),
+          mermas: sum(wastes, w => w.cantidad),
+          costoMerma: Math.round(sum(wastes, w => w.costoTotal) * 100) / 100
+        };
+      },
       findWastes: async ({ loteId, limit } = {}) => this.wastes
         .filter(w => !loteId || w.loteId === loteId)
         .slice(-(Math.min(Number(limit) || 100, 500))).reverse()

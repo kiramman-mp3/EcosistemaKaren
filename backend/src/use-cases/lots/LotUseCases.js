@@ -171,6 +171,36 @@ class GetWastes {
   }
 }
 
+// Días que abarca cada período del resumen, contados como días completos del negocio: "hoy" empieza
+// a la medianoche de hoy y "7d" a la de hace seis días, así un período siempre incluye el día en curso.
+const SUMMARY_PERIOD_DAYS = Object.freeze({ hoy: 1, '7d': 7, '30d': 30 });
+
+/** Inicio del período en la zona horaria del negocio (process.env.TZ). */
+function summaryPeriodStart(periodo, now = new Date()) {
+  const days = SUMMARY_PERIOD_DAYS[periodo];
+  if (!days) throw new ValidationException('El período debe ser hoy, 7d o 30d.');
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
+}
+
+class GetInventorySummary {
+  constructor(lotRepository, clock = () => new Date()) {
+    this.lotRepository = lotRepository;
+    this.clock = clock;
+  }
+
+  // Totales del mismo período para todas las cifras: antes el reporte sumaba las ventas de los últimos
+  // 200 movimientos (horas) y la merma de las últimas 200 bajas (semanas), que no se podían comparar.
+  async execute({ periodo = '7d' } = {}, actor) {
+    if (!actor || !['BODEGUERO', 'PERCHERO', 'ADMIN'].includes(actor.rol)) {
+      throw new ForbiddenException('No tiene autorización para consultar el resumen de inventario.');
+    }
+    const hasta = this.clock();
+    const desde = summaryPeriodStart(periodo, hasta);
+    const totals = await this.lotRepository.summarizeInventory({ desde, hasta });
+    return { periodo, desde: desde.toISOString(), hasta: hasta.toISOString(), ...totals };
+  }
+}
+
 function validateAuditFilters(filters = {}, allowType) {
   const result = {};
   if (filters.loteId) {
@@ -276,6 +306,9 @@ module.exports = {
   RegisterMerma,
   GetInventoryMovements,
   GetWastes,
+  GetInventorySummary,
+  summaryPeriodStart,
+  SUMMARY_PERIOD_DAYS,
   ObtenerAlertasCaducidad,
   AtenderAlertaCaducidad,
   ExpireLots

@@ -151,6 +151,9 @@ const schemas = {
     tipo: emptyToUndefined(z.enum(['INGRESO', 'TRASLADO', 'MERMA', 'RESERVA', 'LIBERACION', 'VENTA', 'VENCIMIENTO', 'AJUSTE']).optional()),
     limit: z.coerce.number().int().min(1).max(500).default(100)
   }),
+  summaryQuery: z.strictObject({
+    periodo: z.enum(['hoy', '7d', '30d'], 'El período debe ser hoy, 7d o 30d.').default('7d')
+  }),
   wasteQuery: z.strictObject({
     loteId: emptyToUndefined(z.string().uuid('El filtro loteId debe ser un UUID válido.').optional()),
     limit: z.coerce.number().int().min(1).max(500).default(100)

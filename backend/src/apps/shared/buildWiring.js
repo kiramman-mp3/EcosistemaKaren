@@ -22,7 +22,7 @@ const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
 const { GetProducts, GetProductByBarcode, CreateProduct, SetProductImage } = require('../../use-cases/products/ProductUseCases');
-const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
+const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, GetInventorySummary, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
 const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, ExtendReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const {
   GenerarPromocionesIA,
@@ -162,7 +162,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       updateLotLocationUC: new UpdateLotLocation(lotRepo),
       registerMermaUC: new RegisterMerma(lotRepo),
       getInventoryMovementsUC: new GetInventoryMovements(lotRepo),
-      getWastesUC: new GetWastes(lotRepo)
+      getWastesUC: new GetWastes(lotRepo),
+      getInventorySummaryUC: new GetInventorySummary(lotRepo)
     };
     // Con la tienda separada del portal, atiende las reservas que éste le encarga y le avisa los cambios.
     const storeChannel = !portal && pool && serviceConfig.reservationQueueEnabled
@@ -242,7 +243,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     lotUseCases.updateLotLocationUC,
     lotUseCases.registerMermaUC,
     lotUseCases.getInventoryMovementsUC,
-    lotUseCases.getWastesUC
+    lotUseCases.getWastesUC,
+    lotUseCases.getInventorySummaryUC
   );
 
   controllers.reservationController = portalReservations
