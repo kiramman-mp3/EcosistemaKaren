@@ -108,9 +108,6 @@ aprobadas) y todas cada `CATALOG_RESYNC_SECONDS`. Los costos, ubicaciones, reser
 no salen de la tienda. `GET /api/v1/catalog/status` del portal indica si la copia está
 desactualizada.
 
-Las imágenes locales de productos (`/api/v1/media/...`) no se sincronizan: la carpeta
-`public/media` debe existir también en el portal.
-
 ### Reservas entre portal y tienda
 
 Con base separada, `POST /reservations` en portal-api guarda la reserva como `PENDIENTE_SYNC` y
