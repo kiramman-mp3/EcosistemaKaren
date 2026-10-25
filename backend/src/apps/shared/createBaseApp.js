@@ -7,6 +7,7 @@ require('dotenv').config();
 const { testConnection, getPool } = require('../../infrastructure/db/postgres');
 const { runMigrations } = require('../../infrastructure/db/migrations');
 const { createSecurityMiddlewares, validateProductionSecurity, cookieCsrfProtection } = require('../../infrastructure/http/middlewares/security');
+const { assertNoDefaultAccounts } = require('../../infrastructure/security/defaultAccounts');
 
 // Pila HTTP común a store-api y portal-api: base de datos, cabeceras de seguridad, CORS,
 // límites de tasa, parseo de cuerpo y protección CSRF.
@@ -24,6 +25,8 @@ async function createBaseApp({ database = 'store', migrations = ['store'] } = {}
   if (dbConnected) {
     pool = getPool(database);
     await runMigrations(pool, { targets: migrations });
+    // En producción no se arranca con cuentas de demostración que aún aceptan su contraseña conocida.
+    await assertNoDefaultAccounts(pool);
   } else {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('PostgreSQL es obligatorio en producción; se rechazó el fallback en memoria.');
