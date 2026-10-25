@@ -6,6 +6,8 @@ import { confirmAction, notify } from '../utils/dialogs';
 import { formatDateTime } from '../utils/dates';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage } from '../utils/errors';
+import { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, formatMinutes } from '../config/reservationRules';
+import { canExtendReservation } from '../reservations/extension';
 
 interface ReservationsScreenProps {
   authenticated: boolean;
@@ -13,6 +15,7 @@ interface ReservationsScreenProps {
   syncing: boolean;
   onRefresh: () => Promise<void>;
   onCancel: (id: string) => Promise<void>;
+  onExtend: (id: string) => Promise<void>;
   onOpenPass: (reservation: BackendReservation) => void;
   onLogin: () => void;
   onExplore: () => void;
@@ -39,10 +42,11 @@ const statusOf = (estado: BackendReservation['estado']): { label: string; bg: st
 };
 
 export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
-  authenticated, reservations, syncing, onRefresh, onCancel, onOpenPass, onLogin, onExplore,
+  authenticated, reservations, syncing, onRefresh, onCancel, onExtend, onOpenPass, onLogin, onExplore,
 }) => {
   const [filter, setFilter] = useState<Filter>('TODAS');
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [extending, setExtending] = useState<string | null>(null);
 
   const normalized = useMemo(() => reservations.map(reservation => {
     const expiredPending = (reservation.estado === 'PENDIENTE' || reservation.estado === 'PENDIENTE_SYNC')
@@ -66,6 +70,16 @@ export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
     try { await onCancel(id); }
     catch (error: unknown) { notify('No se pudo cancelar', getErrorMessage(error, 'Inténtalo de nuevo.')); }
     finally { setCancelling(null); }
+  };
+
+  const extend = async (id: string) => {
+    setExtending(id);
+    try {
+      await onExtend(id);
+      notify('Tiempo extendido', `Se añadieron ${RESERVATION_EXTENSION_MINUTES} minutos a la reserva.`);
+    } catch (error: unknown) {
+      notify('No se pudo extender el tiempo', getErrorMessage(error, 'Inténtalo de nuevo.'));
+    } finally { setExtending(null); }
   };
 
   if (!authenticated) {
@@ -136,6 +150,19 @@ export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
                 <Button label={cancelling === reservation.id ? 'Cancelando…' : 'Cancelar'} variant="outline" compact disabled={cancelling === reservation.id} onPress={() => void cancel(reservation.id)} style={styles.flex} />
               </View>
             )}
+            {pending && (canExtendReservation(reservation)
+              ? (
+                <Button
+                  label={extending === reservation.id ? 'Extendiendo…' : `Añadir más tiempo (+${RESERVATION_EXTENSION_MINUTES} min)`}
+                  icon="time-outline"
+                  variant="ghost"
+                  compact
+                  disabled={extending === reservation.id || cancelling === reservation.id}
+                  onPress={() => void extend(reservation.id)}
+                  style={styles.extend}
+                />
+              )
+              : <Text style={styles.maxNote}>Llegaste al máximo de {formatMinutes(RESERVATION_MAX_TOTAL_MINUTES)} para esta reserva.</Text>)}
           </View>
         );
       }}
@@ -161,4 +188,6 @@ const styles = themed(() => StyleSheet.create({
   total: { fontFamily: fonts.body, fontSize: 14, color: colors.inkSoft, marginTop: 6 },
   totalValue: { fontFamily: fonts.tag, color: colors.ink },
   actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  extend: { marginTop: 10 },
+  maxNote: { fontFamily: fonts.semibold, fontSize: 12, color: colors.inkMuted, textAlign: 'center', marginTop: 10 },
 }));

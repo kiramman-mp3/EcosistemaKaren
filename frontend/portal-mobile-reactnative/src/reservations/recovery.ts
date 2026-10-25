@@ -1,6 +1,7 @@
 import type { BackendReservation } from '../api/client';
 import type { ReservationPass } from '../types';
 import { STORE_INFO } from '../config/storeInfo';
+import { canExtendReservation } from './extension';
 
 export function secondsUntil(expiration: string, now = Date.now()): number {
   const timestamp = new Date(expiration).getTime();
@@ -19,6 +20,8 @@ export function selectActiveReservation(
 
 export function reservationToPass(reservation: BackendReservation, now = Date.now()): ReservationPass {
   return {
+    id: reservation.id,
+    canExtend: canExtendReservation(reservation, now),
     // Solo las reservas aceptadas por la tienda (PENDIENTE) llegan aquí, y ésas siempre traen código.
     code: reservation.codigoRetiro ?? '',
     status: reservation.estado,

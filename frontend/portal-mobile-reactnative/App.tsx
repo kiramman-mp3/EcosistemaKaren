@@ -33,6 +33,7 @@ import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { bestSellerIds, isNewProduct } from './src/config/catalogRules';
 import { offerEnded, offerUnitsAvailable } from './src/config/offerRules';
 import { STORE_INFO } from './src/config/storeInfo';
+import { RESERVATION_EXTENSION_MINUTES } from './src/config/reservationRules';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
@@ -364,6 +365,12 @@ function PortalAppContent() {
     }
   };
 
+  // La tienda fija el nuevo vencimiento; al volver a leer las reservas, la lista y el pase abierto lo reflejan.
+  const handleExtendReservation = async (id: string) => {
+    await api.extendReservation(id, RESERVATION_EXTENSION_MINUTES);
+    if (currentUser) await syncReservations(currentUser);
+  };
+
   const goTo = (tab: NavTab) => {
     setActiveTab(tab);
     if (tab === 'reservas' && currentUser) void syncReservations(currentUser);
@@ -472,6 +479,7 @@ function PortalAppContent() {
                 if (currentUser) await syncReservations(currentUser);
                 await loadBackendData();
               }}
+              onExtend={handleExtendReservation}
               onOpenPass={reservation => {
                 setPass({ ...reservationToPass(reservation), customerName: currentUser?.nombre });
                 setIsPassOpen(true);
@@ -497,7 +505,7 @@ function PortalAppContent() {
           <TabBar activeTab={activeTab} onChange={goTo} offersCount={offers.length} hasActivePass={Boolean(activeCode)} />
         </SafeAreaView>
 
-        {pass && <PickupPassModal pass={pass} visible={isPassOpen} onClose={() => setIsPassOpen(false)} />}
+        {pass && <PickupPassModal pass={pass} visible={isPassOpen} onClose={() => setIsPassOpen(false)} onExtend={handleExtendReservation} />}
 
         <CartDrawerMobile
           visible={isCartOpen}

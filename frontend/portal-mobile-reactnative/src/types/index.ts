@@ -51,6 +51,10 @@ export interface CategoryItem {
 }
 
 export interface ReservationPass {
+  /** Id de la reserva, para pedirle más tiempo a la tienda. */
+  id?: string;
+  /** Si todavía cabe otra extensión sin pasar del máximo permitido. */
+  canExtend?: boolean;
   code: string;
   status: string;
   /** Duración total de la reserva; si falta se asume la de 30 minutos. */
