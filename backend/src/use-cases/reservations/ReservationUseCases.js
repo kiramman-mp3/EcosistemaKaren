@@ -41,7 +41,7 @@ class ReservarStock {
     this.heartbeatMonitor = heartbeatMonitor;
   }
 
-  async execute({ usuarioId, items }) {
+  async execute({ usuarioId, items, ttlMinutos }) {
     if (!usuarioId) {
       throw new ValidationException('El usuario autenticado es requerido para realizar la reserva.');
     }
@@ -54,7 +54,7 @@ class ReservarStock {
     const reservation = new Reservation({
       usuarioId,
       estado: 'PENDIENTE',
-      fechaExpiracion: Reservation.calcularFechaExpiracionDefault(RESERVATION_TTL_MINUTES)
+      fechaExpiracion: Reservation.calcularFechaExpiracionDefault(ttlMinutos || RESERVATION_TTL_MINUTES)
     });
 
     return this.reservationRepository.createWithLockedStock(reservation, normalizedItems);
@@ -112,6 +112,22 @@ class CancelReservation {
   }
 }
 
+class ExtendReservation {
+  constructor(reservationRepository) {
+    this.reservationRepository = reservationRepository;
+  }
+
+  async execute(reservationId, actor, minutosAdicionales = 30) {
+    if (!actor || !actor.id) {
+      throw new ValidationException('La identidad del usuario es requerida para extender.');
+    }
+    if (!this.reservationRepository.extendTimeWithLockedStock) {
+      throw new ValidationException('La extensión de tiempo no está soportada por el repositorio actual.');
+    }
+    return this.reservationRepository.extendTimeWithLockedStock(reservationId, actor, minutosAdicionales);
+  }
+}
+
 class GetReservationsByUser {
   constructor(reservationRepository) {
     this.reservationRepository = reservationRepository;
@@ -132,5 +148,6 @@ module.exports = {
   ConfirmReservation,
   CleanExpiredReservations,
   CancelReservation,
+  ExtendReservation,
   GetReservationsByUser
 };

@@ -6,7 +6,9 @@ const {
   ReservarStock,
   ConfirmReservation,
   CancelReservation,
-  CleanExpiredReservations
+  CleanExpiredReservations,
+  ExtendReservation,
+  GetReservationByCode
 } = require('../src/use-cases/reservations/ReservationUseCases');
 
 const CUSTOMER = { id: 'd8a7b6c5-1111-2222-3333-444455556666', rol: 'CLIENTE' };
@@ -102,3 +104,33 @@ test('rechaza crear reservas cuando no existe un heartbeat vigente', async () =>
     error => error.statusCode === 503
   );
 });
+
+test('permite reservar con tiempo personalizado (ttlMinutos) y extender el tiempo de reserva', async () => {
+  const memory = new InMemoryRepositories();
+  const repository = memory.reservationRepository;
+  const reserve = new ReservarStock(repository, ACTIVE_HEARTBEAT);
+  const extend = new ExtendReservation(repository);
+  const getByCode = new GetReservationByCode(repository);
+
+  // 1. Reservar con 60 minutos
+  const reservation = await reserve.execute({
+    usuarioId: CUSTOMER.id,
+    ttlMinutos: 60,
+    items: [{ productoId: PRODUCT_ID, cantidad: 1 }]
+  });
+
+  const now = Date.now();
+  const diffMinutes = (new Date(reservation.fechaExpiracion).getTime() - now) / 60000;
+  assert.ok(diffMinutes > 55 && diffMinutes <= 61);
+
+  // 2. Extender 30 minutos adicionales
+  const extended = await extend.execute(reservation.id, CUSTOMER, 30);
+  const extendedDiffMinutes = (new Date(extended.fechaExpiracion).getTime() - now) / 60000;
+  assert.ok(extendedDiffMinutes > 85 && extendedDiffMinutes <= 91);
+
+  // 3. Consultar por código insensible a mayúsculas/minúsculas y espacios
+  const found = await getByCode.execute(`  ${reservation.codigoRetiro.toLowerCase()}  `);
+  assert.equal(found.id, reservation.id);
+  assert.equal(found.codigoRetiro, reservation.codigoRetiro);
+});
+

@@ -159,6 +159,7 @@ const schemas = {
   }),
   reservationBody: z.strictObject({
     usuarioId: entityId.optional(),
+    ttlMinutos: z.coerce.number().int().min(15).max(240).optional(),
     items: z.array(z.strictObject({
       productoId: entityId,
       cantidad: positiveInteger(10_000),
@@ -169,7 +170,10 @@ const schemas = {
     if (total > 10_000) ctx.addIssue({ code: 'custom', path: ['items'], message: 'La reserva no puede superar 10000 unidades.' });
   }),
   reservationCodeParams: z.strictObject({
-    code: z.string().trim().regex(/^KR-[A-Z0-9]{6,20}$/, 'El código de retiro no tiene un formato válido.')
+    code: z.string().trim().regex(/^KR-[A-Za-z0-9]{6,20}$/i, 'El código de retiro no tiene un formato válido.').transform(val => val.toUpperCase())
+  }),
+  extendReservationBody: z.strictObject({
+    minutosAdicionales: z.coerce.number().int().min(5).max(180).default(30)
   }),
   userParams: z.strictObject({ userId: entityId }),
   reservationQuery: z.strictObject({

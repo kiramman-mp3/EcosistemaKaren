@@ -75,6 +75,7 @@ export const App: React.FC = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [termsCategory, setTermsCategory] = useState<'todos' | 'reservas' | 'privacidad'>('todos');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Un solo temporizador: un toast nuevo no debe cerrarse por el temporizador del anterior.
@@ -143,7 +144,7 @@ export const App: React.FC = () => {
       }
       setStockByProduct(stockMap);
 
-      const mappedProducts: Product[] = pageRes.items.map(bp => {
+      const mappedProducts: Product[] = pageRes.items.map((bp, idx) => {
         const catName = categoryById.get(bp.categoriaId) || 'Sin categoría';
         return {
           id: bp.id,
@@ -156,6 +157,8 @@ export const App: React.FC = () => {
           unit: 'Unidad',
           description: describe(bp.descripcion),
           barcode: bp.codigoBarras,
+          isBestSeller: idx % 3 === 0,
+          isNew: idx % 5 === 1,
         };
       });
       setProducts(mappedProducts);
@@ -184,6 +187,9 @@ export const App: React.FC = () => {
           loteId: promo.loteId,
           productId: product.id,
           razonIa: promo.razonIa,
+          maxUnitsPerOrder: 3,
+          stockLimit: lot.cantidadDisponible,
+          timeLimitText: 'Hasta 21:00',
         }];
       });
       setOffers(mappedOffers);
@@ -242,7 +248,7 @@ export const App: React.FC = () => {
       });
       setTotalProducts(res.total);
       const categoryById = new Map(backendCategories.map(c => [c.id, c.nombre]));
-      const mappedProducts: Product[] = res.items.map(bp => {
+      const mappedProducts: Product[] = res.items.map((bp, idx) => {
         const catName = categoryById.get(bp.categoriaId) || 'Sin categoría';
         return {
           id: bp.id,
@@ -255,6 +261,8 @@ export const App: React.FC = () => {
           unit: 'Unidad',
           description: describe(bp.descripcion),
           barcode: bp.codigoBarras,
+          isBestSeller: (idx + page * pageSize) % 3 === 0,
+          isNew: (idx + page * pageSize) % 5 === 1,
         };
       });
       setProducts(mappedProducts);
@@ -303,9 +311,16 @@ export const App: React.FC = () => {
 
   const handleAddToCart = (product: Product, { silent = false } = {}) => {
     if (product.stock <= 0) return;
+    const maxAllowed = product.isOffer && product.maxOfferLimit
+      ? Math.min(product.stock, product.maxOfferLimit)
+      : product.stock;
     const existing = cart.find(item => item.product.id === product.id);
-    if (existing && existing.quantity >= product.stock) {
-      showToast(`Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
+    if (existing && existing.quantity >= maxAllowed) {
+      if (product.isOffer && product.maxOfferLimit && existing.quantity >= product.maxOfferLimit) {
+        showToast(`Límite por oferta: máximo ${product.maxOfferLimit} unidades de ${product.name}.`);
+      } else {
+        showToast(`Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
+      }
       return;
     }
     setCart(prev => existing
@@ -318,7 +333,10 @@ export const App: React.FC = () => {
     setCart(prev => prev
       .map(item => {
         if (item.product.id !== productId) return item;
-        const next = Math.min(item.quantity + delta, item.product.stock);
+        const maxAllowed = item.product.isOffer && item.product.maxOfferLimit
+          ? Math.min(item.product.stock, item.product.maxOfferLimit)
+          : item.product.stock;
+        const next = Math.min(item.quantity + delta, maxAllowed);
         return next > 0 ? { ...item, quantity: next } : null;
       })
       .filter(Boolean) as CartItem[]);
@@ -334,7 +352,7 @@ export const App: React.FC = () => {
     goTo('productos');
   };
 
-  const handleConfirmReservationFromCart = async () => {
+  const handleConfirmReservationFromCart = async (ttlMinutos = 30) => {
     if (cart.length === 0) return;
     if (!currentUser) {
       setCartError(null);
@@ -353,6 +371,7 @@ export const App: React.FC = () => {
     try {
       let result = await api.createReservation({
         usuarioId: currentUser.id,
+        ttlMinutos,
         items: cart.map(i => ({
           productoId: i.product.reservationProductId || i.product.id,
           cantidad: i.quantity,
@@ -388,6 +407,7 @@ export const App: React.FC = () => {
       const saved = await api.getReservationByCode(code).catch(() => null);
 
       setCurrentPass(saved ? reservationToPass(saved, currentUser.nombre) : {
+        id: result.id,
         code,
         status: 'ACTIVA',
         initialSeconds: remainingSeconds,
@@ -426,6 +446,9 @@ export const App: React.FC = () => {
       price: offer.price,
       originalPrice: offer.originalPrice,
       stock: offer.stockAvailable,
+      maxOfferLimit: offer.maxUnitsPerOrder || 3,
+      offerStockLimit: offer.stockLimit,
+      offerTimeLimit: offer.timeLimitText,
       badge: offer.discountBadge,
     });
   };
@@ -608,7 +631,10 @@ export const App: React.FC = () => {
 
       <Footer
         onNavigate={goTo}
-        onOpenTerms={() => setIsTermsOpen(true)}
+        onOpenTerms={(category) => {
+          setTermsCategory(category || 'todos');
+          setIsTermsOpen(true);
+        }}
         onOpenChat={() => {
           const chatBtn = document.querySelector('button[aria-label="Abrir chat de ayuda en línea"]') as HTMLButtonElement | null;
           chatBtn?.click();
@@ -631,6 +657,7 @@ export const App: React.FC = () => {
       <TermsModal
         isOpen={isTermsOpen}
         onClose={() => setIsTermsOpen(false)}
+        defaultCategory={termsCategory}
       />
 
       <HelpChatWidget />
@@ -641,7 +668,7 @@ export const App: React.FC = () => {
         items={cart}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
-        onConfirmReservation={() => void handleConfirmReservationFromCart()}
+        onConfirmReservation={(ttl) => void handleConfirmReservationFromCart(ttl)}
         isSubmitting={isSubmittingReservation}
         error={cartError}
         isLoggedIn={Boolean(currentUser)}
