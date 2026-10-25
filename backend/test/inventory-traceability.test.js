@@ -90,14 +90,17 @@ test('PostgreSQL registra merma y movimiento en la misma transacción', async t 
     return;
   }
 
-  const category = await pool.query('SELECT id FROM categorias ORDER BY id LIMIT 1');
   const actor = await pool.query("SELECT id FROM usuarios WHERE email = 'bodega@karen.com'");
-  if (!category.rowCount || !actor.rowCount) {
+  if (!actor.rowCount) {
     t.skip('Faltan semillas de producto o bodeguero');
     await pool.end();
     return;
   }
 
+  // Categoría propia: otra prueba en paralelo podría borrar una categoría tomada de la base.
+  const categoryId = randomUUID();
+  await pool.query('INSERT INTO categorias (id, nombre) VALUES ($1, $2)', [categoryId, `Auditoría ${categoryId}`]);
+  const category = { rows: [{ id: categoryId }] };
   const repo = new PostgresLotRepository(pool);
   const productId = randomUUID();
   await pool.query(`
@@ -114,6 +117,7 @@ test('PostgreSQL registra merma y movimiento en la misma transacción', async t 
       await pool.query('DELETE FROM lotes WHERE id = $1', [lotId]);
     }
     await pool.query('DELETE FROM productos WHERE id = $1', [productId]);
+    await pool.query('DELETE FROM categorias WHERE id = $1', [category.rows[0].id]);
     await pool.end();
   });
 

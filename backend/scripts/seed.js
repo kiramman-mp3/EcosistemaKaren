@@ -30,6 +30,9 @@ const bcrypt = require('bcryptjs');
 const { getPool, closePool, connectionSettings } = require('../src/infrastructure/db/postgres');
 const { runMigrations } = require('../src/infrastructure/db/migrations');
 const { buildPromotionCacheKey } = require('../src/domain/policies/PromotionPolicy');
+const {
+  RESERVATION_TTL_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, RESERVATION_EXTENSION_MINUTES
+} = require('../src/domain/policies/BusinessRules');
 
 const args = Object.fromEntries(process.argv.slice(2).map(arg => {
   const [key, value] = arg.replace(/^--/, '').split('=');
@@ -415,8 +418,31 @@ function simulate({ products, lots, users }) {
     return remaining === 0 ? allocation : null;
   };
 
-  const placeReservation = (t, estado) => {
-    const user = pickClient();
+  // Plazo que elige el cliente al apartar (como en las apps: 30 min por defecto) y, a veces, una o dos
+  // extensiones de 30 min, sin pasar de 4 horas en total.
+  const TTL_CHOICES = [[RESERVATION_TTL_MINUTES, 0.62], [45, 0.12], [60, 0.14], [90, 0.07], [120, 0.05]];
+  const pickTtl = weightedPicker(TTL_CHOICES, ([, weight]) => weight);
+  const reservationWindow = () => {
+    const ttl = pickTtl()[0];
+    const room = Math.floor((RESERVATION_MAX_TOTAL_MINUTES - ttl) / RESERVATION_EXTENSION_MINUTES);
+    const extensions = chance(0.14) ? Math.min(room, randInt(1, 2)) : 0;
+    return { ttl, extensions, minutes: ttl + extensions * RESERVATION_EXTENSION_MINUTES };
+  };
+
+  // La confirmación en caja, la cancelación o el vencimiento ocurren más tarde: se programan como
+  // eventos propios para que el historial de cada lote siga en orden. Lo que todavía no ocurrió
+  // (hora futura) deja la reserva PENDIENTE, con su stock apartado.
+  const scheduled = [];
+  const schedule = (at, run) => {
+    let i = scheduled.length;
+    while (i > 0 && scheduled[i - 1].at > at) i--;
+    scheduled.splice(i, 0, { at, run });
+  };
+  const runScheduledUntil = (t) => {
+    while (scheduled.length && scheduled[0].at <= t) scheduled.shift().run();
+  };
+
+  const placeReservation = (t, outcome, { user = pickClient(), window = reservationWindow() } = {}) => {
     const itemCount = Math.min(8, 1 + Math.floor(Math.pow(rand(), 1.8) * 8));
     const chosen = new Map();
     for (let i = 0; i < itemCount * 2 && chosen.size < itemCount; i++) {
@@ -439,45 +465,68 @@ function simulate({ products, lots, users }) {
         lines.push({ lot, q, price: priceAt(product, t) });
       }
     }
-    if (!lines.length) return;
+    if (!lines.length) return null;
 
-    const expiresAt = t + 10 * MIN_MS;
-    let updatedAt = t;
-    if (estado === 'CONFIRMADA') {
-      const at = t + randInt(2, 9) * MIN_MS;
-      const cashier = pick(cashiers);
-      for (const { lot, q } of lines) {
-        const before = { disp: lot.disp, res: lot.res };
-        lot.res -= q;
-        move(lot, 'VENTA', q, before, { disp: lot.disp, res: lot.res },
-          { motivo: 'Venta confirmada desde reserva', actor: cashier.id, reserva: reservaId, at });
-      }
-      updatedAt = at;
-    } else if (estado === 'EXPIRADA' || estado === 'CANCELADA') {
-      const at = estado === 'EXPIRADA' ? expiresAt + randInt(0, 59) * 1000 : t + randInt(1, 8) * MIN_MS;
-      for (const { lot, q } of lines) {
-        const before = { disp: lot.disp, res: lot.res };
-        lot.disp += q;
-        lot.res -= q;
-        move(lot, 'LIBERACION', q, before, { disp: lot.disp, res: lot.res }, {
-          motivo: estado === 'EXPIRADA' ? 'Liberación automática por expiración de reserva' : 'Reserva cancelada por el cliente',
-          actor: estado === 'CANCELADA' ? user.id : null, reserva: reservaId, at
-        });
-      }
-      updatedAt = at;
-    }
-
-    reservations.push({
-      id: reservaId, usuario_id: user.id, codigo_retiro: newCode(), estado,
-      fecha_expiracion: iso(expiresAt), created_at: iso(t), updated_at: iso(updatedAt)
-    });
+    const expiresAt = t + window.minutes * MIN_MS;
+    const row = {
+      id: reservaId, usuario_id: user.id, cliente_nombre: user.nombre, codigo_retiro: newCode(), estado: 'PENDIENTE',
+      fecha_expiracion: iso(expiresAt), created_at: iso(t), updated_at: iso(t), extensiones: window.extensions
+    };
+    reservations.push(row);
     for (const { lot, q, price } of lines) {
       details.push({ id: uuid(), reserva_id: reservaId, lote_id: lot.id, cantidad: q, precio_unitario: price });
     }
+
+    // Cada extensión se pide unos minutos antes de que venza el plazo vigente; la última queda en updated_at.
+    for (let k = 0; k < window.extensions; k++) {
+      const due = t + (window.ttl + k * RESERVATION_EXTENSION_MINUTES) * MIN_MS;
+      const askedAt = due - randInt(2, 12) * MIN_MS;
+      if (askedAt < NOW) row.updated_at = iso(Math.max(Date.parse(row.updated_at) + MIN_MS, askedAt));
+    }
+
+    // El cliente pasa por caja dentro del plazo, cancela poco después de apartar o deja que venza.
+    let at;
+    if (outcome === 'CONFIRMADA') {
+      const latest = Math.max(4, Math.floor(window.minutes * 0.9));
+      at = t + Math.min(latest, 3 + Math.floor(Math.pow(rand(), 1.6) * latest)) * MIN_MS;
+    } else if (outcome === 'CANCELADA') {
+      at = t + randInt(1, Math.min(20, window.minutes - 1)) * MIN_MS;
+    } else if (outcome === 'EXPIRADA') {
+      at = expiresAt + randInt(0, 59) * 1000;
+    } else {
+      return row;
+    }
+    at = Math.max(at, Date.parse(row.updated_at) + MIN_MS);
+    schedule(at, () => {
+      if (at >= NOW) return;
+      if (outcome === 'CONFIRMADA') {
+        const cashier = pick(cashiers);
+        for (const { lot, q } of lines) {
+          const before = { disp: lot.disp, res: lot.res };
+          lot.res -= q;
+          move(lot, 'VENTA', q, before, { disp: lot.disp, res: lot.res },
+            { motivo: 'Venta confirmada desde reserva', actor: cashier.id, reserva: reservaId, at });
+        }
+      } else {
+        for (const { lot, q } of lines) {
+          const before = { disp: lot.disp, res: lot.res };
+          lot.disp += q;
+          lot.res -= q;
+          move(lot, 'LIBERACION', q, before, { disp: lot.disp, res: lot.res }, {
+            motivo: outcome === 'EXPIRADA' ? 'Liberación automática por expiración de reserva' : 'Reserva cancelada por el cliente',
+            actor: outcome === 'CANCELADA' ? user.id : null, reserva: reservaId, at
+          });
+        }
+      }
+      row.estado = outcome;
+      row.updated_at = iso(at);
+    });
+    return row;
   };
 
   for (const event of timeline) {
     const { lot, t } = event;
+    runScheduledUntil(t);
     if (event.kind === 'ingreso') {
       lot.received = true;
       lot.disp = lot.ingresada;
@@ -523,9 +572,24 @@ function simulate({ products, lots, users }) {
     }
   }
 
-  // Reservas vigentes en este momento (pendientes de retiro en caja)
+  runScheduledUntil(NOW);
+
+  // Reservas vigentes en este momento (pendientes de retiro en caja), todas con tiempo restante.
   const pendingCount = Math.round(35 * SCALE);
-  for (let i = 0; i < pendingCount; i++) placeReservation(NOW - randInt(0, 8) * MIN_MS - randInt(0, 59) * 1000, 'PENDIENTE');
+  for (let i = 0; i < pendingCount; i++) {
+    const window = reservationWindow();
+    const age = randInt(0, Math.max(1, window.minutes - 10));
+    placeReservation(NOW - age * MIN_MS - randInt(0, 59) * 1000, 'PENDIENTE', { window });
+  }
+  // La cuenta cliente@ queda con dos reservas para probar: una recién hecha y otra ya extendida una vez.
+  const demoClient = clients.find(c => c.email === `cliente@${DEMO_EMAIL_DOMAIN}`);
+  if (demoClient) {
+    const base = RESERVATION_TTL_MINUTES;
+    placeReservation(NOW - 5 * MIN_MS, 'PENDIENTE', { user: demoClient, window: { ttl: base, extensions: 0, minutes: base } });
+    placeReservation(NOW - 40 * MIN_MS, 'PENDIENTE', {
+      user: demoClient, window: { ttl: base, extensions: 1, minutes: base + RESERVATION_EXTENSION_MINUTES }
+    });
+  }
 
   return { movements, wastes, reservations, details };
 }
@@ -709,16 +773,62 @@ async function cleanPreviousSeed(client) {
 
 // La base del portal solo guarda clientes: se copian con los mismos ids para que el cliente
 // autenticado en el portal sea el mismo que figura en las reservas de la tienda.
-async function seedPortalClients(portalPool, clients) {
+// Copia en el portal de las reservas de los clientes demo, tal como las vería si las hubieran hecho
+// desde las apps: mismo id, código y plazo que en la tienda, las líneas que pidió el cliente (`items`)
+// y lo que asignó la tienda (`detalles`, en el formato de su respuesta). Así "Mis reservas" muestra el
+// historial también con la tienda y el portal en bases separadas.
+function buildPortalReservations(sim, lots) {
+  const lotById = new Map(lots.map(l => [l.id, l]));
+  const linesByReservation = new Map();
+  for (const detail of sim.details) {
+    if (!linesByReservation.has(detail.reserva_id)) linesByReservation.set(detail.reserva_id, []);
+    linesByReservation.get(detail.reserva_id).push(detail);
+  }
+  return sim.reservations.map(reservation => {
+    const lines = linesByReservation.get(reservation.id) || [];
+    const items = new Map();
+    for (const line of lines) {
+      const lot = lotById.get(line.lote_id);
+      const key = `${lot.product.id}:${line.promocion_id || ''}`;
+      const item = items.get(key) || { productoId: lot.product.id, cantidad: 0, ...(line.promocion_id ? { promocionId: line.promocion_id } : {}) };
+      item.cantidad += line.cantidad;
+      items.set(key, item);
+    }
+    return {
+      id: reservation.id, cliente_id: reservation.usuario_id, estado: reservation.estado,
+      codigo_retiro: reservation.codigo_retiro, fecha_expiracion: reservation.fecha_expiracion,
+      items: [...items.values()],
+      detalles: lines.map(line => {
+        const lot = lotById.get(line.lote_id);
+        return {
+          loteId: lot.id, cantidad: line.cantidad, precioUnitario: Number(line.precio_unitario),
+          numeroLote: lot.numero_lote, productoId: lot.product.id, productoNombre: lot.product.nombre,
+          codigoBarras: lot.product.codigoBarras, imagenUrl: lot.product.imagenUrl || null
+        };
+      }),
+      created_at: reservation.created_at, updated_at: reservation.updated_at
+    };
+  });
+}
+
+async function seedPortal(portalPool, clients, portalReservations) {
   await runMigrations(portalPool, { targets: ['portal'] });
   const client = await portalPool.connect();
   try {
     await client.query('BEGIN');
+    // Primero las reservas (y sus comandos, en cascada): impiden borrar a sus clientes.
+    await client.query(`DELETE FROM reservas_portal WHERE cliente_id IN
+      (SELECT id FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}')`);
     await client.query(`DELETE FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}'`);
     await bulkInsert(client, 'usuarios', [
       ['id', 'uuid'], ['nombre', 'text'], ['email', 'text'], ['rol', 'text', 'rol_usuario'],
       ['password_hash', 'text'], ['created_at', 'timestamptz']
     ], clients);
+    await bulkInsert(client, 'reservas_portal', [
+      ['id', 'uuid'], ['cliente_id', 'uuid'], ['estado', 'text'], ['codigo_retiro', 'text'],
+      ['fecha_expiracion', 'timestamptz'], ['items', 'jsonb'], ['detalles', 'jsonb'],
+      ['created_at', 'timestamptz'], ['updated_at', 'timestamptz']
+    ], portalReservations);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -807,8 +917,9 @@ async function main() {
       ['stock_oferta', 'int'], ['vigente_hasta', 'timestamptz']
     ], promotions.map(p => ({ limite_por_pedido: null, stock_oferta: null, vigente_hasta: null, ...p })));
     await bulkInsert(client, 'reservas', [
-      ['id', 'uuid'], ['usuario_id', 'uuid'], ['codigo_retiro', 'text'], ['estado', 'text', 'estado_reserva'],
-      ['fecha_expiracion', 'timestamptz'], ['created_at', 'timestamptz'], ['updated_at', 'timestamptz']
+      ['id', 'uuid'], ['usuario_id', 'uuid'], ['cliente_nombre', 'text'], ['codigo_retiro', 'text'],
+      ['estado', 'text', 'estado_reserva'], ['fecha_expiracion', 'timestamptz'], ['created_at', 'timestamptz'],
+      ['updated_at', 'timestamptz']
     ], sim.reservations);
     await bulkInsert(client, 'reserva_detalles', [
       ['id', 'uuid'], ['reserva_id', 'uuid'], ['lote_id', 'uuid'], ['cantidad', 'int'], ['precio_unitario', 'numeric'],
@@ -840,8 +951,9 @@ async function main() {
     const separatePortalDb = JSON.stringify(connectionSettings('portal')) !== JSON.stringify(connectionSettings('store'));
     if (separatePortalDb) {
       const portalPool = getPool('portal');
-      await seedPortalClients(portalPool, users.filter(u => u.rol === 'CLIENTE'));
-      console.log(`👥 ${users.filter(u => u.rol === 'CLIENTE').length} clientes demo copiados a la base del portal`);
+      const portalReservations = buildPortalReservations(sim, lots);
+      await seedPortal(portalPool, users.filter(u => u.rol === 'CLIENTE'), portalReservations);
+      console.log(`👥 ${users.filter(u => u.rol === 'CLIENTE').length} clientes demo y ${portalReservations.length} reservas copiados a la base del portal`);
     }
 
     const byState =(list, key) => list.reduce((acc, x) => { acc[x[key]] = (acc[x[key]] || 0) + 1; return acc; }, {});

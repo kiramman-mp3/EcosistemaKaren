@@ -18,14 +18,17 @@ async function setup(t) {
     t.skip('PostgreSQL no disponible para prueba de integración');
     return null;
   }
-  const category = await pool.query('SELECT id FROM categorias ORDER BY id LIMIT 1');
   const actor = await pool.query("SELECT id FROM usuarios WHERE email = 'bodega@karen.com'");
   const customer = await pool.query("SELECT id, nombre FROM usuarios WHERE email = 'cliente@karen.com'");
-  if (!category.rowCount || !actor.rowCount || !customer.rowCount) {
+  if (!actor.rowCount || !customer.rowCount) {
     t.skip('Faltan semillas de categoría, bodeguero o cliente');
     return null;
   }
 
+  // Categoría propia: otra prueba en paralelo podría borrar una categoría tomada de la base.
+  const categoryId = randomUUID();
+  await pool.query('INSERT INTO categorias (id, nombre) VALUES ($1, $2)', [categoryId, `Reservas ${categoryId}`]);
+  const category = { rows: [{ id: categoryId }] };
   const productId = randomUUID();
   const productName = `Producto reserva ${Date.now()}`;
   await pool.query(`
@@ -50,6 +53,7 @@ async function setup(t) {
     if (reservationIds.length) await pool.query('DELETE FROM reservas WHERE id = ANY($1::uuid[])', [reservationIds]);
     await pool.query('DELETE FROM lotes WHERE id = $1', [lot.id]);
     await pool.query('DELETE FROM productos WHERE id = $1', [productId]);
+    await pool.query('DELETE FROM categorias WHERE id = $1', [categoryId]);
   });
 
   return {
