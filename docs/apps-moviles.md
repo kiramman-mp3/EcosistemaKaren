@@ -35,10 +35,34 @@ esta función (un APK anterior no la trae). El permiso de cámara ya lo pedía l
 En **Reportes**, los botones **PDF** y **Excel** exportan los movimientos y mermas. En el navegador el PDF abre el diálogo de
 impresión y el Excel (CSV) se descarga; en el teléfono ambos abren la hoja de compartir (correo, WhatsApp, Drive...). Los datos que
 escribe el personal (nombres de producto, motivos) se escapan en el PDF y se neutralizan en el CSV para que Excel no ejecute
-fórmulas. La razón social, la sucursal y el RUC que se imprimen están en `src/config/storeInfo.ts` y son de demostración: cambiarlos
-por los reales. Usa `expo-print`, `expo-sharing` y `expo-file-system`, por lo que **hay que recompilar el APK** para tener esta función.
+fórmulas. Llevan el período elegido (hoy, 7 o 30 días). El nombre comercial, la razón social, la dirección y el RUC que se imprimen
+son los reales de la tienda y están en `src/config/storeInfo.ts`; cada dato se puede cambiar al compilar con su variable
+`EXPO_PUBLIC_STORE_*` (ver `.env.example`). Usa `expo-print`, `expo-sharing` y `expo-file-system`, por lo que **hay que recompilar el APK**
+para tener esta función.
+
+## Qué trae un APK compilado ahora
+
+Las apps no se actualizan solas: todo lo que cambia en su código llega al teléfono solo con un APK nuevo. Desde los APK anteriores:
+
+| App | Cambios |
+|---|---|
+| Bodega | Datos reales de la tienda; encabezado y métricas compactos en pantallas angostas; resumen de reportes por período; el ADMIN puede cambiar el PVP al ingresar un lote; el ADMIN fija en cada oferta el máximo por pedido, el stock de oferta y la fecha y hora de fin. |
+| Portal | Datos reales de la tienda; filtros "Más vendidos" y "Nuevos" con datos reales; las ofertas muestran su hora real de fin, el máximo por pedido y las unidades que quedan; el pase de retiro dice "Supermercado Karen". |
+
+Ninguno de estos cambios agrega módulos nativos: basta recompilar con los mismos pasos. Después de instalar, conviene
+repasar la lista de [verificación en un teléfono](verificacion-telefono.md).
 
 ## Android (.apk)
+
+### En GitHub Actions (sin instalar nada en el PC)
+
+El workflow **Build Android APK** (`.github/workflows/build-android-apk.yml`) compila los dos APK en un runner de Linux, que ya trae el
+SDK de Android. Se lanza a mano en GitHub: **Actions > Build Android APK > Run workflow**, sobre la rama que se quiera compilar (el
+código tiene que estar en GitHub). La casilla de la red local (marcada por defecto) equivale a `KAREN_ALLOW_CLEARTEXT=1` y
+`EXPO_PUBLIC_SERVER_CONFIG=1`. Al terminar, `SupermercadoKaren-portal-apk` y `SupermercadoKaren-bodega-apk` quedan como artefactos
+de la ejecución durante 14 días: se descargan como `.zip` con el `.apk` dentro.
+
+### En el PC
 
 Hace falta Android Studio (trae el JDK y el SDK). Desde la carpeta de cada app:
 

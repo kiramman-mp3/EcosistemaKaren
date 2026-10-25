@@ -25,6 +25,9 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-11 | Reportes → Excel | Se comparte un CSV que abre en Excel o Sheets con tildes correctas y los mismos datos del encabezado. |
 | TEL-12 | Reportes en pantalla → Hoy, Últimos 7 días, Últimos 30 días | Las cuatro cifras cambian juntas con el período, caben en una línea y usan separador de miles (por ejemplo `$8,580.67`). El PDF y el Excel indican el período elegido. |
 | TEL-18 | Recibir con `admin@demo.karen.ec` → escribir un nuevo PVP → Registrar lote | Pide confirmar "de $X a $Y"; al aceptar, el mensaje dice "PVP actualizado" y el portal muestra el nuevo precio en unos segundos. Con `bodega@demo.karen.ec` el campo no aparece. |
+| TEL-19 | Ofertas → Por revisar con `admin@demo.karen.ec` → abrir un borrador | La sección "Límites de la oferta" muestra Máx. por pedido, Stock de oferta (con el tope "Hasta N"), Termina el y A las, en dos columnas que no se salen de la pantalla. |
+| TEL-20 | En el borrador: stock de oferta mayor que el lote → Solo guardar | Aparece "no puede superar las N unidades libres del lote" y no se guarda. |
+| TEL-21 | En el borrador: máximo 2, stock 3, atajo "Mañana 21:00" → Publicar oferta | Se publica; en la lista la tarjeta dice "Máx. 2 por pedido · 3 de 3 con descuento · Hasta …, 21:00", y la oferta aparece en el portal en unos segundos. |
 
 ## Portal (app del cliente)
 
@@ -35,5 +38,8 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-15 | Apartar con `cliente@demo.karen.ec` | Se muestra el pase con QR y temporizador de 30 minutos; en la bodega, TEL-09 lo encuentra. |
 | TEL-16 | Política de privacidad | Aparecen Supermercado Karen, Patricia Rodríguez, el RUC y Quero, Tungurahua. |
 | TEL-17 | KarenBot → hablar con un asesor | Abre WhatsApp con el número +593 98 355 3724 y el mensaje ya escrito. |
+| TEL-22 | Catálogo → filtros "Más vendidos" y "Nuevos" | Cada filtro muestra solo los productos con su insignia (llama o destello) y los ordena por ventas o por fecha de alta. |
+| TEL-23 | Ofertas → la oferta publicada en TEL-21 | Dice "Termina mañana a las 21:00" y "Máx. 2 por pedido". Al apartarla tres veces seguidas, la tercera falla con "Solo queda 1 unidad con este descuento" y la lista se actualiza. |
+| TEL-24 | Mis reservas con `cliente@demo.karen.ec` recién sembrado | Hay dos reservas por retirar con tiempo restante y el historial con retiradas, vencidas y canceladas. "Añadir más tiempo" suma 30 minutos. |
 
 Registrar por cada caso: fecha, modelo del teléfono y versión de Android, versión del APK, resultado (Aprobado/Fallido) y captura cuando falle.
