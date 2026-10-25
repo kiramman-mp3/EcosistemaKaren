@@ -39,7 +39,7 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-16 | Política de privacidad | Aparecen Supermercado Karen, Patricia Rodríguez, el RUC y Quero, Tungurahua. |
 | TEL-17 | KarenBot → hablar con un asesor | Abre WhatsApp con el número +593 98 355 3724 y el mensaje ya escrito. |
 | TEL-22 | Catálogo → filtros "Más vendidos" y "Nuevos" | Cada filtro muestra solo los productos con su insignia (llama o destello) y los ordena por ventas o por fecha de alta. |
-| TEL-23 | Ofertas → la oferta publicada en TEL-21 | Dice "Termina mañana a las 21:00" y "Máx. 2 por pedido". Al apartarla tres veces seguidas, la tercera falla con "Solo queda 1 unidad con este descuento" y la lista se actualiza. |
+| TEL-23 | Ofertas → la oferta publicada en TEL-21 | Dice "Termina mañana a las 21:00" y "Máx. 2 por pedido". La app aparta de a una unidad: las tres primeras veces sale el pase; la cuarta falla con "Las unidades de esta oferta ya se agotaron" y la oferta desaparece de la lista. |
 | TEL-24 | Mis reservas con `cliente@demo.karen.ec` recién sembrado | Hay dos reservas por retirar con tiempo restante y el historial con retiradas, vencidas y canceladas. "Añadir más tiempo" suma 30 minutos. |
 
 Registrar por cada caso: fecha, modelo del teléfono y versión de Android, versión del APK, resultado (Aprobado/Fallido) y captura cuando falle.
