@@ -1,0 +1,61 @@
+name: Build iOS IPA
+
+# Genera un .ipa SIN firmar del portal móvil para instalarlo con AltStore/Sideloadly (que lo firman con
+# tu Apple ID). Compila en un runner de macOS porque Xcode no existe en Windows. Se lanza a mano:
+# Actions > Build iOS IPA > Run workflow. El .ipa queda como artefacto de la ejecución.
+on:
+  workflow_dispatch:
+    inputs:
+      cleartext:
+        description: 'Permitir HTTP hacia la red local y elegir el servidor desde la app (builds de prueba)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: frontend/portal-mobile-reactnative
+    env:
+      KAREN_ALLOW_CLEARTEXT: ${{ inputs.cleartext && '1' || '' }}
+      EXPO_PUBLIC_SERVER_CONFIG: ${{ inputs.cleartext && '1' || '' }}
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/portal-mobile-reactnative/package-lock.json
+      - run: npm ci
+      - name: Generar el proyecto nativo con Expo
+        run: npx expo prebuild --platform ios --no-install
+      - name: Instalar pods
+        working-directory: frontend/portal-mobile-reactnative/ios
+        run: pod install
+      - name: Archivar sin firmar
+        run: |
+          set -euo pipefail
+          WORKSPACE=$(ls -d ios/*.xcworkspace | head -n 1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath build/Karen.xcarchive archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+      - name: Empaquetar el .ipa
+        run: |
+          set -euo pipefail
+          rm -rf Payload && mkdir Payload
+          cp -R build/Karen.xcarchive/Products/Applications/*.app Payload/
+          zip -qry SupermercadoKaren-unsigned.ipa Payload
+          ls -la SupermercadoKaren-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SupermercadoKaren-unsigned-ipa
+          path: frontend/portal-mobile-reactnative/SupermercadoKaren-unsigned.ipa
+          retention-days: 14
