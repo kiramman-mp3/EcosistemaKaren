@@ -125,6 +125,18 @@ Crea un nuevo producto en catálogo.
 }
 ```
 
+### `PUT /products/:id/image`
+Sube o reemplaza la foto del producto (`ADMIN` o `BODEGUERO`; solo store-api). El cuerpo es la **foto en
+binario**, tal como sale de la cámara, con `Content-Type` `image/jpeg`, `image/png`, `image/webp`,
+`image/heic` o `image/heif` (hasta 15 MB y 120 megapíxeles). El servidor la endereza según su orientación EXIF,
+la reduce a un máximo de 1024 px por lado, la convierte a JPEG progresivo y le quita los metadatos (ubicación,
+modelo de cámara). Una foto de cámara de 12 MP (~10 MB) queda en 100-250 KB.
+* **Respuesta (200)**: `{ "success": true, "data": <producto con el nuevo imagenUrl>, "image": { "width", "height", "bytes", "originalBytes" } }`.
+* `imagenUrl` incluye el hash del contenido (`/api/v1/media/productos/<código>-<hash>.jpg`): cada foto nueva tiene
+  URL nueva, así las cachés no muestran la anterior. La foto previa se borra si ningún otro producto la usa.
+* Errores: `400` imagen ilegible o con demasiados píxeles, `401`/`403` sin permiso, `404` producto inexistente,
+  `413` más de 15 MB, `415` tipo no admitido.
+
 ---
 
 ## 2. Lotes e Inventarios (`/lots`)
