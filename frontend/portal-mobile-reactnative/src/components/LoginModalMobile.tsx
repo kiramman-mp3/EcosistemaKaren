@@ -4,12 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { Button, Field, Notice } from './ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorMessage } from '../utils/errors';
 
 interface LoginModalMobileProps {
   visible: boolean;
   onClose: () => void;
   currentUser?: { id: string; nombre: string; email: string; rol?: string } | null;
-  onLoginSuccess?: (user: any) => void;
+  onLoginSuccess?: (user: { id: string; nombre: string; email: string; rol?: string }) => void;
   onLogout?: () => void;
   onOpenPrivacy?: () => void;
 }
@@ -40,8 +41,8 @@ export const LoginModalMobile: React.FC<LoginModalMobileProps> = ({
       if (onLoginSuccess && res.user) onLoginSuccess(res.user);
       setPassword('');
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'No pudimos conectar con la tienda. Inténtalo de nuevo.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'No pudimos conectar con la tienda. Inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import { Button, Chip, EmptyState, SectionTitle } from '../components/ui';
 import { confirmAction, notify } from '../utils/dialogs';
 import { formatDateTime } from '../utils/dates';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorMessage } from '../utils/errors';
 
 interface ReservationsScreenProps {
   authenticated: boolean;
@@ -63,7 +64,7 @@ export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
     if (!confirmed) return;
     setCancelling(id);
     try { await onCancel(id); }
-    catch (error: any) { notify('No se pudo cancelar', error?.response?.data?.message || error?.message || 'Inténtalo de nuevo.'); }
+    catch (error: unknown) { notify('No se pudo cancelar', getErrorMessage(error, 'Inténtalo de nuevo.')); }
     finally { setCancelling(null); }
   };
 

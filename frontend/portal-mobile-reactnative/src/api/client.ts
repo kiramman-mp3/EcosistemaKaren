@@ -30,7 +30,7 @@ export const apiClient = axios.create({
 });
 
 let inMemoryToken: string | null = null;
-let inMemoryUser: any = null;
+let inMemoryUser: StoredUser | null = null;
 let sessionExpiredListener: (() => void) | null = null;
 
 apiClient.interceptors.request.use((config) => {
@@ -250,7 +250,7 @@ export const api = {
     return inMemoryUser;
   },
 
-  setToken(token: string | null, user: any = null) {
+  setToken(token: string | null, user: StoredUser | null = null) {
     inMemoryToken = token;
     inMemoryUser = user;
   },
