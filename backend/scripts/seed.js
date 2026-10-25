@@ -613,6 +613,68 @@ function buildAlertsAndPromotions(lots, users) {
   return { alerts, promotions };
 }
 
+// Límites que el ADMIN fija a cada oferta aprobada. Las vigentes terminan entre unas horas y 7 días
+// después del seed (nunca después de que caduque su lote); un 15 % terminó en los últimos 3 días para
+// probar ofertas vencidas. Las reservas hechas sobre el lote en oferta mientras estaba vigente se
+// enlazan con ella (promocion_id, precio con descuento) y una parte de las ofertas con stock propio
+// queda agotada justo con esas reservas.
+const OFFER_PAST_DAYS = 3;
+const OFFER_FUTURE_DAYS = 7;
+
+function applyOfferLimits(promotions, lots, sim) {
+  const lotById = new Map(lots.map(l => [l.id, l]));
+  const reservationById = new Map(sim.reservations.map(r => [r.id, r]));
+  const live = promotions.filter(p => p.estado === 'APROBADA' && p.activa);
+  const linked = { offers: 0, lines: 0, soldOut: 0, ended: 0 };
+
+  for (const promo of live) {
+    const lot = lotById.get(promo.lote_id);
+    const approvedAt = Date.parse(promo.aprobada_at);
+    const lotEnd = lot.caducidad; // medianoche del día de caducidad: desde ahí el lote ya no se vende
+    if (chance(0.15)) {
+      promo.vigente_hasta = iso(Math.max(approvedAt + 30 * MIN_MS, NOW - randInt(1, OFFER_PAST_DAYS * 24) * 3600000));
+      if (Date.parse(promo.vigente_hasta) >= NOW) promo.vigente_hasta = iso(NOW - MIN_MS);
+      linked.ended++;
+    } else if (chance(0.8)) {
+      const end = NOW + randInt(2, OFFER_FUTURE_DAYS * 24) * 3600000;
+      promo.vigente_hasta = iso(Math.min(end, lotEnd - MIN_MS));
+    } else {
+      promo.vigente_hasta = null; // hasta que caduque el lote
+    }
+    const until = promo.vigente_hasta ? Date.parse(promo.vigente_hasta) : NOW;
+
+    // Reservas del lote tomadas mientras la oferta estaba vigente: llevan el descuento.
+    const lines = sim.details.filter(d => {
+      if (d.lote_id !== lot.id) return false;
+      const reservation = reservationById.get(d.reserva_id);
+      const t = Date.parse(reservation.created_at);
+      return t >= approvedAt && t < until;
+    });
+    let committed = 0;
+    for (const line of lines) {
+      const reservation = reservationById.get(line.reserva_id);
+      const base = priceAt(lot.product, Date.parse(reservation.created_at));
+      line.promocion_id = promo.id;
+      line.precio_unitario = Number((base * (1 - promo.descuento_porcentaje / 100)).toFixed(2));
+      if (reservation.estado === 'PENDIENTE' || reservation.estado === 'CONFIRMADA') committed += line.cantidad;
+    }
+    if (lines.length) { linked.offers++; linked.lines += lines.length; }
+
+    // Stock de oferta: nunca menos de lo ya comprometido ni más de lo que hay en el lote.
+    if (chance(0.6)) {
+      const soldOut = committed > 0 && chance(0.4);
+      const max = committed + lot.disp;
+      promo.stock_oferta = soldOut ? committed : Math.max(1, Math.min(max, committed + randInt(2, 12)));
+      if (soldOut) linked.soldOut++;
+    }
+    if (chance(0.6)) {
+      const cap = promo.stock_oferta || Math.max(1, lot.disp);
+      promo.limite_por_pedido = Math.min(cap, randInt(1, 4));
+    }
+  }
+  return linked;
+}
+
 // ---------------------------------------------------------------------------
 // Persistencia
 // ---------------------------------------------------------------------------
@@ -705,6 +767,7 @@ async function main() {
     const sim = simulate({ products, lots, users });
     finalizeLots(lots);
     const { alerts, promotions } = buildAlertsAndPromotions(lots, users);
+    const offerStats = applyOfferLimits(promotions, lots, sim);
 
     await client.query('BEGIN');
     await cleanPreviousSeed(client);
@@ -725,12 +788,22 @@ async function main() {
       cantidad_disponible: l.disp, cantidad_reservada: l.res, ubicacion: l.ubicacion, estado: l.estado,
       created_at: iso(l.ingreso), updated_at: iso(Math.min(NOW, Math.max(l.ingreso, l.caducidad)))
     })));
+    // Las ofertas van antes que las reservas: sus líneas con descuento las referencian.
+    await bulkInsert(client, 'promociones_ia', [
+      ['id', 'uuid'], ['lote_id', 'uuid'], ['descuento_porcentaje', 'numeric'], ['frase_promocional', 'text'],
+      ['razon_ia', 'text'], ['activa', 'boolean'], ['estado', 'text', 'estado_promocion'], ['modelo_ia', 'text'],
+      ['prompt_version', 'text'], ['cache_key', 'text'], ['cache_hit', 'boolean'], ['created_at', 'timestamptz'],
+      ['aprobada_por', 'uuid'], ['aprobada_at', 'timestamptz'], ['rechazada_por', 'uuid'],
+      ['rechazada_at', 'timestamptz'], ['motivo_rechazo', 'text'], ['limite_por_pedido', 'int'],
+      ['stock_oferta', 'int'], ['vigente_hasta', 'timestamptz']
+    ], promotions.map(p => ({ limite_por_pedido: null, stock_oferta: null, vigente_hasta: null, ...p })));
     await bulkInsert(client, 'reservas', [
       ['id', 'uuid'], ['usuario_id', 'uuid'], ['codigo_retiro', 'text'], ['estado', 'text', 'estado_reserva'],
       ['fecha_expiracion', 'timestamptz'], ['created_at', 'timestamptz'], ['updated_at', 'timestamptz']
     ], sim.reservations);
     await bulkInsert(client, 'reserva_detalles', [
-      ['id', 'uuid'], ['reserva_id', 'uuid'], ['lote_id', 'uuid'], ['cantidad', 'int'], ['precio_unitario', 'numeric']
+      ['id', 'uuid'], ['reserva_id', 'uuid'], ['lote_id', 'uuid'], ['cantidad', 'int'], ['precio_unitario', 'numeric'],
+      ['promocion_id', 'uuid']
     ], sim.details);
     await bulkInsert(client, 'inventario_movimientos', [
       ['id', 'uuid'], ['lote_id', 'uuid'], ['tipo', 'text'], ['cantidad', 'int'],
@@ -753,13 +826,6 @@ async function main() {
       producto_id: change.product.id, precio_anterior: change.anterior, precio_nuevo: change.nuevo, origen: change.origen,
       lote_id: change.lot ? change.lot.id : null, actor_id: change.actor.id, created_at: iso(change.t)
     })));
-    await bulkInsert(client, 'promociones_ia', [
-      ['id', 'uuid'], ['lote_id', 'uuid'], ['descuento_porcentaje', 'numeric'], ['frase_promocional', 'text'],
-      ['razon_ia', 'text'], ['activa', 'boolean'], ['estado', 'text', 'estado_promocion'], ['modelo_ia', 'text'],
-      ['prompt_version', 'text'], ['cache_key', 'text'], ['cache_hit', 'boolean'], ['created_at', 'timestamptz'],
-      ['aprobada_por', 'uuid'], ['aprobada_at', 'timestamptz'], ['rechazada_por', 'uuid'],
-      ['rechazada_at', 'timestamptz'], ['motivo_rechazo', 'text']
-    ], promotions);
     await client.query('COMMIT');
 
     const separatePortalDb = JSON.stringify(connectionSettings('portal')) !== JSON.stringify(connectionSettings('store'));
@@ -790,6 +856,8 @@ async function main() {
     console.log('Lotes por estado:', byState(lots, 'estado'));
     console.log('Reservas por estado:', byState(sim.reservations, 'estado'));
     console.log('Promociones por estado:', byState(promotions, 'estado'));
+    console.log(`Ofertas con límites: ${offerStats.ended} vencidas, ${offerStats.soldOut} agotadas, `
+      + `${offerStats.lines} líneas de reserva en ${offerStats.offers} ofertas`);
     console.log(`Ventas confirmadas simuladas: $${round2(revenue).toLocaleString('es-EC')}`);
     console.log(`\n🔑 Accesos demo (contraseña: ${DEMO_PASSWORD}):`);
     console.log(`   admin@${DEMO_EMAIL_DOMAIN} · bodega@${DEMO_EMAIL_DOMAIN} · percha@${DEMO_EMAIL_DOMAIN} · cliente@${DEMO_EMAIL_DOMAIN}`);
