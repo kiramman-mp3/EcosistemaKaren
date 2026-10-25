@@ -54,6 +54,8 @@ function customerReservationRoutes(router, { reservationController }, { authenti
   router.post('/reservations', authenticate, authorize('CLIENTE'), validate({ body: schemas.reservationBody }), (req, res, next) => reservationController.createReservation(req, res, next));
   router.get('/reservations/user/:userId', authenticate, validate({ params: schemas.userParams, query: schemas.reservationQuery }), (req, res, next) => reservationController.getByUser(req, res, next));
   router.post('/reservations/:id/cancel', authenticate, authorize('CLIENTE', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.emptyBody }), (req, res, next) => reservationController.cancel(req, res, next));
+  // El cliente extiende el plazo de su reserva (hasta 4 h en total desde que la creó).
+  router.post('/reservations/:id/extend', authenticate, authorize('CLIENTE'), validate({ params: schemas.idParams, body: schemas.extendReservationBody }), (req, res, next) => reservationController.extend(req, res, next));
 }
 
 // El ADMIN cancela reservas desde la tienda, que es quien libera el stock y avisa al portal. Solo el ADMIN:

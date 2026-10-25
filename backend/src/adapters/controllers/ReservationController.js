@@ -1,4 +1,5 @@
 const { ForbiddenException } = require('../../domain/exceptions/DomainExceptions');
+const { RESERVATION_EXTENSION_MINUTES } = require('../../domain/policies/BusinessRules');
 
 const STAFF_ROLES = new Set(['BODEGUERO', 'PERCHERO', 'ADMIN']);
 
@@ -39,33 +40,10 @@ class ReservationController {
     }
   }
 
-  async consultByCode(req, res, next) {
-    try {
-      const { code } = req.params;
-      const reservation = await this.getReservationByCodeUC.execute(code);
-      res.json({
-        success: true,
-        data: {
-          id: reservation.id,
-          codigoRetiro: reservation.codigoRetiro,
-          estado: reservation.estado,
-          fechaExpiracion: reservation.fechaExpiracion,
-          clienteNombre: reservation.clienteNombre || 'Cliente',
-          detalles: reservation.detalles,
-          total: reservation.detalles?.reduce((acc, d) => acc + Number(d.precioUnitario) * d.cantidad, 0) || 0,
-          created_at: reservation.created_at,
-          updated_at: reservation.updated_at
-        }
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-
   async extend(req, res, next) {
     try {
       const { id } = req.params;
-      const minutos = req.body?.minutosAdicionales || 30;
+      const minutos = req.body?.minutosAdicionales || RESERVATION_EXTENSION_MINUTES;
       if (!this.extendReservationUC) {
         return res.status(501).json({ success: false, message: 'Operación no implementada.' });
       }

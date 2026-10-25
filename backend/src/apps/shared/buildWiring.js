@@ -23,7 +23,7 @@ const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
 const { GetProducts, GetProductByBarcode, CreateProduct, SetProductImage } = require('../../use-cases/products/ProductUseCases');
 const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
-const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
+const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, ExtendReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const {
   GenerarPromocionesIA,
   GetPromotions,
@@ -247,7 +247,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       confirmReservationUC,
       // El ADMIN cancela reservas desde la tienda (los clientes lo hacen en el portal).
       new CancelReservation(reservationRepo),
-      portal ? new GetReservationsByUser(reservationRepo) : undefined
+      portal ? new GetReservationsByUser(reservationRepo) : undefined,
+      portal ? new ExtendReservation(reservationRepo) : undefined
     );
 
   controllers.promotionController = new PromotionController(
