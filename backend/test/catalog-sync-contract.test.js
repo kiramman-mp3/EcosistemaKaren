@@ -25,7 +25,8 @@ const samples = {
   },
   promociones: {
     id: uuid(4), loteId: uuid(3), descuentoPorcentaje: 20, frasePromocional: 'Aprovecha la leche',
-    createdAt: '2026-10-24T12:00:00.000Z'
+    createdAt: '2026-10-24T12:00:00.000Z', limitePorPedido: 2, stockOferta: 10,
+    vigenteHasta: '2026-10-26T01:00:00.000Z', unidadesRestantes: 7
   }
 };
 
@@ -51,6 +52,18 @@ test('una tienda con la versión anterior puede enviar productos sin fecha de al
   assert.ok(!schemas.catalogSyncBody.safeParse({ section: 'productos', version: 1, items: [negative] }).success);
   const fractional = { ...samples.productos, vendidos30d: 1.5 };
   assert.ok(!schemas.catalogSyncBody.safeParse({ section: 'productos', version: 1, items: [fractional] }).success);
+});
+
+test('las ofertas pueden llegar sin límites (tienda anterior o sin topes) y nunca con límites inválidos', () => {
+  const parse = (item) => schemas.catalogSyncBody.safeParse({ section: 'promociones', version: 1, items: [item] }).success;
+  const { limitePorPedido: _l, stockOferta: _s, vigenteHasta: _v, unidadesRestantes: _u, ...legacy } = samples.promociones;
+  assert.ok(parse(legacy));
+  assert.ok(parse({ ...samples.promociones, limitePorPedido: null, stockOferta: null, vigenteHasta: null, unidadesRestantes: null }));
+  assert.ok(parse({ ...samples.promociones, unidadesRestantes: 0 }));
+  assert.ok(!parse({ ...samples.promociones, limitePorPedido: 0 }));
+  assert.ok(!parse({ ...samples.promociones, stockOferta: 2.5 }));
+  assert.ok(!parse({ ...samples.promociones, unidadesRestantes: -1 }));
+  assert.ok(!parse({ ...samples.promociones, vigenteHasta: '2026-10-26' }));
 });
 
 test('el esquema acepta cualquier UUID que PostgreSQL acepte, no solo los RFC 4122', () => {

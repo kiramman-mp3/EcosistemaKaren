@@ -9,6 +9,7 @@
 // conserva el valor que ya tenía o, si la fila es nueva, usa `fallback` (una expresión SQL).
 
 const field = (key, column, sql, extra = {}) => ({ key, column, sql, ...extra });
+const offerLimit = (min) => ({ min, max: 100000, nullable: true, optional: true, fallback: 'NULL' });
 
 const SECTIONS = {
   categorias: {
@@ -58,7 +59,14 @@ const SECTIONS = {
       field('loteId', 'lote_id', 'uuid'),
       field('descuentoPorcentaje', 'descuento_porcentaje', 'numeric', { min: 1, max: 90 }),
       field('frasePromocional', 'frase_promocional', 'text', { max: 180 }),
-      field('createdAt', 'created_at', 'timestamptz')
+      field('createdAt', 'created_at', 'timestamptz'),
+      // Límites que fija el ADMIN y unidades de oferta que quedan (las calcula la tienda); null = sin
+      // tope. Si faltan se conserva el valor previo: no hay confusión con "sin tope" porque los límites
+      // no cambian tras aprobar la oferta y las restantes solo son null cuando no hay stock de oferta.
+      field('limitePorPedido', 'limite_por_pedido', 'int', offerLimit(1)),
+      field('stockOferta', 'stock_oferta', 'int', offerLimit(1)),
+      field('vigenteHasta', 'vigente_hasta', 'timestamptz', { nullable: true, optional: true, fallback: 'NULL' }),
+      field('unidadesRestantes', 'unidades_restantes', 'int', offerLimit(0))
     ],
     fixed: [
       ['razon_ia', "'Promoción aprobada por la tienda.'"],
