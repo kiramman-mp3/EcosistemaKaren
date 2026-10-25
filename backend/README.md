@@ -14,7 +14,12 @@ automáticamente para evitar pérdida accidental de información.
 El esquema inicial **no crea cuentas ni datos de ejemplo**. Los datos de demostración
 (`cliente@karen.com`, `bodega@karen.com` y `admin@karen.com` con la contraseña `demo123`, más tres
 productos y lotes) están en `init-db/dev/01-demo-data.sql`, que solo monta el `docker-compose.yml` de
-desarrollo. `npm run db:seed` genera un conjunto más grande con cuentas `@demo.karen.ec`.
+desarrollo. `npm run db:seed` genera un conjunto más grande con cuentas `@demo.karen.ec`: unos 120
+días de historial, reservas con el plazo que elige el cliente (30 min por defecto, a veces extendido),
+ofertas con límites que terminan entre hace 3 días y dentro de 7, y cambios de PVP. Se puede repetir:
+borra y regenera solo los datos demo. Con la tienda y el portal en bases separadas copia también los
+clientes demo y sus reservas al portal; `node start.js --split` le pasa esa conexión, y a mano hay
+que darle las variables `PORTAL_DB_*`.
 
 PostgreSQL y pgAdmin se publican solo en `127.0.0.1` (puertos `DB_EXPOSED_PORT` y `PGADMIN_PORT`).
 Las credenciales de `.env.example` son únicamente para desarrollo.
