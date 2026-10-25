@@ -6,6 +6,7 @@ import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui';
 import { Bump, PopPressable } from './motion';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { categoryTone } from '../theme/categoryTone';
+import { maxPerOrderText, offerEndText } from '../config/offerRules';
 
 const LOW_STOCK = 5;
 
@@ -78,6 +79,24 @@ interface OfferTagProps {
   compact?: boolean;
 }
 
+/** Hora real de fin y límite por pedido que fijó la tienda; nada si la oferta no los tiene. */
+const OfferLimits: React.FC<{ offer: FlashOffer }> = ({ offer }) => {
+  const endText = offerEndText(offer.endsAt);
+  const limitText = maxPerOrderText(offer.maxPerOrder);
+  if (!endText && !limitText) return null;
+  return (
+    <View style={styles.offerLimits}>
+      {endText && (
+        <View style={styles.offerEnd}>
+          <Ionicons name="time-outline" size={14} color={colors.mora} />
+          <Text style={styles.left}>{endText}</Text>
+        </View>
+      )}
+      {limitText && <Text style={styles.limitChip}>{limitText}</Text>}
+    </View>
+  );
+};
+
 /** Oferta por vencer: pegatina limón con el precio rebajado y la fecha impresa. */
 export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve, busy = false, compact = false }) => (
   <View style={[styles.offer, compact && styles.offerCompact]}>
@@ -96,6 +115,7 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve, busy = fal
         <ExpiryStamp date={offer.expiresOn} color={colors.mora} />
         <Text style={styles.left}>Quedan {offer.stockAvailable}</Text>
       </View>
+      <OfferLimits offer={offer} />
       <PopPressable
         onPress={() => onReserve(offer)}
         disabled={busy}
@@ -144,6 +164,12 @@ const styles = themed(() => StyleSheet.create({
   offerPrice: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   offerMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 },
   left: { fontFamily: fonts.semibold, fontSize: 13, color: colors.mora },
+  offerLimits: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  offerEnd: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  limitChip: {
+    fontFamily: fonts.bold, fontSize: 11, color: colors.mora, borderWidth: 1.5, borderColor: colors.mora,
+    borderRadius: radius.tag, paddingHorizontal: 6, paddingVertical: 1,
+  },
   reserve: { minHeight: 46, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   reserveText: { fontFamily: fonts.tag, fontSize: 15, color: '#FFFFFF' },
 }));

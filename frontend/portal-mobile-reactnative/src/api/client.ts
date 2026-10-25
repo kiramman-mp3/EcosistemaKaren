@@ -97,6 +97,11 @@ export interface BackendPromotion {
   razonIa?: string;
   activa: boolean;
   created_at?: string;
+  /** Límites que fija el ADMIN (null = sin tope) y unidades con descuento que quedan. */
+  limitePorPedido?: number | null;
+  stockOferta?: number | null;
+  vigenteHasta?: string | null;
+  unidadesRestantes?: number | null;
 }
 
 export interface CreateReservationRequest {

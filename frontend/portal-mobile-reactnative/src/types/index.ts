@@ -35,6 +35,8 @@ export interface FlashOffer {
   stockAvailable: number;
   expiryText: string;
   expiresOn?: string;
+  maxPerOrder?: number | null; // límite por pedido que fijó la tienda
+  endsAt?: string | null;      // fecha y hora real de fin de la oferta
   productName?: string;
   image: string | null;
   loteId?: string;

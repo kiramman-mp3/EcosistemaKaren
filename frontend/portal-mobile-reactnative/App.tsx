@@ -31,6 +31,7 @@ import { getErrorMessage, getErrorStatus, getServerMessage } from './src/utils/e
 import { colors, fonts, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { bestSellerIds, isNewProduct } from './src/config/catalogRules';
+import { offerEnded, offerUnitsAvailable } from './src/config/offerRules';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
@@ -136,19 +137,24 @@ function PortalAppContent() {
       const mappedOffers: FlashOffer[] = backendPromos.flatMap(promo => {
         const lot = backendLots.find(l => l.id === promo.loteId);
         const product = lot && productById.get(lot.productoId);
-        if (!lot || !product || lot.cantidadDisponible <= 0) return [];
+        if (!lot || !product || lot.cantidadDisponible <= 0 || offerEnded(promo.vigenteHasta)) return [];
         const originalPrice = Number(product.precioVenta);
+        // Con stock de oferta, el medidor y las unidades son los de la oferta; sin él, los del lote.
+        const units = offerUnitsAvailable({ lotAvailable: lot.cantidadDisponible, unidadesRestantes: promo.unidadesRestantes });
+        if (units <= 0) return [];
         return [{
           id: promo.id,
           title: promo.frasePromocional || product.nombre,
           category: categoryById.get(product.categoriaId) || 'Oferta',
           discountBadge: `-${promo.descuentoPorcentaje}%`,
           aiBadge: Boolean(promo.razonIa),
-          urgencyBadge: `Quedan ${lot.cantidadDisponible}`,
+          urgencyBadge: `Quedan ${units}`,
           price: Number((originalPrice * (1 - promo.descuentoPorcentaje / 100)).toFixed(2)),
           originalPrice,
-          stockTotal: Math.max(lot.cantidadIngresada || 0, lot.cantidadDisponible),
-          stockAvailable: lot.cantidadDisponible,
+          stockTotal: promo.stockOferta ? Math.max(promo.stockOferta, units) : Math.max(lot.cantidadIngresada || 0, units),
+          stockAvailable: units,
+          maxPerOrder: promo.limitePorPedido ?? null,
+          endsAt: promo.vigenteHasta ?? null,
           expiryText: `Vence: ${formatDate(lot.fechaCaducidad)}`,
           expiresOn: lot.fechaCaducidad,
           productName: product.nombre,
@@ -350,6 +356,8 @@ function PortalAppContent() {
       void loadBackendData();
     } catch (err: unknown) {
       notify('No pudimos apartar la oferta', getErrorMessage(err, 'Revisa tu conexión con la tienda.'));
+      // La oferta pudo agotarse o terminar: se actualizan las unidades que se muestran.
+      void loadBackendData();
     } finally {
       setReservingOfferId(null);
     }
