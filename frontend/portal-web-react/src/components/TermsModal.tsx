@@ -16,10 +16,17 @@ interface TermsModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultSection?: string;
+  defaultCategory?: 'todos' | 'privacidad' | 'reservas' | 'fefo' | 'pagos';
 }
 
-export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
-  const [activeCategory, setActiveCategory] = useState<'todos' | 'privacidad' | 'reservas' | 'fefo' | 'pagos'>('todos');
+export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose, defaultCategory = 'todos' }) => {
+  const [activeCategory, setActiveCategory] = useState<'todos' | 'privacidad' | 'reservas' | 'fefo' | 'pagos'>(defaultCategory);
+
+  useEffect(() => {
+    if (isOpen && defaultCategory) {
+      setActiveCategory(defaultCategory);
+    }
+  }, [isOpen, defaultCategory]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -34,33 +41,33 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-mora/70 flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-[70] bg-mora/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="terms-title"
     >
-      <div className="relative w-full max-w-3xl rounded-block bg-surface shadow-pop-lg border-2 border-mora overflow-hidden my-6 animate-scale-up flex flex-col max-h-[90dvh]">
-        {/* Encabezado del modal */}
-        <div className="bg-limon text-mora px-4 py-3 sm:px-6 sm:py-5 border-b-2 border-mora flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex w-11 h-11 rounded-full border-2 border-mora bg-surface text-mora items-center justify-center shrink-0">
-              <FileText className="w-5 h-5" />
+      <div className="relative w-full max-w-3xl rounded-block bg-surface shadow-pop-lg border-2 border-mora overflow-hidden my-2 sm:my-6 animate-scale-up flex flex-col max-h-[92dvh]">
+        {/* Encabezado del modal adaptativo */}
+        <div className="bg-limon text-mora px-3 py-3 sm:px-6 sm:py-4 border-b-2 border-mora flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="hidden xs:flex w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-mora bg-surface text-mora items-center justify-center shrink-0">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 id="terms-title" className="font-display font-extrabold text-lg sm:text-2xl text-mora leading-tight">
+            <div className="min-w-0">
+              <h2 id="terms-title" className="font-display font-extrabold text-base sm:text-xl md:text-2xl text-mora leading-tight truncate">
                 Términos y Condiciones del Servicio
               </h2>
-              <p className="text-[11px] sm:text-xs font-semibold text-mora/80">
-                Supermercados Karen S.A. · RUC 0992345678001 · Guayaquil, Ecuador · Actualizado 2026
+              <p className="text-[10px] sm:text-xs font-semibold text-mora/80 truncate">
+                Supermercados Karen S.A. · Privacidad y LOPDP Ecuador · 2026
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Cerrar términos y condiciones"
-            className="w-10 h-10 rounded-full bg-surface border-2 border-mora text-mora hover:bg-mora hover:text-white flex items-center justify-center transition-colors shrink-0 ml-2"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-surface border-2 border-mora text-mora hover:bg-mora hover:text-white flex items-center justify-center transition-colors shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 

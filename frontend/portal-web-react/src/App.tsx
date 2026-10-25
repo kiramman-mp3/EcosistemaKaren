@@ -75,6 +75,7 @@ export const App: React.FC = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [termsCategory, setTermsCategory] = useState<'todos' | 'privacidad' | 'reservas' | 'fefo' | 'pagos'>('todos');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Un solo temporizador: un toast nuevo no debe cerrarse por el temporizador del anterior.
@@ -334,7 +335,7 @@ export const App: React.FC = () => {
     goTo('productos');
   };
 
-  const handleConfirmReservationFromCart = async () => {
+  const handleConfirmReservationFromCart = async (ttlMinutos = 30) => {
     if (cart.length === 0) return;
     if (!currentUser) {
       setCartError(null);
@@ -353,6 +354,7 @@ export const App: React.FC = () => {
     try {
       let result = await api.createReservation({
         usuarioId: currentUser.id,
+        ttlMinutos,
         items: cart.map(i => ({
           productoId: i.product.reservationProductId || i.product.id,
           cantidad: i.quantity,
@@ -388,6 +390,7 @@ export const App: React.FC = () => {
       const saved = await api.getReservationByCode(code).catch(() => null);
 
       setCurrentPass(saved ? reservationToPass(saved, currentUser.nombre) : {
+        id: result.id,
         code,
         status: 'ACTIVA',
         initialSeconds: remainingSeconds,
@@ -608,7 +611,10 @@ export const App: React.FC = () => {
 
       <Footer
         onNavigate={goTo}
-        onOpenTerms={() => setIsTermsOpen(true)}
+        onOpenTerms={(category) => {
+          setTermsCategory(category || 'todos');
+          setIsTermsOpen(true);
+        }}
         onOpenChat={() => {
           const chatBtn = document.querySelector('button[aria-label="Abrir chat de ayuda en línea"]') as HTMLButtonElement | null;
           chatBtn?.click();
@@ -631,6 +637,7 @@ export const App: React.FC = () => {
       <TermsModal
         isOpen={isTermsOpen}
         onClose={() => setIsTermsOpen(false)}
+        defaultCategory={termsCategory}
       />
 
       <HelpChatWidget />
@@ -641,7 +648,7 @@ export const App: React.FC = () => {
         items={cart}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
-        onConfirmReservation={() => void handleConfirmReservationFromCart()}
+        onConfirmReservation={(ttl) => void handleConfirmReservationFromCart(ttl)}
         isSubmitting={isSubmittingReservation}
         error={cartError}
         isLoggedIn={Boolean(currentUser)}

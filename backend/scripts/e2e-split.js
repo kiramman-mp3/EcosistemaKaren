@@ -241,6 +241,30 @@ async function run() {
   check('el cliente ve la reserva cancelada', (await portal('GET', `/reservations/code/${toCancel.body.data?.codigoRetiro}`, null, client)).body.data?.estado === 'CANCELADA');
 
   console.log('');
+  console.log('Plazo de la reserva');
+  const minutesAlive = async (id) => {
+    const row = (await storeDb.query('SELECT fecha_expiracion, created_at FROM reservas WHERE id = $1', [id])).rows[0];
+    return Math.round((new Date(row.fecha_expiracion) - new Date(row.created_at)) / 60000);
+  };
+  const longer = await portal('POST', '/reservations', { ttlMinutos: 60, items: [{ productoId: data.productId, cantidad: 1 }] }, client);
+  const longerId = longer.body.data?.id;
+  check('el cliente elige 60 minutos y la tienda guarda ese plazo', longer.status === 201 && Math.abs((await minutesAlive(longerId)) - 60) <= 1, String(longer.status));
+  check('un plazo fuera de rango se rechaza', (await portal('POST', '/reservations', { ttlMinutos: 5, items: [{ productoId: data.productId, cantidad: 1 }] }, client)).status === 400);
+  const extended = await portal('POST', `/reservations/${longerId}/extend`, { minutosAdicionales: 30 }, client);
+  check('el cliente extiende 30 minutos por el canal con la tienda', extended.status === 200, `${extended.status} ${extended.body.message || ''}`);
+  check('la tienda tiene el nuevo plazo de 90 minutos', Math.abs((await minutesAlive(longerId)) - 90) <= 1);
+  check('el portal muestra el mismo vencimiento que la tienda', Boolean(await waitFor(async () => {
+    const row = (await portalDb.query('SELECT fecha_expiracion FROM reservas_portal WHERE id = $1', [longerId])).rows[0];
+    const stored = (await storeDb.query('SELECT fecha_expiracion FROM reservas WHERE id = $1', [longerId])).rows[0];
+    return Math.abs(new Date(row.fecha_expiracion) - new Date(stored.fecha_expiracion)) < 1000;
+  }, 15000)));
+  check('el personal no extiende reservas de clientes (ruta solo para CLIENTE)', [401, 403].includes((await portal('POST', `/reservations/${longerId}/extend`, {}, staff)).status));
+  const atLimit = await portal('POST', '/reservations', { ttlMinutos: 240, items: [{ productoId: data.productId, cantidad: 1 }] }, client);
+  const overLimit = await portal('POST', `/reservations/${atLimit.body.data?.id}/extend`, { minutosAdicionales: 30 }, client);
+  check('no se puede pasar de 4 horas en total', overLimit.status === 400 && /4 horas/.test(overLimit.body.message || ''), `${overLimit.status} ${overLimit.body.message || ''}`);
+  check('la reserva de 4 horas conserva su plazo', Math.abs((await minutesAlive(atLimit.body.data?.id)) - 240) <= 1);
+
+  console.log('');
   console.log('Foto tomada con la cámara');
   // Foto de 12 MP con ruido (no comprime bien) y orientación EXIF, como la que entrega un teléfono.
   const camera = await sharp(crypto.randomBytes(4000 * 3000 * 3), { raw: { width: 4000, height: 3000, channels: 3 } })

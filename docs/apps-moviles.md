@@ -30,6 +30,14 @@ sale en ~300 KB— y el servidor la vuelve a comprimir (máx. 1024 px), la guard
 Usa los módulos nativos `expo-image-picker` y `expo-image-manipulator`: **hay que volver a compilar el APK** de bodega para tener
 esta función (un APK anterior no la trae). El permiso de cámara ya lo pedía la app para escanear códigos.
 
+## Reportes de bodega (PDF y Excel)
+
+En **Reportes**, los botones **PDF** y **Excel** exportan los movimientos y mermas. En el navegador el PDF abre el diálogo de
+impresión y el Excel (CSV) se descarga; en el teléfono ambos abren la hoja de compartir (correo, WhatsApp, Drive...). Los datos que
+escribe el personal (nombres de producto, motivos) se escapan en el PDF y se neutralizan en el CSV para que Excel no ejecute
+fórmulas. La razón social, la sucursal y el RUC que se imprimen están en `src/config/storeInfo.ts` y son de demostración: cambiarlos
+por los reales. Usa `expo-print`, `expo-sharing` y `expo-file-system`, por lo que **hay que recompilar el APK** para tener esta función.
+
 ## Android (.apk)
 
 Hace falta Android Studio (trae el JDK y el SDK). Desde la carpeta de cada app:

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, QrCode, RefreshCw } from 'lucide-react';
-import type { BackendReservation } from '../api/client';
+import { AlertTriangle, Check, Clock, QrCode, RefreshCw } from 'lucide-react';
+import { api, BackendReservation } from '../api/client';
 import { formatDateTime } from '../utils/dates';
 import { Button } from './ui/Button';
 import { Illustration } from './ui/Illustration';
@@ -25,6 +25,17 @@ const FILTERS: { id: ReservationFilter; label: string }[] = [
   { id: 'COMPLETADAS', label: 'Retiradas' },
   { id: 'CANCELADAS', label: 'Canceladas o vencidas' },
 ];
+
+// Cuánto se extiende cada vez y el máximo que puede durar una reserva desde que se creó (lo valida la tienda).
+const EXTENSION_MINUTES = 30;
+const MAX_TOTAL_MINUTES = 240;
+
+/** ¿Cabe otra extensión sin pasar de 4 h en total? Sin fecha de creación se deja intentar: la tienda decide. */
+function canExtend(reservation: BackendReservation): boolean {
+  if (!reservation.created_at) return true;
+  const limit = new Date(reservation.created_at).getTime() + MAX_TOTAL_MINUTES * 60000;
+  return new Date(reservation.fechaExpiracion).getTime() + EXTENSION_MINUTES * 60000 <= limit;
+}
 
 const statusLabel: Record<BackendReservation['estado'], string> = {
   PENDIENTE_SYNC: 'Confirmando',
@@ -51,6 +62,9 @@ export const MyReservationsPage: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ReservationFilter>('TODAS');
 
+  const [extendingId, setExtendingId] = useState<string | null>(null);
+  const [extendMessage, setExtendMessage] = useState<string | null>(null);
+
   const normalized = useMemo(() => reservations.map(reservation => {
     const isExpiredPending = (reservation.estado === 'PENDIENTE' || reservation.estado === 'PENDIENTE_SYNC')
       && new Date(reservation.fechaExpiracion).getTime() <= Date.now();
@@ -74,6 +88,21 @@ export const MyReservationsPage: React.FC<Props> = ({
       setError(getErrorMessage(cause, 'No se pudo cancelar la reserva. Inténtalo de nuevo.'));
     } finally {
       setCancelling(null);
+    }
+  };
+
+  const handleExtend = async (id: string) => {
+    setExtendingId(id);
+    setError(null);
+    setExtendMessage(null);
+    try {
+      await api.extendReservation(id, EXTENSION_MINUTES);
+      setExtendMessage(`Tiempo extendido: se añadieron ${EXTENSION_MINUTES} minutos a la reserva.`);
+      await onRefresh();
+    } catch (cause: unknown) {
+      setError(getErrorMessage(cause, 'No se pudo extender el tiempo de la reserva.'));
+    } finally {
+      setExtendingId(null);
     }
   };
 
@@ -104,6 +133,11 @@ export const MyReservationsPage: React.FC<Props> = ({
           {error && (
             <p role="alert" className="mb-5 flex gap-2 rounded-tag bg-karen-tint text-karen-deep text-sm font-semibold p-3">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{error}
+            </p>
+          )}
+          {extendMessage && (
+            <p role="status" className="mb-5 flex gap-2 rounded-tag bg-aguacate-tint text-fresh text-sm font-bold p-3">
+              <Check className="w-4 h-4 shrink-0 mt-0.5" />{extendMessage}
             </p>
           )}
 
@@ -190,17 +224,32 @@ export const MyReservationsPage: React.FC<Props> = ({
                       </div>
                     )}
                     {pending && (
-                      <div className="grid grid-cols-2 gap-2 p-4 pt-0">
-                        <Button onClick={() => onOpenPass(reservation)}>
-                          <QrCode className="w-4 h-4" />Ver pase QR
-                        </Button>
-                        <Button
-                          onClick={() => void cancel(reservation.id)}
-                          disabled={cancelling === reservation.id}
-                          variant="surface"
-                        >
-                          {cancelling === reservation.id ? 'Cancelando…' : 'Cancelar reserva'}
-                        </Button>
+                      <div className="flex flex-col gap-2 p-4 pt-0">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button onClick={() => onOpenPass(reservation)}>
+                            <QrCode className="w-4 h-4" />Ver pase QR
+                          </Button>
+                          <Button
+                            onClick={() => void cancel(reservation.id)}
+                            disabled={cancelling === reservation.id}
+                            variant="surface"
+                          >
+                            {cancelling === reservation.id ? 'Cancelando…' : 'Cancelar reserva'}
+                          </Button>
+                        </div>
+                        {canExtend(reservation) ? (
+                          <Button
+                            onClick={() => void handleExtend(reservation.id)}
+                            disabled={extendingId === reservation.id}
+                            variant="surface"
+                            className="w-full text-xs font-bold py-1.5 border-dashed border-mora/40 hover:bg-limon"
+                          >
+                            <Clock className={`w-3.5 h-3.5 ${extendingId === reservation.id ? 'animate-spin' : ''}`} />
+                            {extendingId === reservation.id ? 'Extendiendo…' : `Añadir más tiempo (+${EXTENSION_MINUTES} min)`}
+                          </Button>
+                        ) : (
+                          <p className="text-center text-xs font-semibold text-ink-muted">Llegaste al máximo de 4 horas para esta reserva.</p>
+                        )}
                       </div>
                     )}
                   </li>

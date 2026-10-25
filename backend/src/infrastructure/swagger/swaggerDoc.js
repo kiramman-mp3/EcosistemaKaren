@@ -309,6 +309,7 @@ const swaggerDocument = {
                 type: 'object',
                 required: ['items'],
                 properties: {
+                  ttlMinutos: { type: 'integer', minimum: 15, maximum: 240, default: 30, description: 'Minutos que se guardan los productos (el cliente los elige; 30 por defecto).' },
                   items: {
                     type: 'array',
                     items: {
@@ -386,6 +387,27 @@ const swaggerDocument = {
         ],
         responses: {
           '200': { description: 'Reserva confirmada y stock deducido' }
+        }
+      }
+    },
+    '/reservations/{id}/extend': {
+      post: {
+        tags: ['Reservaciones'],
+        summary: 'Extender el plazo de una reserva pendiente',
+        description: 'Solo el cliente propietario. Suma `minutosAdicionales` (5 a 180; 30 por defecto) al vencimiento. Una reserva no puede durar más de 4 horas en total desde que se creó. El vencimiento lo fija la tienda, por lo que requiere un latido vigente; si la tienda no responde en unos segundos, responde 503 sin cambiar nada.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: false,
+          content: { 'application/json': { schema: { type: 'object', properties: { minutosAdicionales: { type: 'integer', minimum: 5, maximum: 180, default: 30 } } } } }
+        },
+        responses: {
+          '200': { description: 'Plazo extendido; devuelve la reserva con su nuevo vencimiento' },
+          '400': { description: 'La reserva no está pendiente, ya venció o excede las 4 horas en total' },
+          '403': { description: 'La reserva es de otro cliente' },
+          '404': { description: 'Reserva no encontrada' },
+          '409': { description: 'Ya hay una extensión de esta reserva en curso' },
+          '503': { description: 'La tienda no está conectada o no respondió a tiempo' }
         }
       }
     },
@@ -663,6 +685,7 @@ const OPERATION_OWNERS = [
   ['/auth/register', ['post'], 'portal'],
   ['/reservations', ['post'], 'portal'],
   ['/reservations/user/{userId}', null, 'portal'],
+  ['/reservations/{id}/extend', null, 'portal'],
   ['/catalog/status', null, 'portal']
 ];
 

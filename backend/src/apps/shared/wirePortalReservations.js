@@ -4,6 +4,7 @@ const PostgresPortalReservationRepository = require('../../adapters/repositories
 const PortalReservationSweeperWorker = require('../../infrastructure/workers/PortalReservationSweeperWorker');
 const {
   RequestReservation,
+  ExtendPortalReservation,
   GetPortalReservationByCode,
   GetPortalReservationsByUser,
   CancelPortalReservation,
@@ -25,7 +26,8 @@ function wirePortalReservations({ pool, heartbeatMonitor, serviceConfig }) {
       new GetPortalReservationByCode(repository),
       undefined,
       new CancelPortalReservation(repository),
-      new GetPortalReservationsByUser(repository)
+      new GetPortalReservationsByUser(repository),
+      new ExtendPortalReservation(repository, heartbeatMonitor, { waitMs: serviceConfig.reservationSyncWaitMs })
     ),
     storeChannelController: new StoreChannelController(
       new DeliverStoreCommands(repository),

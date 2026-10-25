@@ -1,21 +1,24 @@
 const { ForbiddenException } = require('../../domain/exceptions/DomainExceptions');
+const { RESERVATION_EXTENSION_MINUTES } = require('../../domain/policies/BusinessRules');
 
 const STAFF_ROLES = new Set(['BODEGUERO', 'PERCHERO', 'ADMIN']);
 
 class ReservationController {
-  constructor(reservarStockUC, getReservationByCodeUC, confirmReservationUC, cancelReservationUC, getReservationsByUserUC) {
+  constructor(reservarStockUC, getReservationByCodeUC, confirmReservationUC, cancelReservationUC, getReservationsByUserUC, extendReservationUC) {
     this.reservarStockUC = reservarStockUC;
     this.getReservationByCodeUC = getReservationByCodeUC;
     this.confirmReservationUC = confirmReservationUC;
     this.cancelReservationUC = cancelReservationUC;
     this.getReservationsByUserUC = getReservationsByUserUC;
+    this.extendReservationUC = extendReservationUC;
   }
 
   async createReservation(req, res, next) {
     try {
       const reservation = await this.reservarStockUC.execute({
         usuarioId: req.user.id,
-        items: req.body.items
+        items: req.body.items,
+        ttlMinutos: req.body.ttlMinutos
       });
       // Con portal y tienda separados, la tienda puede tardar en responder: 202 y el cliente consulta después.
       const awaitingStore = reservation.estado === 'PENDIENTE_SYNC';
@@ -31,6 +34,24 @@ class ReservationController {
           fechaExpiracion: reservation.fechaExpiracion,
           detalles: reservation.detalles
         }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async extend(req, res, next) {
+    try {
+      const { id } = req.params;
+      const minutos = req.body?.minutosAdicionales || RESERVATION_EXTENSION_MINUTES;
+      if (!this.extendReservationUC) {
+        return res.status(501).json({ success: false, message: 'Operación no implementada.' });
+      }
+      const reservation = await this.extendReservationUC.execute(id, req.user, minutos);
+      res.json({
+        success: true,
+        message: `Tiempo de reserva extendido en ${minutos} minutos.`,
+        data: reservation
       });
     } catch (err) {
       next(err);

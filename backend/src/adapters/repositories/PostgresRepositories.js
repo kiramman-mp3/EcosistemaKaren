@@ -3,6 +3,7 @@ const Product = require('../../domain/entities/Product');
 const Lot = require('../../domain/entities/Lot');
 const User = require('../../domain/entities/User');
 const Reservation = require('../../domain/entities/Reservation');
+const { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES } = require('../../domain/policies/BusinessRules');
 const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
 const { toDateOnly } = require('../../domain/policies/BusinessDates');
@@ -933,8 +934,56 @@ class PostgresReservationRepository {
   }
 
   async findByCode(code) {
-    const [reservation] = await this._findWithDetails('r.codigo_retiro = $1', [code]);
+    // Los códigos se guardan en mayúsculas: se normaliza lo que escribe la persona, no la columna (así usa su índice).
+    const cleanCode = (code || '').trim().toUpperCase();
+    const [reservation] = await this._findWithDetails('r.codigo_retiro = $1', [cleanCode]);
     return reservation || null;
+  }
+
+  /**
+   * Extiende el plazo de una reserva PENDIENTE sin tocar su stock. Sin `until`, suma `minutes` al vencimiento
+   * actual; con `until` (instante absoluto, lo usa el portal) lo fija ahí, de modo que reentregar el mismo comando
+   * no extiende dos veces. Una reserva nunca puede durar más de `maxTotalMinutes` desde su creación.
+   */
+  async extendTimeWithLockedStock(reservationId, actor, minutes = RESERVATION_EXTENSION_MINUTES, { until = null, maxTotalMinutes = RESERVATION_MAX_TOTAL_MINUTES } = {}) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const row = await this._findByIdForUpdate(client, reservationId);
+      if (!row) {
+        throw new NotFoundException(`Reserva con ID '${reservationId}' no encontrada.`);
+      }
+      if (actor.rol !== 'ADMIN' && row.usuarioId !== actor.id) {
+        throw new ForbiddenException('Solo el propietario o un administrador puede extender la reserva.');
+      }
+      if (row.estado !== 'PENDIENTE') {
+        throw new ValidationException(`No se puede extender una reserva en estado ${row.estado}.`);
+      }
+      const current = new Date(row.fechaExpiracion);
+      if (current <= new Date()) {
+        throw new ValidationException('La reserva ya ha expirado y no puede extenderse.');
+      }
+      const target = until ? new Date(until) : new Date(current.getTime() + minutes * 60000);
+      if (Number.isNaN(target.getTime())) throw new ValidationException('La nueva fecha de vencimiento no es válida.');
+      if (target > current) {
+        const limit = new Date(new Date(row.created_at).getTime() + maxTotalMinutes * 60000);
+        if (target > limit) {
+          throw new ValidationException(`Una reserva puede durar como máximo ${maxTotalMinutes / 60} horas en total.`);
+        }
+        await client.query(
+          'UPDATE reservas SET fecha_expiracion = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+          [target, reservationId]
+        );
+      }
+      await client.query('COMMIT');
+      const [updated] = await this._findWithDetails('r.id = $1', [reservationId]);
+      return updated || null;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async findById(id) {
