@@ -5,6 +5,7 @@ import { CartItem } from '../types';
 import { Button, EmptyState, Price, ProductImage } from './ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { categoryTone } from '../theme/categoryTone';
+import { SHEET_MAX_WIDTH } from '../theme/layout';
 import {
   DEFAULT_RESERVATION_MINUTES, RESERVATION_DURATION_OPTIONS, RESERVATION_EXTENSION_MINUTES,
   RESERVATION_MAX_TOTAL_MINUTES, formatMinutes,
@@ -144,7 +145,7 @@ export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
 
 const styles = themed(() => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.6)', justifyContent: 'flex-end' },
-  sheet: { maxHeight: '90%', backgroundColor: colors.aisle, borderTopLeftRadius: radius.block, borderTopRightRadius: radius.block, borderWidth: 2, borderBottomWidth: 0, borderColor: colors.mora, overflow: 'hidden' },
+  sheet: { width: '100%', maxWidth: SHEET_MAX_WIDTH, alignSelf: 'center', maxHeight: '90%', backgroundColor: colors.aisle, borderTopLeftRadius: radius.block, borderTopRightRadius: radius.block, borderWidth: 2, borderBottomWidth: 0, borderColor: colors.mora, overflow: 'hidden' },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.sticker, borderBottomWidth: 2, borderBottomColor: colors.mora, paddingLeft: 20, paddingRight: 8, paddingVertical: 10 },
   title: { fontFamily: fonts.tag, fontSize: 28, color: colors.mora },
   count: { fontFamily: fonts.tagSemibold, fontSize: 20, color: colors.mora },

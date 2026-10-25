@@ -58,7 +58,7 @@ export const ChatBotModal: React.FC<ChatBotModalProps> = ({ visible, onClose }) 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.column} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.head}>
             <View style={styles.avatar}><Ionicons name="chatbubbles" size={20} color="#FFFFFF" /></View>
             <View style={styles.flex}>
@@ -141,6 +141,8 @@ export const ChatBotModal: React.FC<ChatBotModalProps> = ({ visible, onClose }) 
 
 const styles = themed(() => StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
+  // En tabletas la conversación es una columna centrada, no una línea de texto de borde a borde.
+  column: { flex: 1, width: '100%', maxWidth: 760, alignSelf: 'center' },
   screen: { flex: 1, backgroundColor: colors.aisle },
   head: {
     flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.sticker,

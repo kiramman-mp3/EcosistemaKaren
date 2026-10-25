@@ -6,6 +6,7 @@ import { Button, Chip, EmptyState } from '../components/ui';
 import { Skeleton } from '../components/motion';
 import { ProductTag } from '../components/ProductTag';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { useLayout } from '../theme/layout';
 import { QuickFilter, SortKey, sortForQuickFilter, visibleProducts } from '../config/catalogView';
 
 interface CatalogScreenProps {
@@ -38,6 +39,7 @@ const SORT_OPTIONS: { id: SortKey; label: string }[] = [
 export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   products, offers, categories, selectedCategory, onSelectCategory, cart, onAddToCart, state, error, refreshing, onRefresh,
 }) => {
+  const { productColumns: columns, gutter } = useLayout();
   const [query, setQuery] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('todos');
@@ -64,10 +66,11 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
 
   return (
     <FlatList
+      key={columns}
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { padding: gutter }]}
       data={state === 'ready' || state === 'empty' ? visible : []}
-      numColumns={2}
+      numColumns={columns}
       columnWrapperStyle={styles.columns}
       keyExtractor={product => product.id}
       initialNumToRender={8}
@@ -132,14 +135,14 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         </View>
       }
       ListEmptyComponent={
-        state === 'loading' ? <View style={styles.skeletons}>{[0, 1, 2, 3].map(i => <Skeleton key={i} style={styles.skeleton} />)}</View>
+        state === 'loading' ? <View style={styles.skeletons}>{Array.from({ length: columns * 2 }, (_, i) => <Skeleton key={i} style={[styles.skeleton, { width: `${100 / columns - 2}%` }]} />)}</View>
           : state === 'offline' || state === 'error'
             ? <EmptyState illustration="offline" title="No pudimos cargar los productos" text={error || 'La tienda no respondió.'} action={<Button label="Intentar de nuevo" compact onPress={onRefresh} />} />
             : <EmptyState illustration="search" title="No encontramos ese producto" text="Prueba con otra palabra o date una vuelta por todos los pasillos."
                 action={<Button label="Ver todos" variant="outline" compact onPress={() => { setQuery(''); setOnlyInStock(false); setQuickFilter('todos'); setSort('nombre'); onSelectCategory('Todos'); }} />} />
       }
       renderItem={({ item }) => (
-        <View style={styles.cell}>
+        <View style={[styles.cell, { maxWidth: `${100 / columns}%` }]}>
           <ProductTag product={item} inCart={inCart.get(item.id) || 0} onAdd={onAddToCart} />
         </View>
       )}
@@ -151,7 +154,7 @@ const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 24 },
   columns: { gap: 10 },
-  cell: { flex: 1, maxWidth: '50%', marginBottom: 10 },
+  cell: { flex: 1, marginBottom: 10 },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 52, paddingLeft: 16,
     backgroundColor: colors.card, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.mora,
@@ -167,5 +170,5 @@ const styles = themed(() => StyleSheet.create({
   toggleText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
   count: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted, marginBottom: 10 },
   skeletons: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  skeleton: { width: '48%', aspectRatio: 0.72 },
+  skeleton: { aspectRatio: 0.72 },
 }));
