@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ActivityIndicator, AppState, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -11,7 +11,8 @@ import { PickupPassModal } from './src/components/PickupPassModal';
 import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
 import { ChatBotModal } from './src/components/ChatBotModal';
-import { PrivacyPolicyModal } from './src/components/PrivacyPolicyModal';
+import { TermsModal } from './src/components/TermsModal';
+import type { TermsCategory } from './src/config/terms';
 import { ServerConfigModal } from './src/components/ServerConfigModal';
 import { PopPressable } from './src/components/motion';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,7 +77,10 @@ function PortalAppContent() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  // Pestaña de los términos que está abierta; null si el modal está cerrado.
+  const [termsCategory, setTermsCategory] = useState<TermsCategory | null>(null);
+  const lastTermsCategory = useRef<TermsCategory>('todos');
+  const openTerms = (category: TermsCategory) => { lastTermsCategory.current = category; setTermsCategory(category); };
   const [isServerOpen, setIsServerOpen] = useState(false);
   const [serverUrl, setServerUrl] = useState(getServerUrl());
 
@@ -451,7 +455,8 @@ function PortalAppContent() {
               activePassCode={activeCode}
               onOpenPass={() => setIsPassOpen(true)}
               userName={currentUser?.nombre.split(' ')[0]}
-              onOpenPrivacy={() => setIsPrivacyOpen(true)}
+              onOpenPrivacy={() => openTerms('privacidad')}
+              onOpenTerms={() => openTerms('todos')}
             />
           )}
           {activeTab === 'productos' && (
@@ -538,7 +543,7 @@ function PortalAppContent() {
             setCurrentUser(user);
             void syncReservations(user);
           }}
-          onOpenPrivacy={() => { setIsLoginOpen(false); setIsPrivacyOpen(true); }}
+          onOpenPrivacy={() => { setIsLoginOpen(false); openTerms('privacidad'); }}
           onLogout={() => {
             setCurrentUser(null);
             setPass(null);
@@ -548,7 +553,7 @@ function PortalAppContent() {
         />
 
         <ChatBotModal visible={isChatOpen} onClose={() => setIsChatOpen(false)} />
-        <PrivacyPolicyModal visible={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+        <TermsModal visible={termsCategory !== null} category={termsCategory ?? lastTermsCategory.current} onClose={() => setTermsCategory(null)} />
         {SERVER_CONFIG_ENABLED && (
           <ServerConfigModal visible={isServerOpen} onClose={() => setIsServerOpen(false)} onChanged={handleServerChanged} />
         )}

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { DataLoadState, FlashOffer, NavTab, Product } from '../types';
 import { Button, EmptyState, ExpiryStamp, OldPrice, Price, ProductImage, SectionTitle } from '../components/ui';
 import { OfferTag } from '../components/ProductTag';
+import { StoreInfoCard } from '../components/StoreInfoCard';
 import { PopPressable, Slap } from '../components/motion';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { categoryTone, toneSolid } from '../theme/categoryTone';
@@ -24,6 +25,7 @@ interface HomeScreenProps {
   onOpenPass: () => void;
   userName?: string;
   onOpenPrivacy: () => void;
+  onOpenTerms: () => void;
 }
 
 const STEPS = [
@@ -41,7 +43,7 @@ const STICKERS = [
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   products, categories, offers, state, refreshing, onRefresh, onNavigate, onSelectCategory,
-  onReserveOffer, reservingOfferId, activePassCode, onOpenPass, userName, onOpenPrivacy,
+  onReserveOffer, reservingOfferId, activePassCode, onOpenPass, userName, onOpenPrivacy, onOpenTerms,
 }) => {
   const stickers = useMemo(() => offers.slice(0, 3), [offers]);
 
@@ -181,9 +183,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         ))}
       </View>
 
-      <TouchableOpacity style={styles.privacyLink} onPress={onOpenPrivacy} accessibilityRole="link">
-        <Text style={styles.privacyLinkText}>Política de privacidad</Text>
-      </TouchableOpacity>
+      <StoreInfoCard />
+
+      <View style={styles.legalLinks}>
+        <TouchableOpacity style={styles.privacyLink} onPress={onOpenTerms} accessibilityRole="link">
+          <Text style={styles.privacyLinkText}>Términos y condiciones</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.privacyLink} onPress={onOpenPrivacy} accessibilityRole="link">
+          <Text style={styles.privacyLinkText}>Política de privacidad</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
@@ -215,7 +224,8 @@ const styles = themed(() => StyleSheet.create({
   discountText: { fontFamily: fonts.tag, fontSize: 16, color: '#FFFFFF' },
   section: { paddingHorizontal: 16, paddingTop: 28 },
   link: { minHeight: 44, justifyContent: 'center' },
-  privacyLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  legalLinks: { marginTop: 8 },
+  privacyLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   privacyLinkText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.inkSoft, textDecorationLine: 'underline' },
   linkText: { fontFamily: fonts.tag, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
   offerRow: { gap: 14, paddingRight: 16, paddingBottom: 4 },
