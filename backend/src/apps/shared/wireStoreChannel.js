@@ -1,6 +1,5 @@
 const PostgresOutbox = require('../../infrastructure/outbox/PostgresOutbox');
 const HttpPortalChannel = require('../../infrastructure/outbox/HttpPortalChannel');
-const ReservationEventPublisher = require('../../infrastructure/outbox/ReservationEventPublisher');
 const OutboxFlusherWorker = require('../../infrastructure/workers/OutboxFlusherWorker');
 const CommandPollerWorker = require('../../infrastructure/workers/CommandPollerWorker');
 const { ProcessStoreCommand } = require('../../use-cases/reservations/StoreCommandUseCases');
@@ -23,7 +22,6 @@ function wireStoreChannel({ pool, reservationRepo, serviceConfig }) {
 
   return {
     outbox,
-    eventPublisher: new ReservationEventPublisher(outbox),
     workers: [flusher, poller]
   };
 }

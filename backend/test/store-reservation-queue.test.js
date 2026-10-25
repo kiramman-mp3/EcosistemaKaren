@@ -5,7 +5,6 @@ const { ConfirmReservation, CleanExpiredReservations } = require('../src/use-cas
 const CommandPollerWorker = require('../src/infrastructure/workers/CommandPollerWorker');
 const OutboxFlusherWorker = require('../src/infrastructure/workers/OutboxFlusherWorker');
 const HttpPortalChannel = require('../src/infrastructure/outbox/HttpPortalChannel');
-const ReservationEventPublisher = require('../src/infrastructure/outbox/ReservationEventPublisher');
 const HeartbeatSenderWorker = require('../src/infrastructure/workers/HeartbeatSenderWorker');
 const {
   OverbookingException, NotFoundException, ValidationException, ForbiddenException
@@ -317,62 +316,17 @@ test('HttpPortalChannel usa la clave de servicio, el long-poll y expone el códi
   await assert.rejects(() => channel.sendEvents([]), (error) => error.status === 503);
 });
 
-test('confirmar en caja avisa al portal; si la reserva estaba vencida, avisa que expiró', async () => {
-  const events = [];
-  const publisher = { publishStateChange: async (event) => { events.push(event); } };
-  const actor = { id: 'u1', rol: 'BODEGUERO' };
-
-  const ok = new ConfirmReservation({ confirmWithLockedStock: async () => ({ id: RID, estado: 'CONFIRMADA' }) }, publisher);
-  assert.equal((await ok.execute(RID, actor)).estado, 'CONFIRMADA');
-  assert.deepEqual(events, [{ reservaId: RID, estado: 'CONFIRMADA' }]);
-
-  events.length = 0;
-  const expired = new ConfirmReservation({
-    confirmWithLockedStock: async () => { throw new ValidationException('La reserva expiró y su stock fue liberado.'); },
-    findById: async () => ({ id: RID, estado: 'EXPIRADA' })
-  }, publisher);
-  await assert.rejects(() => expired.execute(RID, actor), ValidationException);
-  assert.deepEqual(events, [{ reservaId: RID, estado: 'EXPIRADA' }]);
-
-  events.length = 0;
-  const other = new ConfirmReservation({
-    confirmWithLockedStock: async () => { throw new ValidationException('No se puede confirmar una reserva en estado CANCELADA.'); },
-    findById: async () => ({ id: RID, estado: 'CANCELADA' })
-  }, publisher);
-  await assert.rejects(() => other.execute(RID, actor), ValidationException);
-  assert.deepEqual(events, [], 'otros fallos no generan avisos');
+test('confirmar en caja exige BODEGUERO o ADMIN y delega en el repositorio, que deja el aviso al portal', async () => {
+  const calls = [];
+  const uc = new ConfirmReservation({ confirmWithLockedStock: async (id, actor) => { calls.push([id, actor.rol]); return { id, estado: 'CONFIRMADA' }; } });
+  assert.equal((await uc.execute(RID, { id: 'u1', rol: 'BODEGUERO' })).estado, 'CONFIRMADA');
+  assert.deepEqual(calls, [[RID, 'BODEGUERO']]);
+  await assert.rejects(() => uc.execute(RID, { id: 'c1', rol: 'CLIENTE' }), ForbiddenException);
 });
 
-test('confirmar sin portal (monolito) no requiere publicador', async () => {
-  const uc = new ConfirmReservation({ confirmWithLockedStock: async () => ({ id: RID, estado: 'CONFIRMADA' }) });
-  assert.equal((await uc.execute(RID, { id: 'u1', rol: 'ADMIN' })).estado, 'CONFIRMADA');
-});
-
-test('el sweeper publica un aviso EXPIRADA por cada reserva liberada', async () => {
-  const events = [];
-  const uc = new CleanExpiredReservations(
-    { expirePendingWithLockedStock: async () => ({ countLiberadas: 2, reservaIds: ['r1', 'r2'] }) },
-    { publishStateChange: async (event) => { events.push(event); } }
-  );
+test('el barrido de expiración devuelve lo que liberó el repositorio', async () => {
+  const uc = new CleanExpiredReservations({ expirePendingWithLockedStock: async () => ({ countLiberadas: 2, reservaIds: ['r1', 'r2'] }) });
   assert.deepEqual(await uc.execute(), { countLiberadas: 2, reservaIds: ['r1', 'r2'] });
-  assert.deepEqual(events, [{ reservaId: 'r1', estado: 'EXPIRADA' }, { reservaId: 'r2', estado: 'EXPIRADA' }]);
-});
-
-test('el publicador encola con clave estable y no falla la operación si la bandeja no responde', async () => {
-  const outbox = fakeOutbox();
-  const publisher = new ReservationEventPublisher(outbox, () => NOW);
-  await publisher.publishStateChange({ reservaId: 'r1', estado: 'CONFIRMADA' });
-  await publisher.publishStateChange({ reservaId: 'r1', estado: 'CONFIRMADA' });
-  assert.deepEqual(outbox.rows.map(r => r.clave), ['state:r1:CONFIRMADA']);
-  assert.equal(outbox.rows[0].payload.at, NOW.toISOString());
-
-  const originalError = console.error;
-  console.error = () => {};
-  try {
-    await new ReservationEventPublisher({ enqueue: async () => { throw new Error('base caída'); } }).publishStateChange({ reservaId: 'r2', estado: 'EXPIRADA' });
-  } finally {
-    console.error = originalError;
-  }
 });
 
 test('el heartbeat informa cuántos avisos esperan en la bandeja de salida', async () => {
