@@ -30,6 +30,7 @@ import { notify } from './src/utils/dialogs';
 import { getErrorMessage, getErrorStatus, getServerMessage } from './src/utils/errors';
 import { colors, fonts, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
+import { bestSellerIds, isNewProduct } from './src/config/catalogRules';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
@@ -123,7 +124,12 @@ function PortalAppContent() {
         image: mediaUrl(bp.imagenUrl),
         description: describe(bp.descripcion),
         barcode: bp.codigoBarras,
+        createdAt: bp.created_at,
+        soldLast30d: bp.vendidos30d ?? 0,
+        isNew: isNewProduct(bp.created_at),
       }));
+      const bestSellers = bestSellerIds(mappedProducts);
+      for (const product of mappedProducts) product.isBestSeller = bestSellers.has(product.id);
       setProducts(mappedProducts);
 
       const productById = new Map(backendProds.map(product => [product.id, product]));

@@ -22,11 +22,21 @@ interface CatalogScreenProps {
 
 const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
+// Filtros rápidos con datos reales: cada uno ordena por su criterio (ventas de 30 días o fecha de alta).
+type QuickFilter = 'todos' | 'mas-vendidos' | 'nuevos';
+const QUICK_FILTERS: { id: QuickFilter; label: string }[] = [
+  { id: 'todos', label: 'Todo' },
+  { id: 'mas-vendidos', label: 'Más vendidos' },
+  { id: 'nuevos', label: 'Nuevos' },
+];
+const createdTime = (product: Product) => (product.createdAt ? new Date(product.createdAt).getTime() : 0);
+
 export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   products, categories, selectedCategory, onSelectCategory, cart, onAddToCart, state, error, refreshing, onRefresh,
 }) => {
   const [query, setQuery] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('todos');
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
@@ -42,9 +52,13 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
     return products
       .filter(product => (selectedCategory === 'Todos' || product.category === selectedCategory)
         && (!onlyInStock || product.stock > 0)
+        && (quickFilter !== 'mas-vendidos' || Boolean(product.isBestSeller))
+        && (quickFilter !== 'nuevos' || Boolean(product.isNew))
         && (!q || fold(product.name).includes(q) || (product.barcode || '').includes(q)))
-      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, [products, selectedCategory, onlyInStock, query]);
+      .sort((a, b) => (quickFilter === 'mas-vendidos' ? (b.soldLast30d ?? 0) - (a.soldLast30d ?? 0) : 0)
+        || (quickFilter === 'nuevos' ? createdTime(b) - createdTime(a) : 0)
+        || a.name.localeCompare(b.name, 'es'));
+  }, [products, selectedCategory, onlyInStock, quickFilter, query]);
 
   return (
     <FlatList
@@ -89,6 +103,11 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
               />
             ))}
           </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quick}>
+            {QUICK_FILTERS.map(option => (
+              <Chip key={option.id} label={option.label} active={quickFilter === option.id} onPress={() => setQuickFilter(option.id)} />
+            ))}
+          </ScrollView>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={2}>{selectedCategory === 'Todos' ? 'Todos los productos' : selectedCategory}</Text>
             <TouchableOpacity
@@ -109,7 +128,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           : state === 'offline' || state === 'error'
             ? <EmptyState illustration="offline" title="No pudimos cargar los productos" text={error || 'La tienda no respondió.'} action={<Button label="Intentar de nuevo" compact onPress={onRefresh} />} />
             : <EmptyState illustration="search" title="No encontramos ese producto" text="Prueba con otra palabra o date una vuelta por todos los pasillos."
-                action={<Button label="Ver todos" variant="outline" compact onPress={() => { setQuery(''); setOnlyInStock(false); onSelectCategory('Todos'); }} />} />
+                action={<Button label="Ver todos" variant="outline" compact onPress={() => { setQuery(''); setOnlyInStock(false); setQuickFilter('todos'); onSelectCategory('Todos'); }} />} />
       }
       renderItem={({ item }) => (
         <View style={styles.cell}>
@@ -132,6 +151,7 @@ const styles = themed(() => StyleSheet.create({
   searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.ink, paddingVertical: 10 },
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   chips: { gap: 8, paddingVertical: 12 },
+  quick: { gap: 8, paddingBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   title: { flex: 1, fontFamily: fonts.tag, fontSize: 30, lineHeight: 32, color: colors.ink },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
