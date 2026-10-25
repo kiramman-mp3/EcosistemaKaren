@@ -28,6 +28,8 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-19 | Ofertas → Por revisar con `admin@demo.karen.ec` → abrir un borrador | La sección "Límites de la oferta" muestra Máx. por pedido, Stock de oferta (con el tope "Hasta N"), Termina el y A las, en dos columnas que no se salen de la pantalla. |
 | TEL-20 | En el borrador: stock de oferta mayor que el lote → Solo guardar | Aparece "no puede superar las N unidades libres del lote" y no se guarda. |
 | TEL-21 | En el borrador: máximo 2, stock 3, atajo "Mañana 21:00" → Publicar oferta | Se publica; en la lista la tarjeta dice "Máx. 2 por pedido · 3 de 3 con descuento · Hasta …, 21:00", y la oferta aparece en el portal en unos segundos. |
+| TEL-26 | Catálogo con `admin@demo.karen.ec` → Registrar producto → escanear un EAN nuevo → llenar los datos y tomar una foto con la cámara → Guardar | El producto queda registrado con su foto en el catálogo y, en unos segundos, en el portal. Con `bodega@demo.karen.ec` no aparece el botón de registrar. |
+| TEL-27 | Catálogo con `admin@demo.karen.ec` → tocar un producto → cambiar nombre, pasillo, PVP y stock mínimo → Guardar cambios | El mensaje dice "Producto actualizado" (y el PVP anterior y el nuevo si cambió); la lista y el portal muestran los datos nuevos. El campo del EAN no se puede editar. |
 
 ## Portal (app del cliente)
 
@@ -41,5 +43,6 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-22 | Catálogo → filtros "Más vendidos" y "Nuevos" | Cada filtro muestra solo los productos con su insignia (llama o destello) y los ordena por ventas o por fecha de alta. |
 | TEL-23 | Ofertas → la oferta publicada en TEL-21 | Dice "Termina mañana a las 21:00" y "Máx. 2 por pedido". La app aparta de a una unidad: las tres primeras veces sale el pase; la cuarta falla con "Las unidades de esta oferta ya se agotaron" y la oferta desaparece de la lista. |
 | TEL-24 | Mis reservas con `cliente@demo.karen.ec` recién sembrado | Hay dos reservas por retirar con tiempo restante y el historial con retiradas, vencidas y canceladas. "Añadir más tiempo" suma 30 minutos. |
+| TEL-25 | Apartar con `cliente@demo.karen.ec` → abrir el pase → "¿Necesitas más tiempo? +30 min" | Aparece "+30 minutos añadidos con éxito" y el temporizador sube media hora. Tras llegar a 4 horas en total, el botón se reemplaza por "Llegaste al máximo de 4 horas para esta reserva". |
 
 Registrar por cada caso: fecha, modelo del teléfono y versión de Android, versión del APK, resultado (Aprobado/Fallido) y captura cuando falle.
