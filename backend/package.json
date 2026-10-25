@@ -14,7 +14,7 @@
     "start:portal": "node index.portal.js",
     "dev:store": "node --watch index.store.js",
     "dev:portal": "node --watch index.portal.js",
-    "test": "node --test test/*.test.js",
+    "test": "node --test --import ./test/support/preload.mjs test/*.test.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "docker:up": "docker compose up -d",
@@ -24,7 +24,8 @@
     "test:migrations": "node scripts/verify-migrations.js",
     "test:endpoints": "node scripts/test-endpoints.js",
     "test:performance": "node scripts/performance-smoke.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "user:create": "node scripts/create-user.js"
   },
   "dependencies": {
     "@google/genai": "^2.28.0",
