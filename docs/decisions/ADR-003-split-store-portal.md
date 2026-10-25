@@ -117,6 +117,10 @@ resultados y eventos repetidos no cambian nada en el portal.
 definitiva y prevalece sobre lo que el portal haya inferido. El portal solo expira por su cuenta
 las reservas que la tienda nunca aceptó; las aceptadas las expira la tienda y se lo avisa.
 
+**Reserva sin respuesta de la tienda.** Si un comando agota sus entregas, el portal rechaza la reserva
+(`STORE_ERROR`) y encola un `CANCEL` para ella: si la tienda había reservado el stock sin que su
+resultado llegara, lo libera en vez de retenerlo hasta que venza la reserva; si no la conoce, lo ignora.
+
 **Cancelación.** El portal cancela de inmediato para el cliente. Si la tienda aún no recibió el
 `CREATE`, ambos se anulan en el portal y la tienda nunca se entera; si ya lo recibió, se encola
 un `CANCEL` que libera el stock. Si en la tienda ya estaba confirmada, se informa el estado
@@ -204,7 +208,8 @@ y los clientes se registran únicamente en portal-api.
 - ADMIN no puede cancelar reservas con los servicios separados: su ruta de cancelación vive en el
   portal, donde no tiene cuenta, y la tienda no expone una.
 - El aviso de confirmación o expiración se encola justo después de confirmar en la tienda; si la
-  base cae en ese instante, el portal tarda en enterarse.
+  base cae en ese instante, el portal tarda en enterarse. Mientras tanto, una reserva aceptada cuyo
+  plazo pasó se publica con `vencidaSinConfirmar: true`, sin cambiar su estado.
 - El portal móvil no muestra el aviso de catálogo desactualizado que sí muestra el portal web.
 - La verificación de punta a punta con dos instancias reales de PostgreSQL y HTTP entre los servicios
   la hace el CI (`backend-services`); localmente se validó con una base embebida.
