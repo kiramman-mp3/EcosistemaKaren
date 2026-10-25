@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const { ValidationException } = require('../exceptions/DomainExceptions');
 const { RESERVATION_TTL_MINUTES } = require('../policies/BusinessRules');
 
@@ -38,7 +39,7 @@ class Reservation {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = 'KR-';
     for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+      code += chars.charAt(crypto.randomInt(chars.length));
     }
     return code;
   }

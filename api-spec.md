@@ -23,19 +23,59 @@ la app de bodega con Bearer.
 | Cambiar ubicación o registrar merma | `BODEGUERO`, `PERCHERO`, `ADMIN` |
 | Crear reservas | `CLIENTE` |
 | Consultar reservas | Propietario, `BODEGUERO`, `PERCHERO` o `ADMIN` |
-| Cancelar reservas | Propietario o `ADMIN` |
+| Cancelar reservas | Propietario (en el portal) o `ADMIN` (en el portal o en la tienda) |
 | Confirmar reservas | `BODEGUERO`, `ADMIN` |
 | Alertas y generación de promociones | `BODEGUERO`, `PERCHERO`, `ADMIN` |
-| Registrar heartbeat | `BODEGUERO`, `ADMIN` |
 
 El catálogo, las promociones activas, el heartbeat de lectura y `GET /availability`
 son públicos. Este último solo expone identificador de lote/producto, fecha, estado y
-cantidad disponible; excluye lotes vencidos o sin disponibilidad.
+cantidad disponible; excluye lotes vencidos o sin disponibilidad. Acepta el filtro opcional
+`?productoId=<uuid>` (UUID inválido responde `400`; un parámetro desconocido se ignora) y se
+puede cachear 5 segundos (`Cache-Control: public, max-age=5` y `ETag`; una solicitud
+condicional con `If-None-Match` responde `304`).
 
-El servidor inicia con las reservas bloqueadas. `POST /heartbeat` debe ser enviado por
-la aplicación operativa y permanece vigente durante 60 segundos por defecto. Si nunca se
-ha recibido un latido o el último superó `HEARTBEAT_TIMEOUT_SECONDS`, `POST /reservations`
-responde `503 Service Unavailable` sin modificar el inventario.
+El servidor inicia con las reservas bloqueadas. El latido lo envía el backend de la tienda
+(store-api) a `POST /internal/v1/store/heartbeat`, un canal interno autenticado con la
+cabecera `x-store-key` que no forma parte de la API pública ni acepta tokens de usuario.
+Permanece vigente durante 60 segundos por defecto. Si nunca se ha recibido un latido o el
+último superó `HEARTBEAT_TIMEOUT_SECONDS`, `POST /reservations` responde
+`503 Service Unavailable` sin modificar el inventario. `GET /heartbeat` solo consulta el estado.
+
+### `GET /catalog/status` (portal)
+Público. Indica si la copia del catálogo y la disponibilidad que ve el cliente puede estar
+desactualizada, para que las apps lo avisen. Respuesta:
+
+```json
+{
+  "success": true,
+  "mode": "mirror",
+  "stale": false,
+  "lastSyncAt": "2026-10-24T15:00:00.000Z",
+  "secondsSinceSync": 42,
+  "staleAfterSeconds": 1200,
+  "missingSections": [],
+  "sections": [{ "seccion": "lotes", "version": 1792854000000, "elementos": 214, "sincronizadoAt": "2026-10-24T15:00:00.000Z" }]
+}
+```
+
+`stale` es `true` si falta alguna sección (`categorias`, `productos`, `lotes`, `promociones`) o la
+más antigua supera `staleAfterSeconds`. En el monolito de transición `mode` es `direct` y
+`stale` siempre es `false`. Este endpoint solo lo expone portal-api, no store-api.
+
+### Canal interno de sincronización (store-api → portal-api)
+Fotos de productos (misma cabecera `x-store-key`): `POST /internal/v1/store/sync/media/manifest` con
+`{ "files": [{ "ruta", "sha256", "size" }], "prune": true }` responde `{ "missing": [rutas], "removed": n }`;
+`PUT /internal/v1/store/sync/media?ruta=<ruta>` sube el binario (`Content-Type: application/octet-stream`, cabecera
+`x-content-sha256`, máx. 2 MB; 400 si el hash, la firma de imagen o la ruta no son válidos). El portal las sirve
+públicamente en `GET /api/v1/media/productos/<archivo>` (`ETag`, `Cache-Control: public, max-age=86400`).
+
+`POST /internal/v1/store/sync/catalog`, autenticado con la cabecera `x-store-key` y fuera de la
+API pública. Cuerpo: `{ "section": "categorias|productos|lotes|promociones", "version": <entero creciente>, "items": [...] }`.
+Es un snapshot completo de la sección: el portal reemplaza su copia. Responde
+`{ "success": true, "section", "version", "applied", "count" }`; si ya tiene una versión igual o
+mayor, `applied` es `false` y devuelve `currentVersion`. Campos no incluidos en el contrato
+(costos, ubicación, razones de IA, etc.) se rechazan con `400`. Solo está disponible cuando
+portal-api tiene base de datos propia.
 
 ---
 
@@ -84,6 +124,18 @@ Crea un nuevo producto en catálogo.
   "minStockAlerta": 10
 }
 ```
+
+### `PUT /products/:id/image`
+Sube o reemplaza la foto del producto (`ADMIN` o `BODEGUERO`; solo store-api). El cuerpo es la **foto en
+binario**, tal como sale de la cámara, con `Content-Type` `image/jpeg`, `image/png`, `image/webp`,
+`image/heic` o `image/heif` (hasta 15 MB y 120 megapíxeles). El servidor la endereza según su orientación EXIF,
+la reduce a un máximo de 1024 px por lado, la convierte a JPEG progresivo y le quita los metadatos (ubicación,
+modelo de cámara). Una foto de cámara de 12 MP (~10 MB) queda en 100-250 KB.
+* **Respuesta (200)**: `{ "success": true, "data": <producto con el nuevo imagenUrl>, "image": { "width", "height", "bytes", "originalBytes" } }`.
+* `imagenUrl` incluye el hash del contenido (`/api/v1/media/productos/<código>-<hash>.jpg`): cada foto nueva tiene
+  URL nueva, así las cachés no muestran la anterior. La foto previa se borra si ningún otro producto la usa.
+* Errores: `400` imagen ilegible o con demasiados píxeles, `401`/`403` sin permiso, `404` producto inexistente,
+  `413` más de 15 MB, `415` tipo no admitido.
 
 ---
 
@@ -167,11 +219,44 @@ nombre de otra persona.
 La creación bloquea las filas de lotes candidatas con `SELECT ... FOR UPDATE`, siempre
 en un orden determinista por producto/lote. La confirmación, cancelación y expiración
 también bloquean la reserva y sus lotes dentro de una única transacción PostgreSQL.
+
+#### Con portal y tienda separados
+portal-api no descuenta stock: guarda la reserva y se la encarga a la tienda, que es la única
+autoridad sobre el inventario (ver [ADR-003](docs/decisions/ADR-003-split-store-portal.md)).
+Espera hasta `RESERVATION_SYNC_WAIT_SECONDS` (8 s por defecto) la respuesta y responde igual
+que siempre:
+
+* `201` con `codigoRetiro`, `fechaExpiracion` y `detalles` (lote, cantidad, precio y datos del
+  producto) si la tienda aceptó la reserva.
+* El error habitual si la rechazó: `409` sin stock suficiente, `400` (oferta no disponible o
+  reserva vencida), `404` (producto inexistente) o `503` (la tienda no pudo procesarla).
+* `202` con `"estado": "PENDIENTE_SYNC"` y sin `codigoRetiro` si la tienda tarda más. El
+  cliente consulta `GET /reservations/user/:userId` hasta que pase a `PENDIENTE` (aceptada con
+  su código) o `RECHAZADA` (con `motivoRechazo` y `mensajeRechazo`).
+* `503` sin guardar nada si no hay un heartbeat vigente de la tienda.
+
+Una reserva `PENDIENTE` cuyo plazo ya pasó, pero que la tienda todavía no marcó como vencida (por ejemplo,
+porque está sin conexión), se devuelve con `"vencidaSinConfirmar": true`; su estado no cambia hasta que
+la tienda lo informe.
+
+Estados que puede ver el cliente: `PENDIENTE_SYNC`, `PENDIENTE`, `CONFIRMADA`, `EXPIRADA`,
+`CANCELADA` y `RECHAZADA`. `POST /reservations/:id/cancel` cancela de inmediato; el stock se
+libera cuando la tienda procesa el aviso. Si la reserva ya estaba confirmada en caja, el estado
+real de la tienda prevalece. La consulta por código (`GET /reservations/code/:code`) solo
+encuentra reservas aceptadas.
 Esto evita sobreventa, dobles confirmaciones y liberaciones duplicadas bajo concurrencia.
 
 ### `POST /reservations/:id/confirm`
 Confirma una reserva pendiente y descuenta el stock reservado. Requiere rol `BODEGUERO`
 o `ADMIN`.
+
+### `POST /reservations/:id/extend`
+Extiende el plazo de una reserva pendiente. Solo el cliente propietario (`CLIENTE`). Cuerpo opcional:
+`{ "minutosAdicionales": 30 }` (5 a 180). **Una reserva no puede durar más de 4 horas en total** desde que se creó; pasarse
+responde `400`. Con portal y tienda separados el vencimiento lo fija la tienda: el portal le encarga un comando
+`RESERVATION_EXTEND` y espera su respuesta unos segundos (`503` si no hay latido o la tienda no responde; no queda nada
+pendiente). Pedir otra extensión mientras hay una en curso responde `409`. Al crear la reserva, `ttlMinutos` (15 a 240,
+30 por defecto) permite elegir cuánto se guardan los productos.
 
 ### `POST /reservations/:id/cancel`
 Libera el stock de una reserva pendiente. Solo puede ejecutarlo el cliente propietario o

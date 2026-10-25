@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Copy, Download, X } from 'lucide-react';
+import { Check, Clock, Copy, Download, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
 import { ReservationPass } from '../types';
+import { api } from '../api/client';
 import { Button } from './ui/Button';
 import { Illustration } from './ui/Illustration';
 
@@ -23,6 +24,8 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
   const [copied, setCopied] = useState(false);
   const [savingImage, setSavingImage] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [extending, setExtending] = useState(false);
+  const [extendedNotice, setExtendedNotice] = useState<string | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,6 +53,22 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
     void navigator.clipboard?.writeText(pass.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleExtendTime = async () => {
+    if (!pass.id || extending) return;
+    setExtending(true);
+    setExtendedNotice(null);
+    try {
+      await api.extendReservation(pass.id, 30);
+      setSecondsLeft(prev => prev + 1800);
+      setExtendedNotice('+30 minutos añadidos con éxito.');
+      setTimeout(() => setExtendedNotice(null), 3000);
+    } catch (err: any) {
+      setExtendedNotice(err.message || 'No se pudo extender el tiempo.');
+    } finally {
+      setExtending(false);
+    }
   };
 
   const handleSaveImage = async () => {
@@ -150,6 +169,23 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
                 </>
               )}
             </div>
+
+            {!expired && pass.id && (
+              <div className="mt-3 text-center" data-export-ignore="true">
+                <button
+                  type="button"
+                  onClick={() => void handleExtendTime()}
+                  disabled={extending}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-page text-mora border-2 border-mora shadow-sm hover:bg-limon transition-colors"
+                >
+                  <Clock className={`w-3.5 h-3.5 ${extending ? 'animate-spin' : ''}`} />
+                  {extending ? 'Extendiendo…' : '¿Necesitas más tiempo? +30 min'}
+                </button>
+                {extendedNotice && (
+                  <p className="mt-1 text-xs font-bold text-aguacate-solid">{extendedNotice}</p>
+                )}
+              </div>
+            )}
 
             {pass.items.length > 0 && (
               <>

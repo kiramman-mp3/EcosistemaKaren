@@ -21,6 +21,8 @@ pnpm-debug.log*
 # Build outputs & cache
 dist/
 build/
+# Configuración de builds personalizados de EAS: debe versionarse y llegar al archivo que sube EAS.
+!**/.eas/build/
 .next/
 .cache/
 .expo/
@@ -38,3 +40,4 @@ Thumbs.db
 
 # Imágenes descargadas por el seed (npm run db:seed)
 backend/public/media/productos/
+dist-mobile/

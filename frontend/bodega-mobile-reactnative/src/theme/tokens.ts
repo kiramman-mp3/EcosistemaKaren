@@ -118,3 +118,16 @@ export function levelColors(nivel: NivelAlerta | string, mode: ThemeMode = 'ligh
       return { band: c.fresh, tint: c.freshTint, text: mode === 'dark' ? '#6EE7B7' : c.fresh, label: 'En fecha' };
   }
 }
+
+/** Color representativo del pasillo para perchas, bodega y catálogo */
+export function getAisleColor(categoryName?: string) {
+  const norm = (categoryName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (norm.includes('lacteo')) return { bg: '#DBEAFE', text: '#1E40AF', dot: '#2563EB', label: 'Pasillo Azul' };
+  if (norm.includes('grano') || norm.includes('arroz') || norm.includes('legumbre')) return { bg: '#FEF3C7', text: '#92400E', dot: '#D97706', label: 'Pasillo Ámbar' };
+  if (norm.includes('snack') || norm.includes('dulce') || norm.includes('galleta')) return { bg: '#FCE7F3', text: '#9D174D', dot: '#DB2777', label: 'Pasillo Rosa' };
+  if (norm.includes('conserva') || norm.includes('enlatado')) return { bg: '#DCFCE7', text: '#166534', dot: '#16A34A', label: 'Pasillo Verde' };
+  if (norm.includes('bebida') || norm.includes('jugo') || norm.includes('agua')) return { bg: '#E0F2FE', text: '#0369A1', dot: '#0284C7', label: 'Pasillo Celeste' };
+  if (norm.includes('limpieza') || norm.includes('hogar')) return { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', label: 'Pasillo Púrpura' };
+  if (norm.includes('carne') || norm.includes('embutido')) return { bg: '#FEE2E2', text: '#991B1B', dot: '#DC2626', label: 'Pasillo Rojo' };
+  return { bg: '#F1F5F9', text: '#334155', dot: '#475569', label: 'Pasillo General' };
+}

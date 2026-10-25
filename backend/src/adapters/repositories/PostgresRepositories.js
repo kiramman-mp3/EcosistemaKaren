@@ -3,6 +3,7 @@ const Product = require('../../domain/entities/Product');
 const Lot = require('../../domain/entities/Lot');
 const User = require('../../domain/entities/User');
 const Reservation = require('../../domain/entities/Reservation');
+const { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES } = require('../../domain/policies/BusinessRules');
 const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
 const { toDateOnly } = require('../../domain/policies/BusinessDates');
@@ -110,6 +111,25 @@ class PostgresProductRepository {
       WHERE p.codigo_barras = $1
     `, [barcode]);
     return res.rows.length ? new Product(res.rows[0]) : null;
+  }
+
+  async updateImage(id, imagenUrl) {
+    const res = await this.pool.query(
+      `UPDATE productos SET imagen_url = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1
+       RETURNING id, categoria_id as "categoriaId", codigo_barras as "codigoBarras",
+                 nombre, descripcion, precio_venta as "precioVenta",
+                 impuesto_porcentaje as "impuestoPorcentaje",
+                 min_stock_alerta as "minStockAlerta", imagen_url as "imagenUrl",
+                 created_at, updated_at`,
+      [id, imagenUrl]
+    );
+    return res.rows.length ? new Product(res.rows[0]) : null;
+  }
+
+  /** Cuántos productos usan esa foto: una foto compartida no se borra del disco. */
+  async countByImageUrl(imagenUrl) {
+    const res = await this.pool.query('SELECT COUNT(*)::int AS total FROM productos WHERE imagen_url = $1', [imagenUrl]);
+    return Number(res.rows[0].total);
   }
 
   async save(product) {
@@ -221,7 +241,13 @@ class PostgresLotRepository {
     return { countExpired: Number(res.rows[0].count) };
   }
 
-  async save(lot, actorId) {
+  /**
+   * Guarda el lote y su movimiento de ingreso. Si se pasa `buildAlert` (función que recibe el lote
+   * guardado y devuelve una Alert o null), la alerta de caducidad se guarda en la misma transacción:
+   * así un fallo no deja un lote sin su alerta, y reintentar no duplica el lote. La alerta queda en
+   * `saved.alertaGenerada` (propiedad no enumerable, no se publica por la API).
+   */
+  async save(lot, actorId, buildAlert = null) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -245,10 +271,24 @@ class PostgresLotRepository {
         reservadaAntes: 0, reservadaDespues: Number(row.cantidadReservada),
         ubicacionDestino: row.ubicacion, motivo: 'Ingreso inicial de lote', actorId
       });
-      await client.query('COMMIT');
       const saved = new Lot(row);
       saved.productoNombre = lot.productoNombre;
       saved.codigoBarras = lot.codigoBarras;
+      if (typeof buildAlert === 'function') {
+        const alert = buildAlert(saved);
+        let storedAlert = null;
+        if (alert) {
+          const alertRes = await client.query(
+            `INSERT INTO alertas_caducidad (lote_id, dias_para_vencer, nivel, atendida)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id, lote_id as "loteId", dias_para_vencer as "diasParaVencer", nivel, atendida, created_at`,
+            [alert.loteId, alert.diasParaVencer, alert.nivel, alert.atendida]
+          );
+          storedAlert = new Alert({ ...alert, ...alertRes.rows[0] });
+        }
+        Object.defineProperty(saved, 'alertaGenerada', { value: storedAlert, enumerable: false });
+      }
+      await client.query('COMMIT');
       return saved;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -428,9 +468,50 @@ class PostgresLotRepository {
 class PostgresReservationRepository {
   constructor(pool) {
     this.pool = pool;
+    this.publishStateEvents = false;
   }
 
-  async createWithLockedStock(reservation, items) {
+  /**
+   * Con la tienda separada del portal (ADR-003), cada cambio de estado hecho en la tienda (confirmada,
+   * expirada o cancelada por un administrador) deja su aviso en la bandeja de salida `outbox_portal`
+   * dentro de la misma transacción que el cambio: o ocurren los dos o ninguno, así el portal nunca se
+   * queda sin enterarse. Las cancelaciones que pide el propio portal no generan aviso (ya lo sabe).
+   */
+  enableStateEvents() {
+    this.publishStateEvents = true;
+  }
+
+  async _enqueueStateEvent(client, reservaId, estado) {
+    if (!this.publishStateEvents) return;
+    await client.query(
+      `INSERT INTO outbox_portal (tipo, clave, payload)
+       VALUES ('RESERVATION_STATE', $1, $2::jsonb)
+       ON CONFLICT (clave) DO NOTHING`,
+      [`state:${reservaId}:${estado}`, JSON.stringify({ reservaId, estado, at: new Date().toISOString() })]
+    );
+  }
+
+  /**
+   * Crea la reserva descontando stock FEFO en una sola transacción.
+   * `options.remote` ({ id, clienteNombre }) marca una reserva originada en portal-api: conserva
+   * el id que asignó el portal y guarda el nombre del cliente. Ese cliente no existe en la tabla
+   * local de usuarios, por lo que sus movimientos de inventario no llevan actor.
+   */
+  async createWithLockedStock(reservation, items, options = {}) {
+    // El código de retiro es único y se genera al azar: ante una colisión (rarísima) se genera otro.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this._createWithLockedStock(reservation, items, options);
+      } catch (error) {
+        const collision = error.code === '23505' && /codigo_retiro/.test(error.constraint || '');
+        if (!collision || attempt >= 2) throw error;
+        reservation.codigoRetiro = Reservation.generarCodigoRetiro();
+      }
+    }
+  }
+
+  async _createWithLockedStock(reservation, items, options = {}) {
+    const remote = options.remote || null;
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -520,11 +601,12 @@ class PostgresReservationRepository {
       }
 
       const reservationResult = await client.query(`
-        INSERT INTO reservas (usuario_id, codigo_retiro, estado, fecha_expiracion)
-        VALUES ($1, $2, 'PENDIENTE', $3)
+        INSERT INTO reservas (id, usuario_id, codigo_retiro, estado, fecha_expiracion, cliente_nombre)
+        VALUES (COALESCE($1::uuid, uuid_generate_v4()), $2, $3, 'PENDIENTE', $4, $5)
         RETURNING id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
                   estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
-      `, [reservation.usuarioId, reservation.codigoRetiro, reservation.fechaExpiracion]);
+      `, [remote ? remote.id : null, reservation.usuarioId, reservation.codigoRetiro,
+        reservation.fechaExpiracion, remote ? remote.clienteNombre || null : null]);
 
       const savedDetails = [];
       for (const detail of details) {
@@ -542,9 +624,12 @@ class PostgresReservationRepository {
           reservadaAntes: detail.reservadaAntes,
           reservadaDespues: detail.reservadaAntes + detail.cantidad,
           ubicacionOrigen: detail.ubicacion, ubicacionDestino: detail.ubicacion,
-          motivo: 'Stock asignado a reserva', actorId: reservation.usuarioId,
+          motivo: 'Stock asignado a reserva', actorId: remote ? null : reservation.usuarioId,
           reservaId: reservationResult.rows[0].id,
-          metadata: detail.promocionId ? { promocionId: detail.promocionId } : {}
+          metadata: {
+            ...(detail.promocionId ? { promocionId: detail.promocionId } : {}),
+            ...(remote ? { clienteId: reservation.usuarioId, origen: 'PORTAL' } : {})
+          }
         });
       }
 
@@ -582,6 +667,7 @@ class PostgresReservationRepository {
         await client.query(`
           UPDATE reservas SET estado = 'EXPIRADA', updated_at = CURRENT_TIMESTAMP WHERE id = $1
         `, [reservationId]);
+        await this._enqueueStateEvent(client, reservationId, 'EXPIRADA');
         expired = true;
         await client.query('COMMIT');
       } else {
@@ -594,8 +680,9 @@ class PostgresReservationRepository {
           await client.query(`
             UPDATE lotes
             SET cantidad_reservada = cantidad_reservada - $1,
+                -- Solo un lote ACTIVO pasa a AGOTADO: uno VENCIDO vendido por completo conserva su estado.
                 estado = CASE
-                  WHEN cantidad_disponible = 0 AND cantidad_reservada - $1 = 0 THEN 'AGOTADO'::estado_lote
+                  WHEN estado = 'ACTIVO' AND cantidad_disponible = 0 AND cantidad_reservada - $1 = 0 THEN 'AGOTADO'::estado_lote
                   ELSE estado
                 END,
                 updated_at = CURRENT_TIMESTAMP
@@ -616,6 +703,7 @@ class PostgresReservationRepository {
           RETURNING id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
                     estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
         `, [reservationId]);
+        await this._enqueueStateEvent(client, reservationId, 'CONFIRMADA');
         await client.query('COMMIT');
         const updated = new Reservation(updatedResult.rows[0]);
         updated.detalles = details;
@@ -650,8 +738,9 @@ class PostgresReservationRepository {
       }
 
       const details = await this._findDetails(client, reservationId);
+      // Un cliente del portal (`actor.remote`) no existe en la tabla local de usuarios: sin actor.
       await this._releaseLockedDetails(client, details, {
-        tipo: 'LIBERACION', actorId: actor.id, reservaId: reservationId,
+        tipo: 'LIBERACION', actorId: actor.remote ? null : actor.id, reservaId: reservationId,
         motivo: 'Liberación por cancelación o expiración durante cancelación'
       });
       expired = new Date(reservationRow.fechaExpiracion) <= new Date();
@@ -663,6 +752,7 @@ class PostgresReservationRepository {
         RETURNING id, usuario_id as "usuarioId", codigo_retiro as "codigoRetiro",
                   estado, fecha_expiracion as "fechaExpiracion", created_at, updated_at
       `, [nextState, reservationId]);
+      if (!actor.remote) await this._enqueueStateEvent(client, reservationId, nextState);
 
       await client.query('COMMIT');
       if (!expired) {
@@ -696,7 +786,7 @@ class PostgresReservationRepository {
 
       if (reservationIds.length === 0) {
         await client.query('COMMIT');
-        return { countLiberadas: 0 };
+        return { countLiberadas: 0, reservaIds: [] };
       }
 
       const detailsResult = await client.query(`
@@ -742,8 +832,9 @@ class PostgresReservationRepository {
         SET estado = 'EXPIRADA', updated_at = CURRENT_TIMESTAMP
         WHERE id = ANY($1::uuid[])
       `, [reservationIds]);
+      for (const reservaId of reservationIds) await this._enqueueStateEvent(client, reservaId, 'EXPIRADA');
       await client.query('COMMIT');
-      return { countLiberadas: reservationIds.length };
+      return { countLiberadas: reservationIds.length, reservaIds: reservationIds };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -843,8 +934,56 @@ class PostgresReservationRepository {
   }
 
   async findByCode(code) {
-    const [reservation] = await this._findWithDetails('r.codigo_retiro = $1', [code]);
+    // Los códigos se guardan en mayúsculas: se normaliza lo que escribe la persona, no la columna (así usa su índice).
+    const cleanCode = (code || '').trim().toUpperCase();
+    const [reservation] = await this._findWithDetails('r.codigo_retiro = $1', [cleanCode]);
     return reservation || null;
+  }
+
+  /**
+   * Extiende el plazo de una reserva PENDIENTE sin tocar su stock. Sin `until`, suma `minutes` al vencimiento
+   * actual; con `until` (instante absoluto, lo usa el portal) lo fija ahí, de modo que reentregar el mismo comando
+   * no extiende dos veces. Una reserva nunca puede durar más de `maxTotalMinutes` desde su creación.
+   */
+  async extendTimeWithLockedStock(reservationId, actor, minutes = RESERVATION_EXTENSION_MINUTES, { until = null, maxTotalMinutes = RESERVATION_MAX_TOTAL_MINUTES } = {}) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const row = await this._findByIdForUpdate(client, reservationId);
+      if (!row) {
+        throw new NotFoundException(`Reserva con ID '${reservationId}' no encontrada.`);
+      }
+      if (actor.rol !== 'ADMIN' && row.usuarioId !== actor.id) {
+        throw new ForbiddenException('Solo el propietario o un administrador puede extender la reserva.');
+      }
+      if (row.estado !== 'PENDIENTE') {
+        throw new ValidationException(`No se puede extender una reserva en estado ${row.estado}.`);
+      }
+      const current = new Date(row.fechaExpiracion);
+      if (current <= new Date()) {
+        throw new ValidationException('La reserva ya ha expirado y no puede extenderse.');
+      }
+      const target = until ? new Date(until) : new Date(current.getTime() + minutes * 60000);
+      if (Number.isNaN(target.getTime())) throw new ValidationException('La nueva fecha de vencimiento no es válida.');
+      if (target > current) {
+        const limit = new Date(new Date(row.created_at).getTime() + maxTotalMinutes * 60000);
+        if (target > limit) {
+          throw new ValidationException(`Una reserva puede durar como máximo ${maxTotalMinutes / 60} horas en total.`);
+        }
+        await client.query(
+          'UPDATE reservas SET fecha_expiracion = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+          [target, reservationId]
+        );
+      }
+      await client.query('COMMIT');
+      const [updated] = await this._findWithDetails('r.id = $1', [reservationId]);
+      return updated || null;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async findById(id) {
@@ -867,9 +1006,9 @@ class PostgresReservationRepository {
     const heads = await this.pool.query(`
       SELECT r.id, r.usuario_id as "usuarioId", r.codigo_retiro as "codigoRetiro",
              r.estado, r.fecha_expiracion as "fechaExpiracion", r.created_at, r.updated_at,
-             u.nombre as "clienteNombre"
+             COALESCE(u.nombre, r.cliente_nombre) as "clienteNombre"
       FROM reservas r
-      JOIN usuarios u ON u.id = r.usuario_id
+      LEFT JOIN usuarios u ON u.id = r.usuario_id
       WHERE ${where}
       ORDER BY r.created_at DESC, r.id${paging}
     `, limit === null ? params : [...params, limit, offset]);
@@ -975,6 +1114,10 @@ class PostgresUserRepository {
       WHERE email = $1
     `, [email]);
     return res.rows.length ? new User(res.rows[0]) : null;
+  }
+
+  async updatePasswordHash(id, passwordHash) {
+    await this.pool.query('UPDATE usuarios SET password_hash = $2 WHERE id = $1', [id, passwordHash]);
   }
 
   async save(user) {

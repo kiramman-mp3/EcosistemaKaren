@@ -1,5 +1,7 @@
-const { NotFoundException, ValidationException } = require('../../domain/exceptions/DomainExceptions');
+const crypto = require('node:crypto');
+const { NotFoundException, ValidationException, ConflictException } = require('../../domain/exceptions/DomainExceptions');
 const Product = require('../../domain/entities/Product');
+const { MEDIA_URL_PREFIX, isMediaPath } = require('../../infrastructure/media/mediaPaths');
 
 class GetProducts {
   constructor(productRepository) {
@@ -44,7 +46,7 @@ class CreateProduct {
 
     const existingProduct = await this.productRepository.findByBarcode(productData.codigoBarras);
     if (existingProduct) {
-      throw new ValidationException(`Ya existe un producto registrado con el código de barras '${productData.codigoBarras}'.`);
+      throw new ConflictException(`Ya existe un producto registrado con el código de barras '${productData.codigoBarras}'.`);
     }
 
     const product = new Product(productData);
@@ -52,8 +54,59 @@ class CreateProduct {
   }
 }
 
+// Foto de un producto: se comprime y normaliza (ver SharpImageProcessor), se guarda con un nombre que incluye
+// el hash de su contenido (cada foto nueva tiene URL nueva y las cachés de apps y portal no muestran la vieja)
+// y se actualiza el producto. El worker de sincronización la copia al portal. La foto anterior se borra si
+// ningún otro producto la usa.
+class SetProductImage {
+  constructor({ productRepository, imageProcessor, mediaStorage }) {
+    this.productRepository = productRepository;
+    this.imageProcessor = imageProcessor;
+    this.mediaStorage = mediaStorage;
+  }
+
+  async execute(productId, upload) {
+    if (!Buffer.isBuffer(upload) || upload.length === 0) {
+      throw new ValidationException('Debe enviar la foto del producto en el cuerpo de la solicitud.');
+    }
+    const product = await this.productRepository.findById(productId);
+    if (!product) throw new NotFoundException(`Producto con ID '${productId}' no fue encontrado.`);
+
+    const image = await this.imageProcessor.process(upload);
+    const hash = crypto.createHash('sha256').update(image.data).digest('hex').slice(0, 10);
+    const ruta = `${MEDIA_URL_PREFIX}productos/${product.codigoBarras}-${hash}.jpg`;
+    if (!isMediaPath(ruta)) throw new ValidationException('El código de barras del producto no permite generar el nombre de la foto.');
+
+    const previous = product.imagenUrl;
+    if (ruta !== previous) {
+      await this.mediaStorage.save(ruta, image.data);
+      try {
+        const updated = await this.productRepository.updateImage(productId, ruta);
+        product.imagenUrl = updated?.imagenUrl ?? ruta;
+      } catch (error) {
+        await this.mediaStorage.remove(ruta).catch(() => {});
+        throw error;
+      }
+      await this._removeIfUnused(previous);
+    }
+    return { product, image: { width: image.width, height: image.height, bytes: image.data.length, originalBytes: upload.length } };
+  }
+
+  // La foto anterior solo se borra del disco si es una ruta local y ya ningún producto la usa. Un fallo al
+  // borrar no debe deshacer la actualización: queda un archivo huérfano, nada más.
+  async _removeIfUnused(previous) {
+    if (!isMediaPath(previous)) return;
+    try {
+      if ((await this.productRepository.countByImageUrl(previous)) === 0) await this.mediaStorage.remove(previous);
+    } catch (error) {
+      console.warn(`⚠️ No se pudo borrar la foto anterior ${previous}: ${error.message}`);
+    }
+  }
+}
+
 module.exports = {
   GetProducts,
   GetProductByBarcode,
-  CreateProduct
+  CreateProduct,
+  SetProductImage
 };

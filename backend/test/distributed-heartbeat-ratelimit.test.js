@@ -2,7 +2,7 @@ require('dotenv').config();
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const HeartbeatMonitor = require('../src/infrastructure/heartbeat/HeartbeatMonitor');
-const HeartbeatSimulatorWorker = require('../src/infrastructure/workers/HeartbeatSimulatorWorker');
+const HeartbeatSenderWorker = require('../src/infrastructure/workers/HeartbeatSenderWorker');
 const PostgresRateLimitStore = require('../src/infrastructure/http/middlewares/PostgresRateLimitStore');
 const { getPool, testConnection, closePool } = require('../src/infrastructure/db/postgres');
 const PostgresHeartbeatStore = require('../src/infrastructure/heartbeat/PostgresHeartbeatStore');
@@ -73,16 +73,15 @@ test('PostgresRateLimitStore y PostgresHeartbeatStore sincronizan en PostgreSQL'
   await rateLimitStore.resetKey(testKey);
 });
 
-test('HeartbeatSimulatorWorker emite pings periódicos y mantiene el monitor ONLINE', async () => {
+test('HeartbeatSenderWorker emite latidos periódicos por su transporte', async () => {
   let recorded = 0;
-  const mockMonitor = {
-    recordHeartbeat: async () => {
+  const mockTransport = {
+    send: async () => {
       recorded++;
-      return { status: 'ONLINE', reservationsBlocked: false };
     }
   };
 
-  const worker = new HeartbeatSimulatorWorker(mockMonitor, 50);
+  const worker = new HeartbeatSenderWorker(mockTransport, 50);
   worker.start();
   // Primer ping inmediato al iniciar
   assert.equal(recorded, 1);
@@ -95,4 +94,57 @@ test('HeartbeatSimulatorWorker emite pings periódicos y mantiene el monitor ONL
   const countAtStop = recorded;
   await new Promise(resolve => setTimeout(resolve, 80));
   assert.equal(recorded, countAtStop);
+});
+
+test('HeartbeatSenderWorker sobrevive a fallos del transporte y se recupera', async () => {
+  let shouldFail = true;
+  let attempts = 0;
+  const flakyTransport = {
+    send: async () => {
+      attempts++;
+      if (shouldFail) throw new Error('sin red');
+    }
+  };
+  const originalError = console.error;
+  const originalLog = console.log;
+  const errors = [];
+  console.error = (...args) => errors.push(args.join(' '));
+  console.log = () => {};
+
+  try {
+    const worker = new HeartbeatSenderWorker(flakyTransport, 1000);
+    await worker.ping();
+    await worker.ping();
+    assert.equal(attempts, 2);
+    assert.equal(errors.length, 1, 'solo se registra el primer fallo de la racha');
+    assert.equal(worker.consecutiveFailures, 2);
+
+    shouldFail = false;
+    await worker.ping();
+    assert.equal(worker.consecutiveFailures, 0);
+  } finally {
+    console.error = originalError;
+    console.log = originalLog;
+  }
+});
+
+test('HttpHeartbeatTransport envía la clave de servicio y falla si el portal responde con error', async () => {
+  const HttpHeartbeatTransport = require('../src/infrastructure/heartbeat/HttpHeartbeatTransport');
+  const calls = [];
+  let status = 200;
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    return { ok: status < 400, status };
+  };
+
+  const transport = new HttpHeartbeatTransport({ baseUrl: 'https://portal.karen.example', apiKey: 'clave-de-servicio', fetchImpl });
+  await transport.send({ storeId: 'tienda-principal', version: '1.0.0', pendingEvents: 0 });
+
+  assert.equal(calls[0].url, 'https://portal.karen.example/internal/v1/store/heartbeat');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers['x-store-key'], 'clave-de-servicio');
+  assert.deepEqual(JSON.parse(calls[0].options.body), { storeId: 'tienda-principal', version: '1.0.0', pendingEvents: 0 });
+
+  status = 401;
+  await assert.rejects(() => transport.send({}), /HTTP 401/);
 });

@@ -4,6 +4,7 @@ import { FlashOffer } from '../types';
 import { Button } from './ui/Button';
 import { Sticker } from './ui/Sticker';
 import { TONE_SOLID, Tone } from '../lib/categoryTone';
+import { PromotionGraphicBackground, PromotionThemeGraphic } from './ui/PromotionGraphicBackground';
 
 export interface SpecialEventOffer {
   id: string;
@@ -17,6 +18,7 @@ export interface SpecialEventOffer {
   imageUrl: string;
   category: string;
   featuredProducts: string[];
+  graphicTheme: PromotionThemeGraphic;
 }
 
 export const SPECIAL_DATE_OFFERS: SpecialEventOffer[] = [
@@ -32,6 +34,7 @@ export const SPECIAL_DATE_OFFERS: SpecialEventOffer[] = [
     imageUrl: '/api/v1/media/productos/7861029402267.jpg',
     category: 'Lácteos y Derivados',
     featuredProducts: ['Leche Entera Vita 1L', 'Queso Mozzarella', 'Yogurt Griego Natural'],
+    graphicTheme: 'lacteos',
   },
   {
     id: 'evento-martes-frescura',
@@ -45,6 +48,7 @@ export const SPECIAL_DATE_OFFERS: SpecialEventOffer[] = [
     imageUrl: '/api/v1/media/productos/7861007250491.jpg',
     category: 'Cereales, Avenas y Granolas',
     featuredProducts: ['Avena Orgánica Schullo', 'Almendras Peladas', 'Mix Frutos Secos'],
+    graphicTheme: 'granos',
   },
   {
     id: 'evento-temporada-lonchera',
@@ -58,6 +62,7 @@ export const SPECIAL_DATE_OFFERS: SpecialEventOffer[] = [
     imageUrl: '/api/v1/media/productos/7702103019165.jpg',
     category: 'Galletas y Snacks',
     featuredProducts: ['All-Bran Kellogg\'s', 'Galletas Avena & Miel', 'Bebidas de Avena Gustalac'],
+    graphicTheme: 'snacks',
   },
   {
     id: 'evento-despensa-atun',
@@ -71,6 +76,7 @@ export const SPECIAL_DATE_OFFERS: SpecialEventOffer[] = [
     imageUrl: '/api/v1/media/productos/7862100604648.jpg',
     category: 'Enlatados y Conservas',
     featuredProducts: ['Atún Real Lomitos en Aceite', 'Van Camp\'s Girasol', 'Arvejitas Facundo'],
+    graphicTheme: 'conservas',
   },
 ];
 
@@ -138,8 +144,11 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
           </div>
         </div>
 
-        <div key={currentSlide.id} className={`p-6 sm:p-10 animate-fade ${TONE_SOLID[tone]}`}>
-          <div className="grid lg:grid-cols-[1.3fr_1fr] gap-8 items-center">
+        <div key={currentSlide.id} className={`relative overflow-hidden p-6 sm:p-10 animate-fade ${TONE_SOLID[tone]}`}>
+          {/* Gráfico representativo al fondo para la promoción */}
+          <PromotionGraphicBackground type={currentSlide.graphicTheme} opacity={0.22} />
+
+          <div className="relative z-10 grid lg:grid-cols-[1.3fr_1fr] gap-8 items-center">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-extrabold bg-mora text-white">

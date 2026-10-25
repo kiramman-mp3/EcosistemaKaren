@@ -1,36 +1,27 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
 import { clearSession, loadSession, saveSession, StoredUser } from '../auth/secureSession';
-
-const getBaseUrl = (): string => {
-  // Expo solo inlinea la variable si se lee literalmente como process.env.EXPO_PUBLIC_API_URL.
-  const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (configuredUrl) return configuredUrl.replace(/\/$/, '');
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:4000/api/v1';
-  }
-  return 'http://localhost:4000/api/v1';
-};
-
-export const BASE_URL = getBaseUrl();
+import { getServerUrl, onServerUrlChange } from './serverConfig';
 
 /** Las imágenes llegan como rutas del backend (/api/v1/media/...); la app necesita la URL completa. */
 export function mediaUrl(path?: string | null): string | null {
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return BASE_URL.replace(/\/api\/v1$/, '') + path;
+  return getServerUrl().replace(/\/api\/v1$/, '') + path;
 }
 
 export const apiClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: getServerUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 6000,
 });
 
+// La dirección puede cambiarse desde la app (ver ServerConfigModal): las peticiones siguientes usan la nueva.
+onServerUrlChange(url => { apiClient.defaults.baseURL = url; });
+
 let inMemoryToken: string | null = null;
-let inMemoryUser: any = null;
+let inMemoryUser: StoredUser | null = null;
 let sessionExpiredListener: (() => void) | null = null;
 
 apiClient.interceptors.request.use((config) => {
@@ -130,10 +121,17 @@ export interface ReservationDetail {
 export interface BackendReservation {
   id: string;
   usuarioId: string;
-  codigoRetiro: string;
-  estado: 'PENDIENTE' | 'CONFIRMADA' | 'EXPIRADA' | 'CANCELADA';
+  /** Sin código mientras la tienda no acepta la reserva (PENDIENTE_SYNC) o si la rechazó. */
+  codigoRetiro: string | null;
+  /**
+   * PENDIENTE_SYNC: la tienda aún está confirmando la reserva. RECHAZADA: la tienda no pudo
+   * reservar (ver mensajeRechazo). Los demás estados son los de siempre.
+   */
+  estado: 'PENDIENTE_SYNC' | 'PENDIENTE' | 'CONFIRMADA' | 'EXPIRADA' | 'CANCELADA' | 'RECHAZADA';
   fechaExpiracion: string;
   detalles: ReservationDetail[];
+  motivoRechazo?: string;
+  mensajeRechazo?: string;
   clienteNombre?: string;
   created_at?: string;
   updated_at?: string;
@@ -153,11 +151,6 @@ export const api = {
   // 1. Heartbeat
   async getHeartbeat(): Promise<HeartbeatResponse> {
     const res = await apiClient.get<HeartbeatResponse>('/heartbeat', { timeout: 3500 });
-    return res.data;
-  },
-
-  async pingHeartbeat(): Promise<HeartbeatResponse> {
-    const res = await apiClient.post<HeartbeatResponse>('/heartbeat', {}, { timeout: 3500 });
     return res.data;
   },
 
@@ -248,7 +241,7 @@ export const api = {
     return inMemoryUser;
   },
 
-  setToken(token: string | null, user: any = null) {
+  setToken(token: string | null, user: StoredUser | null = null) {
     inMemoryToken = token;
     inMemoryUser = user;
   },

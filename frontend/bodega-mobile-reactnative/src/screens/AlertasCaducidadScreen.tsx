@@ -6,6 +6,7 @@ import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, ScreenTitle } from '../components/ui';
 import { LotLabel } from '../components/LotLabel';
 import { colors, levelColors, themed } from '../theme/tokens';
+import { getErrorCode, getErrorMessage, getErrorStatus } from '../utils/errors';
 
 interface AlertasCaducidadScreenProps {
   alerts: ExpiryAlertItem[];
@@ -54,8 +55,8 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
       await api.updateLotLocation(item.loteId, 'PERCHA');
       notify('Lote en percha', `${item.productoNombre} (lote ${item.numeroLote}) quedó en percha para venderse primero.`);
       onRefresh();
-    } catch (err: any) {
-      notify('No se pudo mover el lote', err.response?.data?.message || err.message || 'Inténtalo de nuevo.');
+    } catch (err: unknown) {
+      notify('No se pudo mover el lote', getErrorMessage(err, 'Inténtalo de nuevo.'));
     } finally {
       setBusyLotId(null);
     }
@@ -66,12 +67,12 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
     try {
       onOpenAiPromo(await api.generatePromotion(item.loteId));
       onRefresh();
-    } catch (err: any) {
-      const status = err.response?.status;
-      const notConfigured = status === 503 && err.response?.data?.error === 'GeminiNotConfigured';
+    } catch (err: unknown) {
+      const status = getErrorStatus(err);
+      const notConfigured = status === 503 && getErrorCode(err) === 'GeminiNotConfigured';
       notify('No se pudo crear la oferta', notConfigured
         ? 'El asistente de ofertas no está configurado en el servidor (falta GEMINI_API_KEY).'
-        : AI_ERRORS[status] || err.response?.data?.message || err.message || 'Inténtalo de nuevo.');
+        : AI_ERRORS[status] || getErrorMessage(err, 'Inténtalo de nuevo.'));
     } finally {
       setBusyLotId(null);
     }

@@ -23,7 +23,9 @@ export function reservationToPass(
 ): ReservationPass {
   const remainingSeconds = secondsUntil(reservation.fechaExpiracion, now);
   return {
-    code: reservation.codigoRetiro,
+    id: reservation.id,
+    // Solo las reservas aceptadas por la tienda (PENDIENTE) llegan aquí, y ésas siempre traen código.
+    code: reservation.codigoRetiro ?? '',
     status: 'ACTIVA',
     initialSeconds: remainingSeconds,
     remainingSeconds,

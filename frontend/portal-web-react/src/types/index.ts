@@ -50,6 +50,7 @@ export interface CategoryItem {
 }
 
 export interface ReservationPass {
+  id?: string;
   code: string;
   status: 'ACTIVA' | 'EXPIRADA' | 'COMPLETADA';
   initialSeconds: number;

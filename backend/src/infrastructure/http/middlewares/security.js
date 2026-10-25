@@ -3,6 +3,7 @@ const helmet = require('helmet');
 const hpp = require('hpp');
 const { rateLimit } = require('express-rate-limit');
 const { ValidationException } = require('../../../domain/exceptions/DomainExceptions');
+const { UPLOAD_CONTENT_TYPES } = require('../../media/mediaPaths');
 
 function positiveInteger(value, fallback) {
   const parsed = Number(value);
@@ -34,7 +35,11 @@ function rejectDangerousKeys(req, res, next) {
   return next();
 }
 
+// PUT /api/v1/products/:id/image recibe la foto como binario, no como JSON.
+const PHOTO_UPLOAD_PATH = /^\/api\/v1\/products\/[^/]+\/image\/?$/;
+
 function normalizeJsonBody(req, res, next) {
+  if (req.method === 'PUT' && PHOTO_UPLOAD_PATH.test(req.path) && req.is(UPLOAD_CONTENT_TYPES)) return next();
   // Un POST sin datos (cerrar sesión, cancelar) llega con Content-Length: 0 y sin Content-Type: no es un cuerpo.
   const hasBody = Number(req.headers['content-length']) > 0 || req.headers['transfer-encoding'] !== undefined;
   if (hasBody && ['POST', 'PUT', 'PATCH'].includes(req.method) && !req.is('application/json')) {
@@ -45,6 +50,9 @@ function normalizeJsonBody(req, res, next) {
   if (req.body === undefined) req.body = {};
   return next();
 }
+
+// Contraseñas de base de datos de los archivos de ejemplo y del valor que se asumía si faltaba.
+const WEAK_DB_PASSWORDS = new Set(['karen_pass', 'karen_portal_pass', 'postgres', 'password', 'admin']);
 
 function validateProductionSecurity(env = process.env) {
   if (env.NODE_ENV !== 'production') return;
@@ -57,6 +65,25 @@ function validateProductionSecurity(env = process.env) {
   }
   if (env.SWAGGER_ENABLED === 'true' && (!env.SWAGGER_PASSWORD || env.SWAGGER_PASSWORD.length < 16)) {
     throw new Error('SWAGGER_PASSWORD debe tener al menos 16 caracteres en producción.');
+  }
+  // La base de datos no puede usar las credenciales de ejemplo (ni las que se asumen si faltan).
+  for (const name of ['DB_PASSWORD', 'PORTAL_DB_PASSWORD']) {
+    const value = env[name];
+    if (name === 'DB_PASSWORD' && !value) {
+      throw new Error('DB_PASSWORD es obligatoria en producción.');
+    }
+    if (value !== undefined && value !== '' && (WEAK_DB_PASSWORDS.has(value) || value.includes('change_me'))) {
+      throw new Error(`${name} no puede ser una contraseña de ejemplo en producción.`);
+    }
+  }
+  // La clave del canal tienda-portal y la firma de sesiones son secretos distintos: filtrar una
+  // no debe comprometer la otra.
+  if (env.STORE_SERVICE_KEY && env.STORE_SERVICE_KEY === env.JWT_SECRET) {
+    throw new Error('STORE_SERVICE_KEY y JWT_SECRET deben ser secretos distintos.');
+  }
+  // Detrás de un proxy inverso todos los usuarios compartirían IP en los límites de tasa.
+  if (!(Number(env.TRUST_PROXY_HOPS) > 0)) {
+    console.warn('⚠️ TRUST_PROXY_HOPS=0: si hay un proxy inverso delante, todos los clientes comparten una IP en los límites de tasa.');
   }
 }
 
@@ -104,7 +131,9 @@ function createSecurityMiddlewares(env = process.env, { pool = null } = {}) {
     windowMs: positiveInteger(env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     limit: positiveInteger(env.RATE_LIMIT_MAX, 300),
     message: 'Demasiadas solicitudes. Intente nuevamente más tarde.',
-    store: createStore('gen:'),
+    // En memoria por instancia: escribir un contador en PostgreSQL en cada petición de lectura cargaba la base
+    // sin proteger nada crítico. Los límites de autenticación, reservas e IA sí se comparten entre instancias.
+    store: undefined,
   });
   const auth = limiter({
     windowMs: positiveInteger(env.AUTH_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),

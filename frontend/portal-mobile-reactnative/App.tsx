@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ActivityIndicator, AppState, StatusBar, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
@@ -12,6 +12,7 @@ import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
 import { ChatBotModal } from './src/components/ChatBotModal';
 import { PrivacyPolicyModal } from './src/components/PrivacyPolicyModal';
+import { ServerConfigModal } from './src/components/ServerConfigModal';
 import { PopPressable } from './src/components/motion';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -20,10 +21,14 @@ import { OffersScreen } from './src/screens/OffersScreen';
 import { ReservationsScreen } from './src/screens/ReservationsScreen';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './src/types';
 import { api, BackendReservation, mediaUrl } from './src/api/client';
+import { getServerUrl, loadServerUrl, onServerUrlChange, SERVER_CONFIG_ENABLED } from './src/api/serverConfig';
+import { describeServerUrl } from './src/api/serverUrl';
 import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
+import { isAwaitingStore, waitForStoreResolution } from './src/reservations/awaitStore';
 import { formatDate } from './src/utils/dates';
 import { notify } from './src/utils/dialogs';
-import { colors, themed } from './src/theme/tokens';
+import { getErrorMessage, getErrorStatus, getServerMessage } from './src/utils/errors';
+import { colors, fonts, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
@@ -67,6 +72,8 @@ function PortalAppContent() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isServerOpen, setIsServerOpen] = useState(false);
+  const [serverUrl, setServerUrl] = useState(getServerUrl());
 
   const syncReservations = useCallback(async (user: { id: string; nombre: string }) => {
     setSyncingReservations(true);
@@ -146,10 +153,10 @@ function PortalAppContent() {
       });
       setOffers(mappedOffers);
       setDataState(mappedProducts.length > 0 ? 'ready' : 'empty');
-    } catch (error: any) {
+    } catch (error: unknown) {
       setIsOnline(false);
-      setDataState(error?.response ? 'error' : 'offline');
-      setDataError(error?.response?.data?.message || 'La tienda no respondió.');
+      setDataState(getErrorStatus(error) !== undefined ? 'error' : 'offline');
+      setDataError(getServerMessage(error) || 'La tienda no respondió.');
     }
   }, [checkHeartbeat]);
 
@@ -160,22 +167,30 @@ function PortalAppContent() {
   }, [loadBackendData]);
 
   useEffect(() => {
-    void api.restoreSession().then(user => {
-      if (user) {
-        setCurrentUser(user);
-        void syncReservations(user);
-      }
+    let cancelled = false;
+    // Primero la dirección guardada del servidor: la sesión y los datos se piden a ese servidor.
+    void loadServerUrl().then(() => {
+      if (cancelled) return;
+      void api.restoreSession().then(user => {
+        if (user && !cancelled) {
+          setCurrentUser(user);
+          void syncReservations(user);
+        }
+      });
+      void loadBackendData();
     });
     const unsubscribe = api.onSessionExpired(() => {
       setCurrentUser(null);
       setPass(null);
       setReservations([]);
     });
-    void loadBackendData();
+    const unsubscribeServer = onServerUrlChange(setServerUrl);
     const interval = setInterval(checkHeartbeat, 15000);
     return () => {
+      cancelled = true;
       clearInterval(interval);
       unsubscribe();
+      unsubscribeServer();
     };
   }, [loadBackendData, checkHeartbeat, syncReservations]);
 
@@ -188,6 +203,13 @@ function PortalAppContent() {
     });
     return () => { clearInterval(interval); subscription.remove(); };
   }, [currentUser, syncReservations]);
+
+  // Mientras la tienda confirma una reserva, la lista se actualiza sola hasta que la resuelva.
+  useEffect(() => {
+    if (!currentUser || !reservations.some(isAwaitingStore)) return undefined;
+    const interval = setInterval(() => { void syncReservations(currentUser); }, 4000);
+    return () => clearInterval(interval);
+  }, [currentUser, reservations, syncReservations]);
 
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
@@ -216,6 +238,35 @@ function PortalAppContent() {
     setIsPassOpen(true);
   };
 
+  /**
+   * Con la tienda separada del portal, la reserva puede quedar en PENDIENTE_SYNC mientras la tienda
+   * responde. Espera a que la acepte o la rechace; devuelve null si sigue en proceso (la reserva
+   * aparecerá sola en "Mis reservas") y lanza el motivo si la tienda no pudo apartarla.
+   */
+  const settleReservation = async (
+    reservation: BackendReservation,
+    user: { id: string }
+  ): Promise<(BackendReservation & { codigoRetiro: string }) | null> => {
+    let settled: BackendReservation | null = reservation;
+    if (isAwaitingStore(reservation)) {
+      settled = await waitForStoreResolution(reservation.id, () => api.getUserReservations(user.id));
+      if (!settled || isAwaitingStore(settled)) return null;
+    }
+    if (settled.estado === 'RECHAZADA') {
+      throw new Error(settled.mensajeRechazo || 'La tienda no pudo apartar tus productos. Intenta de nuevo.');
+    }
+    if (settled.estado !== 'PENDIENTE' || !settled.codigoRetiro) {
+      throw new Error('La reserva ya no está vigente. Intenta apartar de nuevo.');
+    }
+    return settled as BackendReservation & { codigoRetiro: string };
+  };
+
+  const notifyReservationInProgress = (user: { id: string; nombre: string }) => {
+    void syncReservations(user);
+    setActiveTab('reservas');
+    notify('Tu reserva está en proceso', 'Aparecerá en Mis reservas apenas la tienda la confirme.');
+  };
+
   const handleConfirmReservation = async () => {
     if (cart.length === 0) return;
     if (!currentUser) {
@@ -225,10 +276,17 @@ function PortalAppContent() {
     }
     setIsSubmitting(true);
     try {
-      const reservation = await api.createReservation({
+      const created = await api.createReservation({
         usuarioId: currentUser.id,
         items: cart.map(i => ({ productoId: i.product.id, cantidad: i.quantity })),
       });
+      const reservation = await settleReservation(created, currentUser);
+      if (!reservation) {
+        setIsCartOpen(false);
+        setCart([]);
+        notifyReservationInProgress(currentUser);
+        return;
+      }
       const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
       setIsCartOpen(false);
       await openPassFor(reservation.codigoRetiro, {
@@ -243,8 +301,8 @@ function PortalAppContent() {
       setCart([]);
       void syncReservations(currentUser);
       void loadBackendData();
-    } catch (err: any) {
-      notify('No pudimos apartar tus productos', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+    } catch (err: unknown) {
+      notify('No pudimos apartar tus productos', getErrorMessage(err, 'Revisa tu conexión con la tienda.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -264,10 +322,15 @@ function PortalAppContent() {
     setReservingOfferId(offer.id);
     try {
       // promocionId hace que el backend cobre el precio con descuento y use el lote en oferta.
-      const reservation = await api.createReservation({
+      const created = await api.createReservation({
         usuarioId: currentUser.id,
         items: [{ productoId: product.id, cantidad: 1, promocionId: offer.id }],
       });
+      const reservation = await settleReservation(created, currentUser);
+      if (!reservation) {
+        notifyReservationInProgress(currentUser);
+        return;
+      }
       await openPassFor(reservation.codigoRetiro, {
         code: reservation.codigoRetiro,
         status: reservation.estado,
@@ -279,8 +342,8 @@ function PortalAppContent() {
       });
       void syncReservations(currentUser);
       void loadBackendData();
-    } catch (err: any) {
-      notify('No pudimos apartar la oferta', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+    } catch (err: unknown) {
+      notify('No pudimos apartar la oferta', getErrorMessage(err, 'Revisa tu conexión con la tienda.'));
     } finally {
       setReservingOfferId(null);
     }
@@ -289,6 +352,17 @@ function PortalAppContent() {
   const goTo = (tab: NavTab) => {
     setActiveTab(tab);
     if (tab === 'reservas' && currentUser) void syncReservations(currentUser);
+  };
+
+  // Otro servidor es otra base de clientes: la sesión, el carrito y los datos cargados ya no valen.
+  const handleServerChanged = () => {
+    void api.logout();
+    setCurrentUser(null);
+    setPass(null);
+    setReservations([]);
+    setCart([]);
+    setDataState('loading');
+    void loadBackendData();
   };
 
   const { isDark } = useTheme();
@@ -316,6 +390,17 @@ function PortalAppContent() {
         userName={currentUser?.nombre}
         isOnline={isOnline}
       />
+
+      {SERVER_CONFIG_ENABLED && (
+        <TouchableOpacity
+          style={styles.serverBar}
+          onPress={() => setIsServerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`Servidor ${describeServerUrl(serverUrl)}. Cambiar`}
+        >
+          <Text style={styles.serverBarText} numberOfLines={1}>Servidor: {describeServerUrl(serverUrl)}  ·  cambiar</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.body}>
           {activeTab === 'inicio' && (
@@ -429,6 +514,9 @@ function PortalAppContent() {
 
         <ChatBotModal visible={isChatOpen} onClose={() => setIsChatOpen(false)} />
         <PrivacyPolicyModal visible={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+        {SERVER_CONFIG_ENABLED && (
+          <ServerConfigModal visible={isServerOpen} onClose={() => setIsServerOpen(false)} onChanged={handleServerChanged} />
+        )}
       </SafeAreaView>
   );
 }
@@ -448,6 +536,8 @@ const styles = themed(() => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.card },
   body: { flex: 1, backgroundColor: colors.aisle },
   tabs: { backgroundColor: colors.card },
+  serverBar: { backgroundColor: colors.mora, paddingVertical: 5, paddingHorizontal: 12, alignItems: 'center' },
+  serverBarText: { fontFamily: fonts.medium, fontSize: 11, color: '#FFFFFF' },
   chatFab: { position: 'absolute', right: 14, bottom: 14 },
   chatFabBody: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
 }));

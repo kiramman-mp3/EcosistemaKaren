@@ -34,6 +34,83 @@ jobs:
       - run: npm test
       - run: npm audit --omit=dev
 
+  # Contra una PostgreSQL real: las migraciones de cada servicio (tienda, portal y monolito) dejan el
+  # esquema esperado y son repetibles, y cada servicio arranca con solo las rutas que le tocan.
+  backend-services:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: karen_user
+          POSTGRES_PASSWORD: karen_pass
+          POSTGRES_DB: ecosistema_karen
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U karen_user -d ecosistema_karen"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      JWT_SECRET: dev_jwt_secret_ecosistema_karen_2026_super_secret_32chars
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: ecosistema_karen
+      DB_USER: karen_user
+      DB_PASSWORD: karen_pass
+      PORTAL_DB_NAME: ecosistema_karen_portal
+      PGPASSWORD: karen_pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:migrations
+      - name: Preparar las bases de la tienda y del portal
+        run: |
+          psql -h localhost -U karen_user -d ecosistema_karen -f init-db/store/01-schema.sql
+          psql -h localhost -U karen_user -d ecosistema_karen -c "CREATE DATABASE ecosistema_karen_portal"
+      - run: npm run test:services
+      - run: npm run test:http-errors
+      - run: npm run test:e2e-split
+      - run: node --test test/schema-limits.test.js
+
+  # La imagen de producción compila, corre sin privilegios de root y el compose de ejemplo es válido.
+  backend-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t karen-backend backend
+      - name: La imagen no corre como root
+        run: test "$(docker run --rm --entrypoint id karen-backend -u)" != "0"
+      - name: sharp (compresión de fotos) funciona dentro de la imagen
+        run: docker run --rm --entrypoint node karen-backend -e "require('sharp')({create:{width:8,height:8,channels:3,background:'#fff'}}).jpeg().toBuffer().then(b=>{if(!b.length)process.exit(1)})"
+      - name: El compose de ejemplo es válido
+        env:
+          DB_NAME: karen
+          DB_USER: karen
+          DB_PASSWORD: ci
+          STORE_JWT_SECRET: ci
+          STORE_SERVICE_KEY: ci
+          PORTAL_URL: https://portal.example
+          STORE_CORS_ORIGINS: http://tienda.local
+          STORE_BIND: 127.0.0.1
+          PORTAL_DB_NAME: karen_portal
+          PORTAL_DB_USER: karen_portal
+          PORTAL_DB_PASSWORD: ci
+          PORTAL_JWT_SECRET: ci
+          PORTAL_CORS_ORIGINS: https://portal.example
+          PORTAL_TRUST_PROXY_HOPS: 1
+        run: docker compose -f docker-compose.prod.example.yml --profile store --profile portal config -q
+
   portal-web:
     runs-on: ubuntu-latest
     defaults:
@@ -49,6 +126,15 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+  dev-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
 
   portal-mobile:
     runs-on: ubuntu-latest

@@ -5,6 +5,7 @@ import {
   View,
   Text,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { HeaderBodega } from './src/components/HeaderBodega';
@@ -19,6 +20,7 @@ import { AprobacionesScreen } from './src/screens/AprobacionesScreen';
 import { CatalogoProductosScreen } from './src/screens/CatalogoProductosScreen';
 import { AiPromoModal } from './src/components/AiPromoModal';
 import { MermaModal } from './src/components/MermaModal';
+import { ServerBar } from './src/components/ServerBar';
 import {
   BodegaTab,
   BackendLot,
@@ -27,6 +29,7 @@ import {
   BackendPromotion,
 } from './src/types';
 import { api } from './src/api/client';
+import { loadServerUrl } from './src/api/serverConfig';
 import { classifyExpiryDays } from './src/config/businessRules';
 import { daysUntil } from './src/utils/dates';
 import { useFonts } from 'expo-font';
@@ -69,7 +72,9 @@ function BodegaAppContent() {
   // Check server connection
   useEffect(() => {
     const unsubscribe = api.onSessionExpired(() => setCurrentUser(null));
-    void api.restoreSession()
+    // La dirección guardada del servidor se carga antes de restaurar la sesión.
+    void loadServerUrl()
+      .then(() => api.restoreSession())
       .then(user => {
         if (user) {
           setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
@@ -83,15 +88,6 @@ function BodegaAppContent() {
   const checkHeartbeat = useCallback(async () => {
     try {
       const hb = await api.getHeartbeat();
-      setIsOnline(hb.status === 'ONLINE' && !hb.reservationsBlocked);
-    } catch {
-      setIsOnline(false);
-    }
-  }, []);
-
-  const sendHeartbeat = useCallback(async () => {
-    try {
-      const hb = await api.sendHeartbeat();
       setIsOnline(hb.status === 'ONLINE' && !hb.reservationsBlocked);
     } catch {
       setIsOnline(false);
@@ -156,13 +152,13 @@ function BodegaAppContent() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const heartbeatAction = currentUser.rol === 'PERCHERO' ? checkHeartbeat : sendHeartbeat;
-    void heartbeatAction();
+    // El latido lo emite el backend de la tienda; la app solo consulta su estado.
+    void checkHeartbeat();
     loadData();
     // Debe ser bastante menor que HEARTBEAT_TIMEOUT_SECONDS (30 s) del backend, o la tienda parpadearía a "Sin conexión".
-    const interval = setInterval(heartbeatAction, 10000);
+    const interval = setInterval(checkHeartbeat, 10000);
     return () => clearInterval(interval);
-  }, [loadData, checkHeartbeat, sendHeartbeat, currentUser]);
+  }, [loadData, checkHeartbeat, currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -208,79 +204,90 @@ function BodegaAppContent() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && styles.desktopRoot]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.mora} />
 
-      {/* Header Bodega */}
-      <HeaderBodega
-        isOnline={isOnline}
-        operatorName={currentUser.nombre}
-        operatorRole={currentUser.rol}
-        onOpenReports={() => setActiveTab('reportes')}
-        onLogout={() => {
+      <View style={[styles.appShell, Platform.OS === 'web' && styles.desktopShell]}>
+        {/* Otro servidor es otra base de usuarios: se cierra la sesión y se vuelve a pedir el ingreso. */}
+        <ServerBar onChanged={() => {
           void api.logout();
           setCurrentUser(null);
           setProducts([]);
           setLots([]);
           setAlerts([]);
-          setSelectedPromo(null);
-          setMermaTarget(null);
-        }}
-      />
+        }} />
 
-      {/* Main Screen Body */}
-      <View style={styles.body}>
-        {activeTab === 'ingreso' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
-          <IngresoLoteScreen
-            products={products}
-            onLotCreated={loadData}
-            onOpenCatalog={() => setActiveTab('catalogo')}
-            onRefresh={loadData}
-            refreshing={refreshing}
-          />
-        )}
+        {/* Header Bodega */}
+        <HeaderBodega
+          isOnline={isOnline}
+          operatorName={currentUser.nombre}
+          operatorRole={currentUser.rol}
+          onOpenReports={() => setActiveTab('reportes')}
+          onLogout={() => {
+            void api.logout();
+            setCurrentUser(null);
+            setProducts([]);
+            setLots([]);
+            setAlerts([]);
+            setSelectedPromo(null);
+            setMermaTarget(null);
+          }}
+        />
 
-        {activeTab === 'catalogo' && (
-          <CatalogoProductosScreen role={currentUser.rol} onCatalogChanged={loadData} />
-        )}
+        {/* Main Screen Body */}
+        <View style={styles.body}>
+          {activeTab === 'ingreso' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
+            <IngresoLoteScreen
+              products={products}
+              onLotCreated={loadData}
+              onOpenCatalog={() => setActiveTab('catalogo')}
+              onRefresh={loadData}
+              refreshing={refreshing}
+            />
+          )}
 
-        {activeTab === 'reportes' && <ReportesScreen />}
-        {activeTab === 'promociones' && currentUser.rol === 'ADMIN' && <AprobacionesScreen />}
+          {activeTab === 'catalogo' && (
+            <CatalogoProductosScreen role={currentUser.rol} onCatalogChanged={loadData} />
+          )}
 
-        {activeTab === 'alertas' && (
-          <AlertasCaducidadScreen
-            alerts={alerts}
-            onRefresh={loadData}
-            refreshing={refreshing}
-            onOpenAiPromo={(promo) => setSelectedPromo(promo)}
-            onOpenMerma={handleOpenMerma}
-          />
-        )}
+          {activeTab === 'reportes' && <ReportesScreen />}
+          {activeTab === 'promociones' && currentUser.rol === 'ADMIN' && <AprobacionesScreen />}
 
-        {activeTab === 'inventario' && (
-          <InventarioLotesScreen
-            lots={lots}
-            onRefresh={loadData}
-            refreshing={refreshing}
-          />
-        )}
+          {activeTab === 'alertas' && (
+            <AlertasCaducidadScreen
+              alerts={alerts}
+              onRefresh={loadData}
+              refreshing={refreshing}
+              onOpenAiPromo={(promo) => setSelectedPromo(promo)}
+              onOpenMerma={handleOpenMerma}
+            />
+          )}
 
-        {activeTab === 'caja' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
-          <CajaSiaciScreen
-            onReservationUpdated={loadData}
-            onRefresh={loadData}
-            refreshing={refreshing}
-          />
-        )}
+          {activeTab === 'inventario' && (
+            <InventarioLotesScreen
+              lots={lots}
+              onRefresh={loadData}
+              refreshing={refreshing}
+            />
+          )}
+
+          {activeTab === 'caja' && ['BODEGUERO', 'ADMIN'].includes(currentUser.rol) && (
+            <CajaSiaciScreen
+              onReservationUpdated={loadData}
+              onRefresh={loadData}
+              refreshing={refreshing}
+            />
+          )}
+        </View>
+
+        {/* Bottom Navigation */}
+        <TabNavBodega
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          role={currentUser.rol}
+          criticalAlertsCount={criticalAlertsCount}
+        />
       </View>
-
-      {/* Bottom Navigation */}
-      <TabNavBodega
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        role={currentUser.rol}
-        criticalAlertsCount={criticalAlertsCount}
-      />
 
       {/* Modals */}
       <AiPromoModal
@@ -307,7 +314,7 @@ function BodegaAppContent() {
           onConfirmMerma={handleConfirmMerma}
         />
       )}
-      </SafeAreaView>
+    </SafeAreaView>
   );
 }
 
@@ -327,6 +334,30 @@ const styles = themed(() => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.mora,
+  },
+  desktopRoot: {
+    backgroundColor: '#16100B',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
+  },
+  appShell: {
+    flex: 1,
+    width: '100%',
+  },
+  desktopShell: {
+    maxWidth: 1160,
+    width: '100%',
+    height: '100%',
+    alignSelf: 'center',
+    backgroundColor: colors.aisle,
+    borderLeftWidth: 2,
+    borderRightWidth: 2,
+    borderColor: colors.mora,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 8,
   },
   body: {
     flex: 1,

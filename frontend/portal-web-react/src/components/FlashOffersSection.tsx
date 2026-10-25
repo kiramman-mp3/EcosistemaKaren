@@ -7,6 +7,7 @@ import { SPECIAL_DATE_OFFERS } from './SpecialOffersSlider';
 import { Button } from './ui/Button';
 import { Illustration } from './ui/Illustration';
 import { TONE_SOLID, Tone } from '../lib/categoryTone';
+import { PromotionGraphicBackground } from './ui/PromotionGraphicBackground';
 
 interface FlashOffersSectionProps {
   offers: FlashOffer[];
@@ -78,9 +79,10 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
           {SPECIAL_DATE_OFFERS.map((event, index) => (
             <div
               key={event.id}
-              className={`rounded-block border-2 border-mora p-5 flex flex-col justify-between ${TONE_SOLID[CAMPAIGN_TONES[index % CAMPAIGN_TONES.length]]}`}
+              className={`relative overflow-hidden rounded-block border-2 border-mora p-5 flex flex-col justify-between ${TONE_SOLID[CAMPAIGN_TONES[index % CAMPAIGN_TONES.length]]}`}
             >
-              <div>
+              <PromotionGraphicBackground type={event.graphicTheme} opacity={0.16} />
+              <div className="relative z-10">
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span className="text-xs font-extrabold bg-mora text-white px-2.5 py-1 rounded-full">
                     {event.badge}
@@ -91,7 +93,7 @@ export const FlashOffersSection: React.FC<FlashOffersSectionProps> = ({
                 <p className="mt-2 text-sm leading-relaxed opacity-95">{event.description}</p>
               </div>
 
-              <p className="mt-4 pt-3 border-t-2 border-current/30 text-sm">
+              <p className="relative z-10 mt-4 pt-3 border-t-2 border-current/30 text-sm">
                 <span className="font-semibold">Categoría destacada: </span>
                 <span className="font-extrabold">{event.category}</span>
               </p>

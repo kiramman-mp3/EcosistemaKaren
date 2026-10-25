@@ -9,6 +9,7 @@ import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { Button, DaysCounter, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, levelColors, radius, themed } from '../theme/tokens';
+import { getErrorMessage, getErrorStatus } from '../utils/errors';
 
 type BarcodeLookupState = 'idle' | 'loading' | 'found' | 'invalid' | 'not-found' | 'error';
 
@@ -78,9 +79,9 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
           setSelectedProduct(product);
           setBarcodeState(product ? 'found' : 'not-found');
         })
-        .catch((requestError: any) => {
+        .catch((requestError: unknown) => {
           if (cancelled) return;
-          setBarcodeState(requestError.response?.status === 404 ? 'not-found' : 'error');
+          setBarcodeState(getErrorStatus(requestError) === 404 ? 'not-found' : 'error');
         });
     }, 250);
     return () => {
@@ -152,8 +153,8 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       setBarcode('');
       onLotCreated();
       setTimeout(() => setSuccessMsg(null), 5000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'No se pudo registrar el lote.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'No se pudo registrar el lote.'));
     } finally {
       setLoading(false);
     }

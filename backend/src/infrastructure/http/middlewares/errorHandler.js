@@ -1,4 +1,5 @@
 const { DomainException } = require('../../../domain/exceptions/DomainExceptions');
+const { mapDatabaseError } = require('./databaseErrors');
 
 // El cliente cerró la conexión (recarga, navegación o timeout) antes de que se leyera el cuerpo.
 const CLIENT_GONE = new Set(['stream.not.readable', 'request.aborted']);
@@ -50,6 +51,17 @@ function errorHandler(err, req, res, next) {
       success: false,
       error: 'HttpRequestError',
       message: err.message,
+      requestId: req.id
+    });
+  }
+
+  // Dato inválido o duplicado que solo la base de datos detecta: es un error del cliente, no del servidor.
+  const databaseError = mapDatabaseError(err);
+  if (databaseError) {
+    return res.status(databaseError.status).json({
+      success: false,
+      error: databaseError.error,
+      message: databaseError.message,
       requestId: req.id
     });
   }

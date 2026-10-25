@@ -6,13 +6,11 @@ import { formatDateTime } from '../utils/dates';
 import { InventoryMovement, InventoryWaste } from '../types';
 import { Button, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorMessage, getServerMessage } from '../utils/errors';
+import { buildCsv, buildReportHtml, money, MOVEMENT_LABEL } from '../utils/reportExport';
+import { exportCsvFile, exportPdfFile } from '../utils/exportReport';
+import { notify } from '../utils/dialogs';
 
-const money = (value?: number | null) => value == null ? 'No registrado' : `$${Number(value).toFixed(2)}`;
-
-const MOVEMENT_LABEL: Record<string, string> = {
-  INGRESO: 'Ingreso', TRASLADO: 'Traslado', MERMA: 'Merma', RESERVA: 'Reserva web',
-  LIBERACION: 'Liberación', VENTA: 'Venta', VENCIMIENTO: 'Vencimiento', AJUSTE: 'Ajuste',
-};
 const LOCATION_LABEL: Record<string, string> = { BODEGA: 'Bodega', PERCHA: 'Percha' };
 
 export const ReportesScreen: React.FC = () => {
@@ -27,7 +25,7 @@ export const ReportesScreen: React.FC = () => {
     try {
       const [movementData, wasteData] = await Promise.all([api.getInventoryMovements(), api.getInventoryWastes()]);
       setMovements(movementData); setWastes(wasteData);
-    } catch (err: any) { setError(err.response?.data?.message || 'No se pudo cargar el reporte.'); }
+    } catch (err: unknown) { setError(getServerMessage(err) || 'No se pudo cargar el reporte.'); }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
@@ -40,13 +38,55 @@ export const ReportesScreen: React.FC = () => {
   }), [movements, wastes]);
   const selectedWaste = selectedMovement ? wastes.find(item => item.movimientoId === selectedMovement.id) : undefined;
 
+  // PDF y Excel (CSV): en el navegador se descargan o imprimen; en el teléfono abren la hoja de compartir.
+  const [exporting, setExporting] = useState<'pdf' | 'csv' | null>(null);
+  const exportReport = async (kind: 'pdf' | 'csv') => {
+    if (exporting) return;
+    setExporting(kind);
+    try {
+      const report = { totals, wastes, movements, issuedAt: new Date() };
+      if (kind === 'pdf') await exportPdfFile(buildReportHtml(report));
+      else await exportCsvFile(buildCsv(report), `reporte_bodega_karen_${new Date().toISOString().slice(0, 10)}.csv`);
+    } catch (cause: unknown) {
+      notify('No se pudo exportar el reporte', getErrorMessage(cause, 'Inténtalo de nuevo.'));
+    } finally {
+      setExporting(null);
+    }
+  };
+
   return <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.ink} colors={[colors.ink]} />}
     >
-      <ScreenTitle title="Movimientos y mermas" subtitle={`Últimos ${movements.length} movimientos y ${wastes.length} bajas registradas.`} />
+      <View style={styles.headerRow}>
+        <View style={styles.titleWrap}>
+          <ScreenTitle title="Movimientos y mermas" subtitle={`Últimos ${movements.length} movimientos y ${wastes.length} bajas registradas.`} />
+        </View>
+        <View style={styles.actionsBar}>
+          <TouchableOpacity
+            style={[styles.exportBtn, styles.pdfBtn]}
+            onPress={() => void exportReport('pdf')}
+            disabled={exporting !== null}
+            accessibilityRole="button"
+            accessibilityLabel="Exportar PDF"
+          >
+            {exporting === 'pdf' ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="document-text-outline" size={16} color="#FFFFFF" />}
+            <Text style={styles.exportBtnText}>PDF</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.exportBtn, styles.excelBtn]}
+            onPress={() => void exportReport('csv')}
+            disabled={exporting !== null}
+            accessibilityRole="button"
+            accessibilityLabel="Exportar a Excel (CSV)"
+          >
+            {exporting === 'csv' ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="grid-outline" size={16} color="#FFFFFF" />}
+            <Text style={styles.exportBtnText}>Excel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
       {loading && !movements.length ? <ActivityIndicator style={styles.loading} color={colors.ink} /> : error ? <>
         <Notice tone="error" text={error} />
         <Button label="Intentar de nuevo" variant="outline" onPress={() => void load()} />
@@ -152,7 +192,17 @@ const Detail = ({ label, value, emphasis = false }: { label: string; value: stri
 const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: colors.aisle },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 40, width: '100%', maxWidth: 1080, alignSelf: 'center' },
+  headerRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 },
+  titleWrap: { flex: 1, minWidth: 260 },
+  actionsBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  exportBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.mora, elevation: 2,
+  },
+  pdfBtn: { backgroundColor: colors.karenText },
+  excelBtn: { backgroundColor: '#0E7A43' },
+  exportBtnText: { fontFamily: fonts.bold, fontSize: 13, color: '#FFFFFF' },
   loading: { margin: 40 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metric: { flexGrow: 1, flexBasis: '45%', backgroundColor: colors.card, padding: 14, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule },

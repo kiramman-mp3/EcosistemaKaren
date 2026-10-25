@@ -1,4 +1,4 @@
-const { ValidationException } = require('../../domain/exceptions/DomainExceptions');
+const { ConflictException } = require('../../domain/exceptions/DomainExceptions');
 
 class GetCategories {
   constructor(categoryRepository) {
@@ -18,7 +18,7 @@ class CreateCategory {
   async execute(data) {
     const existing = await this.categoryRepository.findByName(data.nombre);
     if (existing) {
-      throw new ValidationException(`Ya existe una categoría llamada '${existing.nombre}'.`);
+      throw new ConflictException(`Ya existe una categoría llamada '${existing.nombre}'.`);
     }
     return await this.categoryRepository.save(data);
   }

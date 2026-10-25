@@ -1,0 +1,40 @@
+# Build personalizado de EAS: compila el portal para iPhone SIN firmar y sube el .ipa como artefacto.
+# AltStore/Sideloadly lo firman luego con tu Apple ID, así que no hace falta cuenta de pago de Apple
+# ni credenciales en EAS. Se lanza con: eas build -p ios -e ios-altstore
+build:
+  name: iOS sin firmar para AltStore
+  steps:
+    - eas/checkout
+    - eas/install_node_modules
+    - eas/prebuild
+    - run:
+        name: Instalar pods
+        working_directory: ./ios
+        command: pod install
+    - run:
+        name: Archivar sin firmar
+        command: |
+          set -euo pipefail
+          WORKSPACE=$(ls -d ios/*.xcworkspace | head -n 1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath build/Karen.xcarchive archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+    - run:
+        name: Empaquetar el .ipa
+        command: |
+          set -euo pipefail
+          rm -rf Payload && mkdir Payload
+          cp -R build/Karen.xcarchive/Products/Applications/*.app Payload/
+          zip -qry SupermercadoKaren-unsigned.ipa Payload
+          ls -la SupermercadoKaren-unsigned.ipa
+    - eas/upload_artifact:
+        name: Subir el .ipa
+        inputs:
+          type: application-archive
+          # El paso de subida resuelve la ruta desde la raíz del repositorio, no desde el proyecto;
+          # se listan ambas y la que no exista se ignora.
+          path: |
+            frontend/portal-mobile-reactnative/SupermercadoKaren-unsigned.ipa
+            SupermercadoKaren-unsigned.ipa

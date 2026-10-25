@@ -10,14 +10,23 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "node --test test/*.test.js",
+    "start:store": "node index.store.js",
+    "start:portal": "node index.portal.js",
+    "dev:store": "node --watch index.store.js",
+    "dev:portal": "node --watch index.portal.js",
+    "test": "node --test --import ./test/support/preload.mjs test/*.test.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
+    "test:services": "node scripts/smoke-services.js",
+    "test:http-errors": "node scripts/probe-http-errors.js",
+    "test:e2e-split": "node scripts/e2e-split.js",
+    "test:migrations": "node scripts/verify-migrations.js",
     "test:endpoints": "node scripts/test-endpoints.js",
     "test:performance": "node scripts/performance-smoke.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "user:create": "node scripts/create-user.js"
   },
   "dependencies": {
     "@google/genai": "^2.28.0",
@@ -31,6 +40,7 @@
     "hpp": "^0.2.3",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0",
+    "sharp": "^0.35.5",
     "swagger-ui-express": "^5.0.1",
     "zod": "^4.6.5"
   },

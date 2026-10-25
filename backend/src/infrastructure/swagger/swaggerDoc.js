@@ -25,6 +25,7 @@ const swaggerDocument = {
     { name: 'Alertas y SSE', description: 'Monitoreo de caducidad (VENCIDO/ROJO/AMARILLO) y stream en vivo SSE' },
     { name: 'Promociones e IA', description: 'Sugerencias promocionales dinámicas generadas con Google Gemini AI' },
     { name: 'Categorías', description: 'Gestión de categorías de catálogo' },
+    { name: 'Catálogo', description: 'Estado de la copia del catálogo que mantiene el portal' },
     { name: 'Autenticación', description: 'Registro e inicio de sesión de usuarios y roles' },
     { name: 'Heartbeat', description: 'Señal de latido de red física de tienda anti-overbooking' }
   ],
@@ -70,6 +71,32 @@ const swaggerDocument = {
         },
         responses: {
           '201': { description: 'Categoría creada' }
+        }
+      }
+    },
+    '/products/{id}/image': {
+      put: {
+        tags: ['Productos'],
+        summary: 'Subir o reemplazar la foto de un producto (se comprime)',
+        description: 'ADMIN o BODEGUERO. El cuerpo es la foto en binario, tal como sale de la cámara (JPEG, PNG, WebP o HEIC; hasta 15 MB y 120 MP). El servidor la endereza según su orientación EXIF, la reduce a un máximo de 1024 px por lado, la convierte a JPEG, le quita los metadatos (ubicación, cámara) y la guarda con un nombre que incluye su hash. La tienda la sincroniza luego con el portal.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'image/jpeg': { schema: { type: 'string', format: 'binary' } },
+            'image/png': { schema: { type: 'string', format: 'binary' } },
+            'image/webp': { schema: { type: 'string', format: 'binary' } }
+          }
+        },
+        responses: {
+          '200': { description: 'Foto guardada. `data` es el producto con su nuevo `imagenUrl`; `image` indica ancho, alto y bytes antes y después.' },
+          '400': { description: 'El archivo no es una imagen legible o tiene demasiados píxeles' },
+          '401': { description: 'Sin sesión' },
+          '403': { description: 'Rol sin permiso' },
+          '404': { description: 'Producto no encontrado' },
+          '413': { description: 'La foto original supera 15 MB' },
+          '415': { description: 'Tipo de contenido no admitido' }
         }
       }
     },
@@ -139,8 +166,14 @@ const swaggerDocument = {
       get: {
         tags: ['Lotes e Inventario'],
         summary: 'Consultar disponibilidad pública de lotes vigentes',
+        description: 'Respuesta cacheable 5 s (`Cache-Control: public, max-age=5`, con ETag). Con `productoId` devuelve solo los lotes de ese producto; un parámetro desconocido se ignora.',
+        parameters: [
+          { name: 'productoId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' }, description: 'Filtra por producto. Vacío equivale a no filtrar.' }
+        ],
         responses: {
-          '200': { description: 'Disponibilidad sanitizada, sin lotes vencidos ni agotados' }
+          '200': { description: 'Disponibilidad sanitizada, sin lotes vencidos ni agotados' },
+          '304': { description: 'Sin cambios respecto al ETag enviado en If-None-Match' },
+          '400': { description: 'productoId no es un UUID válido' }
         }
       }
     },
@@ -276,6 +309,7 @@ const swaggerDocument = {
                 type: 'object',
                 required: ['items'],
                 properties: {
+                  ttlMinutos: { type: 'integer', minimum: 15, maximum: 240, default: 30, description: 'Minutos que se guardan los productos (el cliente los elige; 30 por defecto).' },
                   items: {
                     type: 'array',
                     items: {
@@ -294,8 +328,38 @@ const swaggerDocument = {
         },
         responses: {
           '201': { description: 'Reserva generada exitosamente con código PIN KR-XXXXXX' },
+          '202': { description: 'Solo con portal y tienda separados: la tienda aún confirma la reserva (estado PENDIENTE_SYNC, sin código). Consultar GET /reservations/user/{userId}.' },
+          '400': { description: 'Datos inválidos, oferta no disponible o reserva vencida antes de que la tienda la atendiera' },
+          '404': { description: 'Producto inexistente' },
           '409': { description: 'Stock insuficiente (Overbooking)' },
-          '503': { description: 'Heartbeat ausente o vencido; reservas bloqueadas' }
+          '503': { description: 'Heartbeat ausente o vencido; reservas bloqueadas, o la tienda no pudo procesar la reserva' }
+        }
+      }
+    },
+    '/reservations/user/{userId}': {
+      get: {
+        tags: ['Reservaciones'],
+        summary: 'Reservas de un cliente',
+        description: 'Solo el propietario o el personal. Con portal y tienda separados puede incluir los estados PENDIENTE_SYNC (la tienda aún confirma) y RECHAZADA (con motivoRechazo y mensajeRechazo).',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'userId', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 } },
+          { name: 'offset', in: 'query', schema: { type: 'integer', minimum: 0, default: 0 } }
+        ],
+        responses: {
+          '200': { description: 'Reservas del cliente, de la más reciente a la más antigua' },
+          '403': { description: 'El usuario no es el propietario' }
+        }
+      }
+    },
+    '/catalog/status': {
+      get: {
+        tags: ['Catálogo'],
+        summary: 'Estado de la copia del catálogo que mantiene el portal',
+        description: 'Indica si el catálogo y la disponibilidad pueden estar desactualizados porque la tienda no ha sincronizado recientemente. En el monolito de transición siempre responde stale=false.',
+        responses: {
+          '200': { description: 'mode (mirror o direct), stale, lastSyncAt y estado de cada sección' }
         }
       }
     },
@@ -326,11 +390,32 @@ const swaggerDocument = {
         }
       }
     },
+    '/reservations/{id}/extend': {
+      post: {
+        tags: ['Reservaciones'],
+        summary: 'Extender el plazo de una reserva pendiente',
+        description: 'Solo el cliente propietario. Suma `minutosAdicionales` (5 a 180; 30 por defecto) al vencimiento. Una reserva no puede durar más de 4 horas en total desde que se creó. El vencimiento lo fija la tienda, por lo que requiere un latido vigente; si la tienda no responde en unos segundos, responde 503 sin cambiar nada.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: false,
+          content: { 'application/json': { schema: { type: 'object', properties: { minutosAdicionales: { type: 'integer', minimum: 5, maximum: 180, default: 30 } } } } }
+        },
+        responses: {
+          '200': { description: 'Plazo extendido; devuelve la reserva con su nuevo vencimiento' },
+          '400': { description: 'La reserva no está pendiente, ya venció o excede las 4 horas en total' },
+          '403': { description: 'La reserva es de otro cliente' },
+          '404': { description: 'Reserva no encontrada' },
+          '409': { description: 'Ya hay una extensión de esta reserva en curso' },
+          '503': { description: 'La tienda no está conectada o no respondió a tiempo' }
+        }
+      }
+    },
     '/reservations/{id}/cancel': {
       post: {
         tags: ['Reservaciones'],
         summary: 'Cancelar una reserva pendiente y liberar su stock',
-        description: 'Solo el cliente propietario o un ADMIN. La liberación usa una transacción con bloqueo de filas.',
+        description: 'En portal-api, el cliente propietario o un ADMIN; en store-api, solo un ADMIN (la tienda libera el stock y avisa al portal). La liberación usa una transacción con bloqueo de filas.',
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
@@ -543,17 +628,9 @@ const swaggerDocument = {
       }
     },
     '/heartbeat': {
-      post: {
-        tags: ['Heartbeat'],
-        summary: 'Enviar latido de red física desde tienda a nube (ping)',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          '200': { description: 'Señal registrada' }
-        }
-      },
       get: {
         tags: ['Heartbeat'],
-        summary: 'Consultar estado de conectividad con tienda y si las reservas están bloqueadas',
+        summary: 'Consultar estado de conectividad con tienda y si las reservas están bloqueadas. El latido lo envía store-api por el canal interno.',
         responses: {
           '200': { description: 'Estado ONLINE u OFFLINE' }
         }
@@ -585,13 +662,83 @@ function swaggerBasicAuth(username, password) {
   };
 }
 
-function setupSwagger(app, env = process.env) {
+// Qué servicio expone cada operación (ADR-003). Lo que no figura aquí lo sirven ambos: lectura del
+// catálogo, autenticación y estado del heartbeat. El monolito de transición muestra todo.
+const OPERATION_OWNERS = [
+  ['/categories', ['post'], 'store'],
+  ['/products', ['post'], 'store'],
+  ['/products/{id}/image', null, 'store'],
+  ['/lots', null, 'store'],
+  ['/lots/{id}/location', null, 'store'],
+  ['/lots/{id}/merma', null, 'store'],
+  ['/inventory/movements', null, 'store'],
+  ['/inventory/wastes', null, 'store'],
+  ['/reservations/{id}/confirm', null, 'store'],
+  ['/alerts', null, 'store'],
+  ['/alerts/{id}/atender', null, 'store'],
+  ['/alerts/stream', null, 'store'],
+  ['/promotions/generate', null, 'store'],
+  ['/promotions/pending', null, 'store'],
+  ['/promotions/{id}/approve', null, 'store'],
+  ['/promotions/{id}/reject', null, 'store'],
+  ['/metrics/ai', null, 'store'],
+  ['/auth/register', ['post'], 'portal'],
+  ['/reservations', ['post'], 'portal'],
+  ['/reservations/user/{userId}', null, 'portal'],
+  ['/reservations/{id}/extend', null, 'portal'],
+  ['/catalog/status', null, 'portal']
+];
+
+const SERVICE_INFO = {
+  store: {
+    title: 'Ecosistema Karen - store-api',
+    description: 'API del servicio local de la tienda (**store-api**): inventario y lotes, caja SIACI, alertas de caducidad, promociones con Gemini AI y administración. Atiende al personal de la tienda; las reservas de los clientes llegan desde portal-api por un canal interno que no forma parte de esta API.\n\nBase URL: `/api/v1`',
+    port: 4000
+  },
+  portal: {
+    title: 'Ecosistema Karen - portal-api',
+    description: 'API del servicio en la nube (**portal-api**) para los clientes: catálogo y disponibilidad (copia que publica la tienda), promociones vigentes, cuentas y reservas, que el portal encarga a la tienda. El canal interno `/internal/v1` con store-api no forma parte de esta API pública.\n\nBase URL: `/api/v1`',
+    port: 4001
+  }
+};
+
+/**
+ * Documento OpenAPI de un servicio: solo las operaciones que expone. Con ambos servicios
+ * activos (monolito) devuelve el documento completo.
+ */
+function documentFor({ store = true, portal = true } = {}) {
+  const active = new Set([...(store ? ['store'] : []), ...(portal ? ['portal'] : [])]);
+  const paths = {};
+  for (const [path, operations] of Object.entries(swaggerDocument.paths)) {
+    const kept = {};
+    for (const [method, operation] of Object.entries(operations)) {
+      const rule = OPERATION_OWNERS.find(([rulePath, methods]) =>
+        rulePath === path && (methods === null || methods.includes(method)));
+      if (!rule || active.has(rule[2])) kept[method] = operation;
+    }
+    if (Object.keys(kept).length > 0) paths[path] = kept;
+  }
+
+  const usedTags = new Set(Object.values(paths).flatMap(operations =>
+    Object.values(operations).flatMap(operation => operation.tags || [])));
+  const single = active.size === 1 ? SERVICE_INFO[[...active][0]] : null;
+  return {
+    ...swaggerDocument,
+    info: single ? { ...swaggerDocument.info, title: single.title, description: single.description } : swaggerDocument.info,
+    tags: swaggerDocument.tags.filter(tag => usedTags.has(tag.name)),
+    paths
+  };
+}
+
+function setupSwagger(app, env = process.env, services = { store: true, portal: true }) {
   const production = env.NODE_ENV === 'production';
   const enabled = production ? env.SWAGGER_ENABLED === 'true' : env.SWAGGER_ENABLED !== 'false';
   if (!enabled) return false;
 
-  swaggerDocument.servers = [{
-    url: env.SWAGGER_API_URL || 'http://localhost:4000/api/v1',
+  const document = documentFor(services);
+  const portInfo = services.portal && !services.store ? SERVICE_INFO.portal : SERVICE_INFO.store;
+  document.servers = [{
+    url: env.SWAGGER_API_URL || `http://localhost:${portInfo.port}/api/v1`,
     description: production ? 'API desplegada' : 'Servidor local de desarrollo'
   }];
 
@@ -602,9 +749,10 @@ function setupSwagger(app, env = process.env) {
     }
     middleware.push(swaggerBasicAuth(env.SWAGGER_USERNAME, env.SWAGGER_PASSWORD));
   }
-  app.use('/api-docs', ...middleware, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  app.use('/api-docs', ...middleware, swaggerUi.serve, swaggerUi.setup(document));
   return true;
 }
 
 module.exports = setupSwagger;
 module.exports.swaggerBasicAuth = swaggerBasicAuth;
+module.exports.documentFor = documentFor;

@@ -18,7 +18,8 @@ export function selectActiveReservation(
 
 export function reservationToPass(reservation: BackendReservation, now = Date.now()): ReservationPass {
   return {
-    code: reservation.codigoRetiro,
+    // Solo las reservas aceptadas por la tienda (PENDIENTE) llegan aquí, y ésas siempre traen código.
+    code: reservation.codigoRetiro ?? '',
     status: reservation.estado,
     remainingSeconds: secondsUntil(reservation.fechaExpiracion, now),
     storeLocation: 'Sucursal Matriz',

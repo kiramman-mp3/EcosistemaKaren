@@ -6,6 +6,8 @@ const validate = require('../src/infrastructure/http/middlewares/validateRequest
 const schemas = require('../src/infrastructure/http/validation/requestSchemas');
 const errorHandler = require('../src/infrastructure/http/middlewares/errorHandler');
 
+const SAMPLE_ID = '00000000-0000-4000-8000-000000000001';
+
 function validationApp(method, path, contract) {
   const app = express();
   app.use(express.json());
@@ -43,7 +45,7 @@ test('normaliza campos válidos y rechaza propiedades no declaradas', async () =
 test('valida fechas reales y su orden cronológico al ingresar lotes', async () => {
   const app = validationApp('post', '/lots', { body: schemas.lotBody });
   const response = await request(app).post('/lots').send({
-    productoId: 'producto-1',
+    productoId: SAMPLE_ID,
     numeroLote: 'LOTE-01',
     fechaElaboracion: '2026-02-30',
     fechaCaducidad: '2026-02-20',
@@ -57,7 +59,7 @@ test('valida fechas reales y su orden cronológico al ingresar lotes', async () 
 test('limita reservas y pagina consultas con valores numéricos seguros', async () => {
   const reservationApp = validationApp('post', '/reservations', { body: schemas.reservationBody });
   const oversized = await request(reservationApp).post('/reservations').send({
-    items: [{ productoId: 'producto-1', cantidad: 10001 }]
+    items: [{ productoId: SAMPLE_ID, cantidad: 10001 }]
   });
   assert.equal(oversized.status, 400);
 
@@ -65,11 +67,11 @@ test('limita reservas y pagina consultas con valores numéricos seguros', async 
     params: schemas.userParams,
     query: schemas.reservationQuery
   });
-  const defaults = await request(queryApp).get('/users/usuario-1');
+  const defaults = await request(queryApp).get(`/users/${SAMPLE_ID}`);
   assert.equal(defaults.status, 200);
   assert.deepEqual(defaults.body.query, { limit: 50, offset: 0 });
 
-  const invalid = await request(queryApp).get('/users/usuario-1?limit=101&offset=-1');
+  const invalid = await request(queryApp).get(`/users/${SAMPLE_ID}?limit=101&offset=-1`);
   assert.equal(invalid.status, 400);
   assert.equal(invalid.body.details.length, 2);
 });
@@ -88,7 +90,7 @@ test('pagina y filtra el catálogo con límites seguros', async () => {
 test('acepta impuesto de producto únicamente en el rango de 0 a 100', async () => {
   const app = validationApp('post', '/products', { body: schemas.productBody });
   const base = {
-    categoriaId: 'categoria-1', codigoBarras: '7862108350431', nombre: 'Producto nuevo',
+    categoriaId: SAMPLE_ID, codigoBarras: '7862108350431', nombre: 'Producto nuevo',
     precioVenta: 2.5, minStockAlerta: 10
   };
   assert.equal((await request(app).post('/products').send({ ...base, impuestoPorcentaje: 15 })).status, 200);

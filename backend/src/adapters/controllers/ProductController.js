@@ -1,8 +1,9 @@
 class ProductController {
-  constructor(getProductsUC, getProductByBarcodeUC, createProductUC) {
+  constructor(getProductsUC, getProductByBarcodeUC, createProductUC, setProductImageUC) {
     this.getProductsUC = getProductsUC;
     this.getProductByBarcodeUC = getProductByBarcodeUC;
     this.createProductUC = createProductUC;
+    this.setProductImageUC = setProductImageUC;
   }
 
   async getProducts(req, res, next) {
@@ -41,6 +42,21 @@ class ProductController {
         success: true,
         message: 'Producto creado en el catálogo maestro.',
         data: product
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // PUT /products/:id/image: el cuerpo es la foto (binario); se comprime antes de guardarla.
+  async setImage(req, res, next) {
+    try {
+      const { product, image } = await this.setProductImageUC.execute(req.params.id, req.body);
+      res.json({
+        success: true,
+        message: 'Foto del producto actualizada.',
+        data: product,
+        image
       });
     } catch (err) {
       next(err);

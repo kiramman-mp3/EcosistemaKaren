@@ -1,6 +1,12 @@
 const http = require('http');
 
+// Recorrido manual de la API contra un backend en marcha. Necesita los datos de demostración de
+// desarrollo (init-db/dev/01-demo-data.sql): cuentas cliente@karen.com y bodega@karen.com con la
+// contraseña demo123. Con otras cuentas: API_CLIENT_EMAIL, API_STAFF_EMAIL y API_PASSWORD.
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:4000/api/v1';
+const CLIENT_EMAIL = process.env.API_CLIENT_EMAIL || 'cliente@karen.com';
+const STAFF_EMAIL = process.env.API_STAFF_EMAIL || 'bodega@karen.com';
+const PASSWORD = process.env.API_PASSWORD || 'demo123';
 
 async function request(path, method = 'GET', data = null, token = null) {
   return new Promise((resolve, reject) => {
@@ -48,15 +54,15 @@ async function runTests() {
     };
 
     const clientLogin = await request('/auth/login', 'POST', {
-      email: 'cliente@karen.com',
-      password: 'demo123'
+      email: CLIENT_EMAIL,
+      password: PASSWORD
     });
     expectStatus('POST /auth/login (cliente)', clientLogin, 200);
     const clientToken = clientLogin.body.data.token;
 
     const warehouseLogin = await request('/auth/login', 'POST', {
-      email: 'bodega@karen.com',
-      password: 'demo123'
+      email: STAFF_EMAIL,
+      password: PASSWORD
     });
     expectStatus('POST /auth/login (bodega)', warehouseLogin, 200);
     const warehouseToken = warehouseLogin.body.data.token;
@@ -97,15 +103,19 @@ async function runTests() {
       }
     }
 
-    // Heartbeat operativo obligatorio antes de reservar
-    const heartbeatPing = await request('/heartbeat', 'POST', {}, warehouseToken);
-    expectStatus('POST /heartbeat', heartbeatPing, 200);
-    const hb = await request('/heartbeat');
+    // La tienda emite el latido por su cuenta: se espera a que llegue antes de reservar
+    const userHeartbeat = await request('/heartbeat', 'POST', {}, warehouseToken);
+    expectStatus('POST /heartbeat (ya no existe)', userHeartbeat, 404);
+    let hb = await request('/heartbeat');
+    for (let attempt = 0; attempt < 15 && hb.body.reservationsBlocked; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      hb = await request('/heartbeat');
+    }
     expectStatus('GET /heartbeat', hb, 200);
     if (hb.body.reservationsBlocked) {
-      throw new Error('GET /heartbeat: las reservas continúan bloqueadas después del ping.');
+      throw new Error('GET /heartbeat: la tienda no envió un latido en 15 s; las reservas siguen bloqueadas.');
     }
-    console.log('6. POST/GET /heartbeat:', hb.status, `Status: ${hb.body.status}`);
+    console.log('6. GET /heartbeat:', hb.status, `Status: ${hb.body.status}`);
 
     // 7. Probar Reserva FEFO
     if (prods.body.data && prods.body.data.length > 0) {
