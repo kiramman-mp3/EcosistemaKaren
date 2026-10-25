@@ -31,7 +31,7 @@ test('/readyz no está listo si falta una migración y nombra cuáles', async ()
   const pool = { query: async () => ({ rows }) };
   const response = await request(appWith(createHealthRouter({ pool, service: 'store' }))).get('/readyz');
   assert.equal(response.status, 503);
-  assert.match(response.body.checks.database, /migraciones pendientes: 012_remote_clients_and_outbox/);
+  assert.match(response.body.checks.database, /migraciones pendientes: 013_product_price_history/);
 });
 
 test('/readyz no está listo sin base de datos y no filtra el mensaje del driver', async () => {
