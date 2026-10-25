@@ -18,7 +18,8 @@ const MIGRATION_SETS = {
     { version: '010_heartbeat_and_ratelimit', file: path.join(INIT_DB, 'store/10-heartbeat-and-ratelimit.sql') },
     { version: '011_token_revocation', file: path.join(INIT_DB, 'store/11-token-revocation.sql') },
     { version: '012_remote_clients_and_outbox', file: path.join(INIT_DB, 'store/12-remote-clients-and-outbox.sql') },
-    { version: '013_product_price_history', file: path.join(INIT_DB, 'store/13-product-price-history.sql') }
+    { version: '013_product_price_history', file: path.join(INIT_DB, 'store/13-product-price-history.sql') },
+    { version: '014_promotion_limits', file: path.join(INIT_DB, 'store/14-promotion-limits.sql') }
   ],
   portal: [
     { version: 'portal_001_schema', file: path.join(INIT_DB, 'portal/01-portal-schema.sql') },
@@ -26,7 +27,8 @@ const MIGRATION_SETS = {
     { version: 'portal_003_reservations', file: path.join(INIT_DB, 'portal/03-reservations.sql') },
     { version: 'portal_004_media_mirror', file: path.join(INIT_DB, 'portal/04-media-mirror.sql') },
     { version: 'portal_005_reservation_extend', file: path.join(INIT_DB, 'portal/05-reservation-extend.sql') },
-    { version: 'portal_006_product_sales', file: path.join(INIT_DB, 'portal/06-product-sales.sql') }
+    { version: 'portal_006_product_sales', file: path.join(INIT_DB, 'portal/06-product-sales.sql') },
+    { version: 'portal_007_promotion_limits', file: path.join(INIT_DB, 'portal/07-promotion-limits.sql') }
   ]
 };
 

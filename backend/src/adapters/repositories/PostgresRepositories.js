@@ -8,16 +8,24 @@ const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
 const { toDateOnly } = require('../../domain/policies/BusinessDates');
 const { RECENT_SALES_JOIN, RECENT_SALES_COLUMN } = require('../../infrastructure/db/productSales');
+const { OFFER_COMMITTED_JOIN, OFFER_REMAINING_COLUMN, OFFER_IN_FORCE } = require('../../infrastructure/db/offerUnits');
 const {
   buildPromotionCacheKey,
-  assertPromotableLot
+  assertPromotableLot,
+  assertOfferTerms,
+  offerLimitViolation
 } = require('../../domain/policies/PromotionPolicy');
 const {
   NotFoundException,
   ValidationException,
   OverbookingException,
+  OfferLimitException,
   ForbiddenException
 } = require('../../domain/exceptions/DomainExceptions');
+
+// Límites de una oferta, tal como los espera la entidad Promotion.
+const OFFER_LIMIT_COLUMNS = 'limite_por_pedido as "limitePorPedido", stock_oferta as "stockOferta", vigente_hasta as "vigenteHasta"';
+const OFFER_LIMIT_COLUMNS_PI = 'pi.limite_por_pedido as "limitePorPedido", pi.stock_oferta as "stockOferta", pi.vigente_hasta as "vigenteHasta"';
 
 // Cambia el PVP de un producto y lo anota en la bitácora, dentro de la transacción de quien llama:
 // así el ingreso de un lote y su nuevo precio se guardan juntos o no se guarda ninguno. Devuelve
@@ -622,19 +630,33 @@ class PostgresReservationRepository {
         let promotedLotId = null;
         let unitPrice = Number(product.precioVenta);
         if (item.promocionId) {
+          // La oferta queda bloqueada hasta el fin de la transacción: dos reservas simultáneas de la
+          // misma oferta cuentan sus unidades una después de la otra y nunca pasan stock_oferta.
           const promotionResult = await client.query(`
-            SELECT pi.lote_id as "loteId", pi.descuento_porcentaje as "descuentoPorcentaje"
+            SELECT pi.lote_id as "loteId", pi.descuento_porcentaje as "descuentoPorcentaje",
+                   pi.limite_por_pedido as "limitePorPedido", pi.stock_oferta as "stockOferta",
+                   pi.vigente_hasta as "vigenteHasta", CURRENT_TIMESTAMP as "ahora"
             FROM promociones_ia pi
             JOIN lotes l ON l.id = pi.lote_id
             WHERE pi.id = $1 AND l.producto_id = $2
               AND pi.estado = 'APROBADA' AND pi.activa = TRUE
               AND l.estado = 'ACTIVO' AND l.fecha_caducidad > CURRENT_DATE
+            FOR UPDATE OF pi
           `, [item.promocionId, item.productoId]);
           if (!promotionResult.rows.length) {
             throw new ValidationException('La oferta seleccionada ya no está disponible para este producto.');
           }
-          promotedLotId = promotionResult.rows[0].loteId;
-          unitPrice = Number((unitPrice * (1 - Number(promotionResult.rows[0].descuentoPorcentaje) / 100)).toFixed(2));
+          const offer = promotionResult.rows[0];
+          const committed = offer.stockOferta === null ? 0 : Number((await client.query(`
+            SELECT COALESCE(SUM(rd.cantidad), 0)::int AS total
+            FROM reserva_detalles rd
+            JOIN reservas r ON r.id = rd.reserva_id
+            WHERE rd.promocion_id = $1 AND r.estado IN ('PENDIENTE', 'CONFIRMADA')
+          `, [item.promocionId])).rows[0].total);
+          const violation = offerLimitViolation(offer, item.cantidad, committed, new Date(offer.ahora));
+          if (violation) throw new OfferLimitException(violation);
+          promotedLotId = offer.loteId;
+          unitPrice = Number((unitPrice * (1 - Number(offer.descuentoPorcentaje) / 100)).toFixed(2));
         }
         const lotsResult = await client.query(`
           SELECT id, cantidad_disponible as "cantidadDisponible",
@@ -699,11 +721,11 @@ class PostgresReservationRepository {
       const savedDetails = [];
       for (const detail of details) {
         const detailResult = await client.query(`
-          INSERT INTO reserva_detalles (reserva_id, lote_id, cantidad, precio_unitario)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO reserva_detalles (reserva_id, lote_id, cantidad, precio_unitario, promocion_id)
+          VALUES ($1, $2, $3, $4, $5)
           RETURNING id, reserva_id as "reservaId", lote_id as "loteId",
-                    cantidad, precio_unitario as "precioUnitario"
-        `, [reservationResult.rows[0].id, detail.loteId, detail.cantidad, detail.precioUnitario]);
+                    cantidad, precio_unitario as "precioUnitario", promocion_id as "promocionId"
+        `, [reservationResult.rows[0].id, detail.loteId, detail.cantidad, detail.precioUnitario, detail.promocionId]);
         savedDetails.push(detailResult.rows[0]);
         await this._insertMovement(client, {
           loteId: detail.loteId, tipo: 'RESERVA', cantidad: detail.cantidad,
@@ -1333,24 +1355,45 @@ class PostgresAlertRepository {
 class PostgresPromotionRepository {
   constructor(pool) {
     this.pool = pool;
+    this._unitsSource = null;
   }
 
+  // Las unidades de oferta que quedan se calculan de las reservas donde existen (store-api y el
+  // monolito); en portal-api se leen de la copia que envía la tienda (promociones_ia.unidades_restantes).
+  _units() {
+    if (!this._unitsSource) {
+      this._unitsSource = this.pool.query("SELECT to_regclass('public.reserva_detalles') IS NOT NULL AS ledger")
+        .then(res => (res.rows[0]?.ledger
+          ? { join: OFFER_COMMITTED_JOIN, column: OFFER_REMAINING_COLUMN }
+          : { join: '', column: 'pi.unidades_restantes' }))
+        .catch(error => { this._unitsSource = null; throw error; });
+    }
+    return this._unitsSource;
+  }
+
+  // Ofertas que ve el cliente: aprobadas, activas, vigentes, sobre un lote que todavía se vende y
+  // con unidades de oferta disponibles.
   async findAllApproved() {
+    const units = await this._units();
     const res = await this.pool.query(`
       SELECT pi.id, pi.lote_id as "loteId",
              pi.descuento_porcentaje as "descuentoPorcentaje",
              pi.frase_promocional as "frasePromocional", pi.razon_ia as "razonIa",
              pi.activa, pi.estado, pi.modelo_ia as "modeloIa",
              pi.prompt_version as "promptVersion", pi.cache_key as "cacheKey",
-             pi.cache_hit as "cacheHit", pi.aprobada_por as "aprobadaPor",
-             pi.aprobada_at as "aprobadaAt", pi.created_at
+             pi.cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS_PI}, pi.aprobada_por as "aprobadaPor",
+             pi.aprobada_at as "aprobadaAt", pi.created_at,
+             ${units.column} as "unidadesRestantes"
       FROM promociones_ia pi
       JOIN lotes l ON l.id = pi.lote_id
+      ${units.join}
       WHERE pi.estado = 'APROBADA'
         AND pi.activa = TRUE
+        AND ${OFFER_IN_FORCE}
         AND l.estado = 'ACTIVO'
         AND l.fecha_caducidad > CURRENT_DATE
         AND l.cantidad_disponible > 0
+        AND (${units.column} IS NULL OR ${units.column} > 0)
       ORDER BY pi.created_at DESC
     `);
     return res.rows.map(r => new Promotion(r));
@@ -1363,24 +1406,27 @@ class PostgresPromotionRepository {
       SELECT id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
              frase_promocional as "frasePromocional", razon_ia as "razonIa",
              activa, estado, modelo_ia as "modeloIa", prompt_version as "promptVersion",
-             cache_key as "cacheKey", cache_hit as "cacheHit", created_at
+             cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
       FROM promociones_ia WHERE estado = 'PENDIENTE_APROBACION' ORDER BY created_at ASC
     `);
     return res.rows.map(r => new Promotion(r));
   }
 
   async findAllOperational({ estado, activa } = {}) {
+    const units = await this._units();
     const res = await this.pool.query(`
       SELECT pi.id, pi.lote_id as "loteId", pi.descuento_porcentaje as "descuentoPorcentaje",
              pi.frase_promocional as "frasePromocional", pi.razon_ia as "razonIa",
              pi.activa, pi.estado, pi.modelo_ia as "modeloIa", pi.prompt_version as "promptVersion",
-             pi.cache_key as "cacheKey", pi.cache_hit as "cacheHit",
+             pi.cache_key as "cacheKey", pi.cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS_PI},
              pi.motivo_rechazo as "motivoRechazo", pi.created_at,
              l.numero_lote as "numeroLote", l.fecha_caducidad as "fechaCaducidad",
-             l.cantidad_disponible as "cantidadDisponible", p.nombre as "productoNombre"
+             l.cantidad_disponible as "cantidadDisponible", p.nombre as "productoNombre",
+             ${units.column} as "unidadesRestantes"
       FROM promociones_ia pi
       JOIN lotes l ON l.id = pi.lote_id
       JOIN productos p ON p.id = l.producto_id
+      ${units.join}
       WHERE ($1::estado_promocion IS NULL OR pi.estado = $1)
         AND ($2::boolean IS NULL OR pi.activa = $2)
       ORDER BY pi.created_at DESC
@@ -1388,15 +1434,16 @@ class PostgresPromotionRepository {
     return res.rows.map(row => new Promotion(row));
   }
 
-  async updateDraft(id, { descuentoPorcentaje, frasePromocional }) {
+  async updateDraft(id, { descuentoPorcentaje, frasePromocional, limitePorPedido = null, stockOferta = null, vigenteHasta = null }) {
     const res = await this.pool.query(`
-      UPDATE promociones_ia SET descuento_porcentaje = $2, frase_promocional = $3
+      UPDATE promociones_ia SET descuento_porcentaje = $2, frase_promocional = $3,
+        limite_por_pedido = $4, stock_oferta = $5, vigente_hasta = $6
       WHERE id = $1 AND estado = 'PENDIENTE_APROBACION'
       RETURNING id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
         frase_promocional as "frasePromocional", razon_ia as "razonIa", activa, estado,
         modelo_ia as "modeloIa", prompt_version as "promptVersion", cache_key as "cacheKey",
-        cache_hit as "cacheHit", created_at
-    `, [id, descuentoPorcentaje, frasePromocional]);
+        cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
+    `, [id, descuentoPorcentaje, frasePromocional, limitePorPedido, stockOferta, vigenteHasta]);
     return res.rows.length ? new Promotion(res.rows[0]) : null;
   }
 
@@ -1407,7 +1454,7 @@ class PostgresPromotionRepository {
       RETURNING id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
         frase_promocional as "frasePromocional", razon_ia as "razonIa", activa, estado,
         modelo_ia as "modeloIa", prompt_version as "promptVersion", cache_key as "cacheKey",
-        cache_hit as "cacheHit", created_at
+        cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
     `, [id]);
     return res.rows.length ? new Promotion(res.rows[0]) : null;
   }
@@ -1424,7 +1471,7 @@ class PostgresPromotionRepository {
       SELECT id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
              frase_promocional as "frasePromocional", razon_ia as "razonIa",
              activa, estado, modelo_ia as "modeloIa", prompt_version as "promptVersion",
-             cache_key as "cacheKey", cache_hit as "cacheHit",
+             cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS},
              aprobada_por as "aprobadaPor", aprobada_at as "aprobadaAt",
              rechazada_por as "rechazadaPor", rechazada_at as "rechazadaAt",
              motivo_rechazo as "motivoRechazo", created_at
@@ -1444,7 +1491,7 @@ class PostgresPromotionRepository {
         SELECT id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
                frase_promocional as "frasePromocional", razon_ia as "razonIa",
                activa, estado, modelo_ia as "modeloIa", prompt_version as "promptVersion",
-               cache_key as "cacheKey", cache_hit as "cacheHit", created_at
+               cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
         FROM promociones_ia
         WHERE lote_id = $1 AND cache_key = $2 AND estado = 'PENDIENTE_APROBACION' LIMIT 1
       `, [loteId, cacheKey]);
@@ -1464,7 +1511,7 @@ class PostgresPromotionRepository {
         RETURNING id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
                   frase_promocional as "frasePromocional", razon_ia as "razonIa",
                   activa, estado, modelo_ia as "modeloIa", prompt_version as "promptVersion",
-                  cache_key as "cacheKey", cache_hit as "cacheHit", created_at
+                  cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
       `, [loteId, descuentoPorcentaje, frasePromocional, razonIa,
           modeloIa, promptVersion, cacheKey, Boolean(cacheHit)]);
       await client.query('COMMIT');
@@ -1484,7 +1531,8 @@ class PostgresPromotionRepository {
       const locked = await client.query(`
         SELECT pi.id, pi.lote_id as "loteId", pi.estado,
                pi.cache_key as "cacheKey", pi.prompt_version as "promptVersion",
-               pi.modelo_ia as "modeloIa",
+               pi.modelo_ia as "modeloIa", pi.stock_oferta as "stockOferta",
+               pi.vigente_hasta as "vigenteHasta",
                l.numero_lote as "numeroLote", l.fecha_caducidad as "fechaCaducidad",
                l.cantidad_disponible as "cantidadDisponible", l.estado as "lotEstado",
                pr.precio_venta as "precioVenta"
@@ -1506,6 +1554,8 @@ class PostgresPromotionRepository {
         cantidadDisponible: Number(current.cantidadDisponible),
         estado: current.lotEstado
       });
+      // Los límites se revisan otra vez: el lote pudo venderse o la hora de fin pasar desde la edición.
+      assertOfferTerms(current, { cantidadDisponible: Number(current.cantidadDisponible) });
       const currentCacheKey = buildPromotionCacheKey({
         loteId: current.loteId,
         fechaCaducidad: current.fechaCaducidad,
@@ -1535,7 +1585,7 @@ class PostgresPromotionRepository {
                   frase_promocional as "frasePromocional", razon_ia as "razonIa",
                   activa, estado, aprobada_por as "aprobadaPor", aprobada_at as "aprobadaAt",
                   modelo_ia as "modeloIa", prompt_version as "promptVersion",
-                  cache_key as "cacheKey", cache_hit as "cacheHit", created_at
+                  cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
       `, [promotionId, adminUserId]);
       if (res.rowCount === 0) {
         throw new ValidationException('No se puede aprobar: la promoción cambió concurrentemente.');

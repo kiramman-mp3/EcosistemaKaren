@@ -90,7 +90,7 @@ function storeCommandResultBody() {
     }),
     z.strictObject({
       status: z.literal('REJECTED'),
-      reason: z.enum(['OVERBOOKING', 'VALIDATION', 'NOT_FOUND', 'EXPIRED', 'STORE_ERROR']),
+      reason: z.enum(['OVERBOOKING', 'OFFER_LIMIT', 'VALIDATION', 'NOT_FOUND', 'EXPIRED', 'STORE_ERROR']),
       message: z.string().max(500).optional()
     }),
     z.strictObject({
@@ -200,9 +200,17 @@ const schemas = {
     estado: z.enum(['PENDIENTE_APROBACION', 'APROBADA', 'RECHAZADA']).optional(),
     activa: z.enum(['true', 'false']).transform(value => value === 'true').optional()
   }),
+  // Los límites de la oferta son opcionales: sin enviar se conservan; null los quita (todo el lote, hasta que caduque).
   promotionUpdateBody: z.strictObject({
     descuentoPorcentaje: z.coerce.number().finite().min(5).max(50),
-    frasePromocional: text(3, 180, 'La frase promocional')
+    frasePromocional: text(3, 180, 'La frase promocional'),
+    limitePorPedido: positiveInteger(100_000).nullable().optional(),
+    stockOferta: positiveInteger(100_000).nullable().optional(),
+    vigenteHasta: z.iso.datetime({ offset: true }).nullable().optional()
+  }).superRefine((data, ctx) => {
+    if (data.limitePorPedido && data.stockOferta && data.limitePorPedido > data.stockOferta) {
+      ctx.addIssue({ code: 'custom', path: ['limitePorPedido'], message: 'El límite por pedido no puede superar el stock de oferta.' });
+    }
   }),
   registerBody: z.strictObject({
     nombre: text(2, 120, 'El nombre'),

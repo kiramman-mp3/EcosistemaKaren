@@ -101,7 +101,7 @@ export const HelpChatWidget: React.FC = () => {
       } else if (lower.includes('reserva') || lower.includes('tiempo') || lower.includes('minuto') || lower.includes('ttl')) {
         replyText = `Al apartar eliges cuánto tiempo guardamos tus productos: ${RESERVATION_RANGE_TEXT}. Luego dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.`;
       } else if (lower.includes('oferta') || lower.includes('descuento') || lower.includes('fefo') || lower.includes('caducidad')) {
-        replyText = 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 5% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.';
+        replyText = 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 5% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional. Algunas tienen un máximo por pedido, pocas unidades con descuento o una hora de fin: lo verás en cada oferta.';
       } else if (lower.includes('pago') || lower.includes('tarjeta') || lower.includes('efectivo') || lower.includes('precio')) {
         replyText = 'El pago se realiza en caja física al momento de retirar tu pedido. Aceptamos efectivo, tarjetas y transferencias.';
       } else if (lower.includes('hola') || lower.includes('buenas') || lower.includes('buenos dias')) {

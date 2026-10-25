@@ -91,6 +91,11 @@ export interface BackendPromotion {
   numeroLote?: string | null;
   fechaCaducidad?: string | null;
   cantidadDisponible?: number | null;
+  // Límites que fija el ADMIN (null = sin tope) y unidades con descuento que quedan.
+  limitePorPedido?: number | null;
+  stockOferta?: number | null;
+  vigenteHasta?: string | null;
+  unidadesRestantes?: number | null;
 }
 
 export interface InventoryMovement {

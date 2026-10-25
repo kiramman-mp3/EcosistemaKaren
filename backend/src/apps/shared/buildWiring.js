@@ -183,7 +183,7 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       getPendingPromotionsUC: new GetPendingPromotions(promotionRepo),
       approvePromotionUC: new ApprovePromotion(promotionRepo),
       rejectPromotionUC: new RejectPromotion(promotionRepo),
-      managePromotionsUC: new ManagePromotions(promotionRepo)
+      managePromotionsUC: new ManagePromotions(promotionRepo, lotRepo)
     };
 
     controllers.alertController = new AlertController(

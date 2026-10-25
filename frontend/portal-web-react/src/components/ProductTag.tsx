@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { Check, Flame, Plus, Sparkles } from 'lucide-react';
+import { Check, Clock, Flame, Plus, Sparkles } from 'lucide-react';
 import { FlashOffer, Product } from '../types';
 import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui/Tag';
 import { Button } from './ui/Button';
 import { categoryTone, TONE_SOLID } from '../lib/categoryTone';
 import { flyToCart } from '../lib/flyToCart';
 import { PromotionGraphicBackground } from './ui/PromotionGraphicBackground';
+import { maxPerOrderText, offerEndText } from '../config/offerRules';
 
 const LOW_STOCK = 5;
 
@@ -138,6 +139,8 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
   const sold = Math.max(0, offer.stockTotal - offer.stockAvailable);
   const soldPercent = offer.stockTotal > 0 ? Math.round((sold / offer.stockTotal) * 100) : 0;
   const tone = categoryTone(offer.category);
+  const endText = offerEndText(offer.endsAt);
+  const limitText = maxPerOrderText(offer.maxPerOrder);
 
   const graphicTheme = offer.category?.match(/l[aá]cteo/i)
     ? 'lacteos'
@@ -192,6 +195,17 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
               Stock oferta: {offer.stockAvailable}
             </span>
           </div>
+          {(endText || limitText) && (
+            <div className="mt-2 flex items-center justify-between gap-2 flex-wrap text-sm font-bold">
+              {endText && (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="w-4 h-4" aria-hidden="true" />
+                  {endText}
+                </span>
+              )}
+              {limitText && <span className="rounded-tag border-2 border-mora px-2 py-0.5 text-xs">{limitText}</span>}
+            </div>
+          )}
 
           {/* Medidor de stock definido para la oferta */}
           <div

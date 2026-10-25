@@ -26,6 +26,10 @@ class Promotion {
     numeroLote,
     fechaCaducidad,
     cantidadDisponible,
+    limitePorPedido,
+    stockOferta,
+    vigenteHasta,
+    unidadesRestantes,
     created_at,
   }) {
     if (!loteId) {
@@ -55,6 +59,13 @@ class Promotion {
       throw new ValidationException(`Estado de promoción inválido: ${estado}`);
     }
 
+    const limit = optionalUnits(limitePorPedido, 'El límite por pedido');
+    const stock = optionalUnits(stockOferta, 'El stock de oferta');
+    if (limit !== null && stock !== null && limit > stock) {
+      throw new ValidationException('El límite por pedido no puede superar el stock de oferta.');
+    }
+    const until = optionalDate(vigenteHasta);
+
     this.id = id;
     this.loteId = loteId;
     this.descuentoPorcentaje = pct;
@@ -80,6 +91,14 @@ class Promotion {
     this.fechaCaducidad = fechaCaducidad || null;
     this.cantidadDisponible = cantidadDisponible === undefined ? null : Number(cantidadDisponible);
 
+    // Límites de la oferta (null = sin tope: todo el lote, hasta que caduque).
+    this.limitePorPedido = limit;
+    this.stockOferta = stock;
+    this.vigenteHasta = until;
+    this.unidadesRestantes = unidadesRestantes === undefined || unidadesRestantes === null
+      ? null
+      : Math.max(0, Number(unidadesRestantes));
+
     this.created_at = created_at || new Date();
   }
 
@@ -97,7 +116,17 @@ class Promotion {
       descuentoPorcentaje: this.descuentoPorcentaje,
       frasePromocional: this.frasePromocional,
       activa: this.activa,
+      ...this._limitsDTO(),
       created_at: this.created_at,
+    };
+  }
+
+  _limitsDTO() {
+    return {
+      limitePorPedido: this.limitePorPedido,
+      stockOferta: this.stockOferta,
+      vigenteHasta: this.vigenteHasta ? this.vigenteHasta.toISOString() : null,
+      unidadesRestantes: this.unidadesRestantes,
     };
   }
 
@@ -116,9 +145,30 @@ class Promotion {
       fechaCaducidad: this.fechaCaducidad,
       cantidadDisponible: this.cantidadDisponible,
       motivoRechazo: this.motivoRechazo,
+      ...this._limitsDTO(),
       created_at: this.created_at,
     };
   }
+}
+
+const MAX_OFFER_UNITS = 100000;
+
+function optionalUnits(value, label) {
+  if (value === undefined || value === null || value === '') return null;
+  const units = Number(value);
+  if (!Number.isInteger(units) || units < 1 || units > MAX_OFFER_UNITS) {
+    throw new ValidationException(`${label} debe ser un número entero entre 1 y ${MAX_OFFER_UNITS}.`);
+  }
+  return units;
+}
+
+function optionalDate(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new ValidationException('La fecha y hora de fin de la oferta no es válida.');
+  }
+  return date;
 }
 
 module.exports = Promotion;

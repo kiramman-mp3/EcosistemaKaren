@@ -218,6 +218,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose, default
                 <li>Los productos en promoción especial u oferta flash corresponden a lotes con fechas de vencimiento próximas pero plenamente aptos y garantizados para consumo humano. Los lotes de 0 días o menos se descartan automáticamente como merma y jamás salen a la venta.</li>
                 <li>La fecha de caducidad exacta de cada lote se informa de forma transparente en la etiqueta del producto y en la ficha del portal digital.</li>
                 <li>Los descuentos generados con asistencia de Inteligencia Artificial (Google Gemini) son formalmente auditados y aprobados por la Gerencia de Tienda.</li>
+                <li>Cada oferta puede tener un máximo de unidades por pedido, una cantidad limitada de unidades con descuento y una fecha y hora de fin, que se muestran en la oferta. Al reservar, la tienda confirma que la oferta sigue vigente y con unidades; si no, la reserva se rechaza y nada se cobra.</li>
               </ul>
             </section>
           )}

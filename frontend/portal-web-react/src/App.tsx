@@ -23,9 +23,10 @@ import { api, BackendReservation } from './api/client';
 import { reservationToPass, selectActiveReservation } from './reservations/recovery';
 import { isAwaitingStore, waitForStoreResolution } from './reservations/awaitStore';
 import { daysUntil, formatDate } from './utils/dates';
-import { getErrorMessage } from './utils/errors';
+import { getErrorMessage, getErrorStatus } from './utils/errors';
 import { STORE_INFO } from './config/storeInfo';
 import { bestSellerIds, isNewProduct } from './config/catalogRules';
+import { offerCartCap, offerEnded, offerUnitsAvailable } from './config/offerRules';
 
 // Foto neutra si un producto aún no tiene imagen propia.
 const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -171,19 +172,24 @@ export const App: React.FC = () => {
       const mappedOffers: FlashOffer[] = backendPromos.flatMap(promo => {
         const lot = backendLots.find(l => l.id === promo.loteId);
         const product = lot && productById.get(lot.productoId);
-        if (!lot || !product || lot.cantidadDisponible <= 0) return [];
+        if (!lot || !product || lot.cantidadDisponible <= 0 || offerEnded(promo.vigenteHasta)) return [];
         const originalPrice = Number(product.precioVenta);
+        // Con stock de oferta, el medidor y las unidades son los de la oferta; sin él, los del lote.
+        const units = offerUnitsAvailable({ lotAvailable: lot.cantidadDisponible, unidadesRestantes: promo.unidadesRestantes });
+        if (units <= 0) return [];
         return [{
           id: promo.id,
           title: promo.frasePromocional,
           category: categoryById.get(product.categoriaId) || 'Oferta',
           discountBadge: `-${promo.descuentoPorcentaje}%`,
           aiBadge: true,
-          urgencyBadge: `Quedan ${lot.cantidadDisponible}`,
+          urgencyBadge: `Quedan ${units}`,
           price: +(originalPrice * (1 - promo.descuentoPorcentaje / 100)).toFixed(2),
           originalPrice,
-          stockTotal: Math.max(lot.cantidadIngresada || 0, lot.cantidadDisponible),
-          stockAvailable: lot.cantidadDisponible,
+          stockTotal: promo.stockOferta ? Math.max(promo.stockOferta, units) : Math.max(lot.cantidadIngresada || 0, units),
+          stockAvailable: units,
+          maxPerOrder: promo.limitePorPedido ?? null,
+          endsAt: promo.vigenteHasta ?? null,
           expiryText: `Vence: ${formatDate(lot.fechaCaducidad)}`,
           expiresOn: lot.fechaCaducidad,
           productName: product.nombre,
@@ -257,7 +263,9 @@ export const App: React.FC = () => {
     if (product.stock <= 0) return;
     const existing = cart.find(item => item.product.id === product.id);
     if (existing && existing.quantity >= product.stock) {
-      showToast(`Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
+      showToast(product.maxPerOrder && product.maxPerOrder === product.stock
+        ? `Esta oferta admite hasta ${product.stock} por pedido. Ya los tienes en tu lista.`
+        : `Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
       return;
     }
     setCart(prev => existing
@@ -358,6 +366,8 @@ export const App: React.FC = () => {
       void loadBackendData();
     } catch (err: unknown) {
       setCartError(getErrorMessage(err, 'No pudimos apartar tus productos. Intenta de nuevo.'));
+      // Sin stock o fuera de los límites de una oferta: se actualizan las unidades que se muestran.
+      if (getErrorStatus(err) === 409) void loadBackendData();
     } finally {
       setIsSubmittingReservation(false);
     }
@@ -379,7 +389,8 @@ export const App: React.FC = () => {
       isOffer: true,
       price: offer.price,
       originalPrice: offer.originalPrice,
-      stock: offer.stockAvailable,
+      stock: offerCartCap({ lotAvailable: offer.stockAvailable, limitePorPedido: offer.maxPerOrder }),
+      maxPerOrder: offer.maxPerOrder,
       badge: offer.discountBadge,
     });
   };

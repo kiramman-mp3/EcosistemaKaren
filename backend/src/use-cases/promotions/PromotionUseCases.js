@@ -2,7 +2,8 @@ const { NotFoundException, ValidationException, ForbiddenException } = require('
 const { GeminiError, GeminiErrorType } = require('../../adapters/ai/GeminiAdapter');
 const {
   buildPromotionCacheKey,
-  assertPromotableLot
+  assertPromotableLot,
+  assertOfferTerms
 } = require('../../domain/policies/PromotionPolicy');
 const metrics = require('../../infrastructure/metrics/AiMetricsCollector');
 const Promotion = require('../../domain/entities/Promotion');
@@ -192,7 +193,10 @@ class GetPendingPromotions {
 }
 
 class ManagePromotions {
-  constructor(promotionRepository) { this.promotionRepository = promotionRepository; }
+  constructor(promotionRepository, lotRepository = null) {
+    this.promotionRepository = promotionRepository;
+    this.lotRepository = lotRepository;
+  }
   _admin(user) { if (!user || user.rol !== 'ADMIN') throw new ForbiddenException('Solo un administrador puede gestionar promociones.'); }
   async list(filters, user) { this._admin(user); return this.promotionRepository.findAllOperational(filters); }
   async update({ promotionId, ...data }, user) {
@@ -201,6 +205,9 @@ class ManagePromotions {
     if (!current) throw new NotFoundException('La promoción no existe.');
     if (current.estado !== 'PENDIENTE_APROBACION') throw new ValidationException('Solo se pueden editar promociones pendientes.');
     const validated = new Promotion({ ...current, ...data });
+    // El stock de oferta sale del lote: no puede prometer más unidades de las que hay.
+    const lot = this.lotRepository ? await this.lotRepository.findById(current.loteId) : null;
+    assertOfferTerms(validated, lot);
     return this.promotionRepository.updateDraft(promotionId, validated);
   }
   async deactivate(promotionId, user) {

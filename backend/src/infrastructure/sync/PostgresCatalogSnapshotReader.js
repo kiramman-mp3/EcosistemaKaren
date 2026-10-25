@@ -1,5 +1,6 @@
 const { SECTIONS } = require('./catalogSections');
 const { RECENT_SALES_JOIN, RECENT_SALES_COLUMN } = require('../db/productSales');
+const { OFFER_COMMITTED_JOIN, OFFER_REMAINING_COLUMN, OFFER_IN_FORCE } = require('../db/offerUnits');
 
 // Qué filas de la tienda se publican en cada sección. Solo lo que un cliente puede ver:
 // lotes vigentes con existencias y promociones aprobadas sobre esos lotes. `computed` da la
@@ -19,12 +20,15 @@ const SOURCES = {
     where: "l.estado = 'ACTIVO' AND l.fecha_caducidad > CURRENT_DATE AND l.cantidad_disponible > 0",
     order: 'l.id'
   },
+  // Una oferta vencida o sin unidades de oferta deja de publicarse: el portal la retira de su copia.
   promociones: {
-    from: 'promociones_ia pi JOIN lotes l ON l.id = pi.lote_id',
+    from: `promociones_ia pi JOIN lotes l ON l.id = pi.lote_id ${OFFER_COMMITTED_JOIN}`,
     alias: 'pi',
-    where: `pi.estado = 'APROBADA' AND pi.activa = TRUE
+    where: `pi.estado = 'APROBADA' AND pi.activa = TRUE AND ${OFFER_IN_FORCE}
+            AND (${OFFER_REMAINING_COLUMN} IS NULL OR ${OFFER_REMAINING_COLUMN} > 0)
             AND l.estado = 'ACTIVO' AND l.fecha_caducidad > CURRENT_DATE AND l.cantidad_disponible > 0`,
-    order: 'pi.id'
+    order: 'pi.id',
+    computed: { unidadesRestantes: OFFER_REMAINING_COLUMN }
   }
 };
 
@@ -51,7 +55,7 @@ class PostgresCatalogSnapshotReader {
     const res = await this.pool.query(this._query(section));
     const timestamps = spec.fields.filter(f => f.sql === 'timestamptz').map(f => f.key);
     return res.rows.map(row => {
-      for (const key of timestamps) row[key] = new Date(row[key]).toISOString();
+      for (const key of timestamps) row[key] = row[key] == null ? null : new Date(row[key]).toISOString();
       return row;
     });
   }

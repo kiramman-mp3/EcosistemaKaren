@@ -61,8 +61,10 @@ orden de eventos que preservar y un envío fallido se corrige solo con el siguie
 - **Qué viaja:** categorías, productos (sin stock mínimo, con su fecha de alta y las unidades
   vendidas en los últimos 30 días, que alimentan los filtros "Nuevos" y "Más vendidos"; esa cifra
   cambia con cada venta, así que la sección de productos se reenvía más a menudo), lotes vigentes con existencias
-  (`estado = ACTIVO`, no vencidos, `cantidad_disponible > 0`) y promociones aprobadas y activas
-  sobre esos lotes. Nunca costos, ubicación, fechas de elaboración, cantidades reservadas,
+  (`estado = ACTIVO`, no vencidos, `cantidad_disponible > 0`) y promociones aprobadas, activas
+  y vigentes sobre esos lotes, con sus límites (por pedido, stock de oferta y hora de fin) y las
+  unidades de oferta que quedan, calculadas en la tienda. Una oferta agotada o terminada deja de
+  enviarse. Nunca costos, ubicación, fechas de elaboración, cantidades reservadas,
   razones ni metadatos de IA, ni quién aprobó una promoción. El esquema rechaza cualquier campo
   fuera del contrato.
 - **Copia en el portal:** tablas con el mismo nombre y forma que las de la tienda, de modo que los
@@ -85,8 +87,10 @@ orden de eventos que preservar y un envío fallido se corrige solo con el siguie
    TTL de 30 minutos de [ADR-002](ADR-002-ttl-reservas-30-minutos.md) y encola
    `RESERVATION_CREATE`.
 3. La tienda toma el comando y ejecuta la asignación FEFO actual
-   (`createWithLockedStock`). Esa validación es la única que decide sobre el stock. Responde
-   `ACCEPTED` con código de retiro y lotes, o `REJECTED` con el motivo.
+   (`createWithLockedStock`). Esa validación es la única que decide sobre el stock y sobre los
+   límites de cada oferta (bloquea la promoción mientras cuenta sus unidades). Responde
+   `ACCEPTED` con código de retiro y lotes, o `REJECTED` con el motivo (`OVERBOOKING`,
+   `OFFER_LIMIT`, `VALIDATION`, `NOT_FOUND`, `EXPIRED` o `STORE_ERROR`).
 4. El portal pasa la reserva a `PENDIENTE` o `RECHAZADA`.
 5. La confirmación en caja, la cancelación y la expiración ocurren en la tienda y se reportan
    por `events`.
