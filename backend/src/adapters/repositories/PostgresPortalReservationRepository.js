@@ -30,6 +30,9 @@ class PostgresPortalReservationRepository {
       updated_at: row.updated_at,
       clienteNombre: row.clienteNombre,
       detalles: row.detalles || [],
+      // La tienda no ha informado el vencimiento de una reserva aceptada (p. ej. está sin conexión): el
+      // estado guardado no cambia, pero el cliente ya sabe que el plazo pasó.
+      ...(row.estado === 'PENDIENTE' && new Date(row.fechaExpiracion) < new Date() ? { vencidaSinConfirmar: true } : {}),
       ...(row.estado === 'RECHAZADA'
         ? { motivoRechazo: row.motivoRechazo, mensajeRechazo: row.mensajeRechazo }
         : {})
@@ -188,13 +191,22 @@ class PostgresPortalReservationRepository {
       `, [maxAttempts, visibilityMs]);
       const failedCreates = exhausted.rows.filter(row => row.tipo === 'RESERVATION_CREATE').map(row => row.reservaId);
       if (failedCreates.length > 0) {
-        await client.query(`
+        const rejected = await client.query(`
           UPDATE reservas_portal
           SET estado = 'RECHAZADA', motivo_rechazo = 'STORE_ERROR',
               mensaje_rechazo = 'La tienda no pudo procesar la reserva. Intente nuevamente.',
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ANY($1::uuid[]) AND estado = 'PENDIENTE_SYNC'
+          RETURNING id, cliente_id AS "clienteId"
         `, [failedCreates]);
+        // La tienda pudo haber reservado el stock sin que su resultado llegara jamás: se le pide
+        // cancelar para que no lo retenga hasta que venza la reserva. Si no la conoce, lo ignora.
+        for (const row of rejected.rows) {
+          await client.query(`
+            INSERT INTO comandos_tienda (tipo, reserva_id, payload)
+            VALUES ('RESERVATION_CANCEL', $1, $2::jsonb)
+          `, [row.id, JSON.stringify({ clienteId: row.clienteId })]);
+        }
       }
 
       const claimed = await client.query(`
