@@ -9,6 +9,7 @@ import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, ScreenTitle } from '../components/ui';
 import { LotLabel } from '../components/LotLabel';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorMessage } from '../utils/errors';
 
 interface InventarioLotesScreenProps {
   lots: BackendLot[];
@@ -45,8 +46,8 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({ lo
     try {
       await api.updateLotLocation(lot.id, next);
       onRefresh();
-    } catch (err: any) {
-      notify('No se pudo mover el lote', err.response?.data?.message || err.message || 'Inténtalo de nuevo.');
+    } catch (err: unknown) {
+      notify('No se pudo mover el lote', getErrorMessage(err, 'Inténtalo de nuevo.'));
     } finally {
       setMovingLotId(null);
     }

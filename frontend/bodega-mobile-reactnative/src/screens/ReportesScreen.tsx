@@ -6,6 +6,7 @@ import { formatDateTime } from '../utils/dates';
 import { InventoryMovement, InventoryWaste } from '../types';
 import { Button, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getServerMessage } from '../utils/errors';
 
 const money = (value?: number | null) => value == null ? 'No registrado' : `$${Number(value).toFixed(2)}`;
 
@@ -27,7 +28,7 @@ export const ReportesScreen: React.FC = () => {
     try {
       const [movementData, wasteData] = await Promise.all([api.getInventoryMovements(), api.getInventoryWastes()]);
       setMovements(movementData); setWastes(wasteData);
-    } catch (err: any) { setError(err.response?.data?.message || 'No se pudo cargar el reporte.'); }
+    } catch (err: unknown) { setError(getServerMessage(err) || 'No se pudo cargar el reporte.'); }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);

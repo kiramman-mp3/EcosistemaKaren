@@ -9,6 +9,7 @@ import { BackendPromotion } from '../types';
 import { confirmAction, notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorMessage, getServerMessage } from '../utils/errors';
 
 type Filter = 'PENDIENTES' | 'ACTIVAS' | 'FINALIZADAS' | 'RECHAZADAS' | 'TODAS';
 
@@ -46,7 +47,7 @@ export const AprobacionesScreen: React.FC = () => {
         : filter === 'FINALIZADAS' ? { estado: 'APROBADA', activa: false }
           : filter === 'RECHAZADAS' ? { estado: 'RECHAZADA' } : {};
     try { setItems(await api.getManagedPromotions(params)); }
-    catch (error: any) { notify('No se pudieron cargar las ofertas', error.response?.data?.message || 'Revisa la conexión con la tienda.'); }
+    catch (error: unknown) { notify('No se pudieron cargar las ofertas', getServerMessage(error) || 'Revisa la conexión con la tienda.'); }
     finally { setLoading(false); }
   }, [filter]);
   useEffect(() => { void load(); }, [load]);
@@ -67,8 +68,8 @@ export const AprobacionesScreen: React.FC = () => {
       setSelected(null);
       await load();
       notify('Listo', success);
-    } catch (error: any) {
-      setFormError(error.response?.data?.message || error.message || 'No se pudo completar la acción.');
+    } catch (error: unknown) {
+      setFormError(getErrorMessage(error, 'No se pudo completar la acción.'));
     } finally { setSaving(false); }
   };
 

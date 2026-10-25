@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api, BodegaAuthResponse } from '../api/client';
 import { Button, Field, Notice } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorMessage } from '../utils/errors';
 
 interface Props {
   onLogin: (auth: BodegaAuthResponse) => void;
@@ -25,8 +26,8 @@ export const BodegaLoginScreen: React.FC<Props> = ({ onLogin }) => {
     setError(null);
     try {
       onLogin(await api.login(email.trim(), password));
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'No se pudo iniciar sesión. Revisa la conexión con la tienda.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'No se pudo iniciar sesión. Revisa la conexión con la tienda.'));
     } finally {
       setLoading(false);
     }
