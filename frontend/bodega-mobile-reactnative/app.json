@@ -23,6 +23,14 @@
         "cameraPermission": "Ecosistema Karen usa la cámara para escanear productos y códigos de retiro."
       }
     ],
+    [
+      "expo-image-picker",
+      {
+        "cameraPermission": "Ecosistema Karen usa la cámara para fotografiar los productos del catálogo.",
+        "microphonePermission": false,
+        "photosPermission": "Ecosistema Karen accede a tus fotos para elegir la imagen de un producto."
+      }
+    ],
     "expo-secure-store",
     "expo-font"
   ]
