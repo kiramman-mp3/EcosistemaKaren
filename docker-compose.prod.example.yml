@@ -60,6 +60,8 @@ services:
       CORS_ORIGINS: ${STORE_CORS_ORIGINS:?}
       TRUST_PROXY_HOPS: ${STORE_TRUST_PROXY_HOPS:-0}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      - store_media:/app/public/media
     ports:
       # IP de la tienda en la red local; nunca 0.0.0.0 si el equipo tiene salida pública.
       - "${STORE_BIND:?}:4000:4000"
@@ -106,4 +108,5 @@ services:
 
 volumes:
   store_data:
+  store_media:
   portal_data:

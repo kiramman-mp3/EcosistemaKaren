@@ -16,7 +16,9 @@ COPY index.js index.store.js index.portal.js ./
 COPY src ./src
 COPY init-db ./init-db
 COPY scripts ./scripts
-COPY public ./public
+# backend/public/media/productos no se versiona (lo genera el seed): se crea vacío y escribible por `node`;
+# en producción se monta como volumen para conservar las fotos entre despliegues.
+RUN mkdir -p public/media/productos && chown -R node:node public
 # Sin privilegios de root; el usuario `node` ya viene en la imagen.
 USER node
 EXPOSE 4000 4001
