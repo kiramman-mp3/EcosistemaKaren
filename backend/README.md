@@ -172,6 +172,15 @@ consultas de inventario actúa además como protección inmediata entre barridos
 El backend incorpora Helmet, identificadores `X-Request-Id`, protección contra parameter
 pollution y prototype pollution, límite configurable para JSON y rate limiting por IP.
 Autenticación, reservas y generación con IA tienen límites adicionales independientes.
+
+El límite general (`RATE_LIMIT_MAX`) se lleva **en memoria de cada instancia**, para que las
+lecturas no escriban en la base de datos: con N réplicas el tope efectivo por IP es N veces el
+configurado, y se reinicia al reiniciar el proceso. Los límites de autenticación, reservas e IA
+sí se comparten en PostgreSQL, porque protegen contra abuso y deben valer entre instancias.
+Las filas vencidas las limpia el worker de mantenimiento.
+
+El worker de catálogo de la tienda registra un aviso (una vez por hora y sección) cuando un
+snapshot supera 2 MB, señal de que conviene paginar esa sección antes de que el canal falle.
 Las respuestas `400`, `413` y `429` incluyen el `requestId` para correlacionarlas con logs.
 
 En producción son obligatorios un `JWT_SECRET` aleatorio de al menos 32 caracteres y una
