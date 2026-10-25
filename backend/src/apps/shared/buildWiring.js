@@ -42,6 +42,8 @@ const PostgresCatalogMirrorRepository = require('../../adapters/repositories/Pos
 const CatalogStatusController = require('../../adapters/controllers/CatalogStatusController');
 const wirePortalReservations = require('./wirePortalReservations');
 const wireStoreChannel = require('./wireStoreChannel');
+const MaintenanceWorker = require('../../infrastructure/workers/MaintenanceWorker');
+const { createMaintenanceTasks } = require('../../infrastructure/maintenance/maintenanceTasks');
 const { ApplyCatalogSnapshot, GetCatalogSyncStatus } = require('../../use-cases/catalog/CatalogSyncUseCases');
 
 // Instancia casos de uso, controladores y procesos de fondo. `store` agrega la autoridad de
@@ -107,6 +109,14 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
   if (portalReservations) {
     controllers.storeChannelController = portalReservations.storeChannelController;
     workers.push(...portalReservations.workers);
+  }
+
+  // Limpieza periódica de tokens revocados, contadores de límite de tasa y comandos de reserva resueltos.
+  if (pool) {
+    workers.push(new MaintenanceWorker(
+      createMaintenanceTasks({ pool, retentionDays: serviceConfig.retentionDays, portalQueue: Boolean(portalReservations) }),
+      serviceConfig.maintenanceIntervalMs
+    ));
   }
 
   let alertStreamManager = null;
