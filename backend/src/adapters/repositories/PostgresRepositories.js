@@ -7,6 +7,7 @@ const { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES } = require
 const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
 const { toDateOnly } = require('../../domain/policies/BusinessDates');
+const { RECENT_SALES_JOIN, RECENT_SALES_COLUMN } = require('../../infrastructure/db/productSales');
 const {
   buildPromotionCacheKey,
   assertPromotableLot
@@ -73,9 +74,24 @@ class PostgresCategoryRepository {
 class PostgresProductRepository {
   constructor(pool) {
     this.pool = pool;
+    this._salesSource = null;
+  }
+
+  // Las ventas de 30 días se calculan del libro de movimientos donde existe (store-api y el
+  // monolito); en portal-api se leen de la copia que envía la tienda (productos.vendidos_30d).
+  _sales() {
+    if (!this._salesSource) {
+      this._salesSource = this.pool.query("SELECT to_regclass('public.inventario_movimientos') IS NOT NULL AS ledger")
+        .then(res => (res.rows[0]?.ledger
+          ? { join: RECENT_SALES_JOIN, column: RECENT_SALES_COLUMN }
+          : { join: '', column: 'p.vendidos_30d' }))
+        .catch(error => { this._salesSource = null; throw error; });
+    }
+    return this._salesSource;
   }
 
   async findAll({ q = '', categoriaId = null, limit = 30, offset = 0 } = {}) {
+    const sales = await this._sales();
     // Escapa comodines de LIKE para que '%' o '_' se busquen como texto literal.
     const term = q.trim().replace(/[\\%_]/g, char => `\\${char}`);
     const search = term ? `%${term}%` : null;
@@ -85,8 +101,8 @@ class PostgresProductRepository {
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
-             p.created_at, p.updated_at
-      FROM productos p
+             p.created_at, p.updated_at, ${sales.column} AS "vendidos30d"
+      FROM productos p ${sales.join}
       WHERE ($1::text IS NULL OR unaccent(p.nombre) ILIKE unaccent($1) OR p.codigo_barras ILIKE $1)
         AND ($2::uuid IS NULL OR p.categoria_id = $2)
       ORDER BY p.nombre ASC
@@ -106,26 +122,28 @@ class PostgresProductRepository {
   }
 
   async findById(id) {
+    const sales = await this._sales();
     const res = await this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
-             p.created_at, p.updated_at
-      FROM productos p
+             p.created_at, p.updated_at, ${sales.column} AS "vendidos30d"
+      FROM productos p ${sales.join}
       WHERE p.id = $1
     `, [id]);
     return res.rows.length ? new Product(res.rows[0]) : null;
   }
 
   async findByBarcode(barcode) {
+    const sales = await this._sales();
     const res = await this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
-             p.created_at, p.updated_at
-      FROM productos p
+             p.created_at, p.updated_at, ${sales.column} AS "vendidos30d"
+      FROM productos p ${sales.join}
       WHERE p.codigo_barras = $1
     `, [barcode]);
     return res.rows.length ? new Product(res.rows[0]) : null;

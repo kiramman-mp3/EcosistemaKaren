@@ -191,6 +191,12 @@ async function run() {
   check('el portal pasa a CONFIRMADA por el aviso de la tienda', Boolean(await waitFor(async () => (await portalDb.query('SELECT estado FROM reservas_portal WHERE id = $1', [reservationId])).rows[0].estado === 'CONFIRMADA', 15000)));
   check('la bandeja de salida queda vacía', Boolean(await waitFor(async () => (await storeDb.query('SELECT count(*)::int n FROM outbox_portal WHERE enviado_at IS NULL')).rows[0].n === 0, 15000)));
 
+  // Filtros "Más vendidos" y "Nuevos": el portal recibe las ventas de 30 días y la fecha de alta real.
+  const productInPortal = async () => (await portal('GET', '/products?q=Producto%20E2E&limit=100')).body.data?.find(item => item.id === data.productId);
+  check('el portal cuenta la venta cobrada en vendidos30d', Boolean(await waitFor(async () => (await productInPortal())?.vendidos30d === 2, 20000)));
+  const storeCreatedAt = (await storeDb.query('SELECT created_at FROM productos WHERE id = $1', [data.productId])).rows[0].created_at;
+  check('el portal muestra la fecha de alta que tiene la tienda', new Date((await productInPortal())?.created_at).getTime() === new Date(storeCreatedAt).getTime());
+
   check('sin stock suficiente responde 409', (await portal('POST', '/reservations', { items: [{ productoId: data.productId, cantidad: 9000 }] }, client)).status === 409);
 
   const mid = await stockOf(data.lotId);
