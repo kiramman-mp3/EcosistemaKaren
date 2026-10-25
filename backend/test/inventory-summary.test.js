@@ -72,20 +72,22 @@ test('PostgreSQL resume ingresos, ventas y mermas del rango pedido', async t => 
     t.skip('PostgreSQL no disponible para prueba de integración');
     return;
   }
-  const category = await pool.query('SELECT id FROM categorias ORDER BY id LIMIT 1');
   const actor = await pool.query("SELECT id FROM usuarios WHERE email = 'bodega@karen.com'");
-  if (!category.rowCount || !actor.rowCount) {
-    t.skip('Faltan semillas de producto o bodeguero');
+  if (!actor.rowCount) {
+    t.skip('Falta la semilla del bodeguero');
     await pool.end();
     return;
   }
 
+  // Categoría propia: las pruebas corren en paralelo y otra podría estar creando y borrando la suya.
   const repo = new PostgresLotRepository(pool);
+  const categoryId = randomUUID();
   const productId = randomUUID();
+  await pool.query('INSERT INTO categorias (id, nombre) VALUES ($1, $2)', [categoryId, `Resumen ${categoryId}`]);
   await pool.query(`
     INSERT INTO productos (id, categoria_id, codigo_barras, nombre, precio_venta, min_stock_alerta)
     VALUES ($1, $2, $3, 'Producto resumen de inventario', 2.50, 1)
-  `, [productId, category.rows[0].id, `SUM-${Date.now()}`]);
+  `, [productId, categoryId, `SUM-${Date.now()}`]);
   let lotId;
   t.after(async () => {
     if (lotId) {
@@ -94,6 +96,7 @@ test('PostgreSQL resume ingresos, ventas y mermas del rango pedido', async t => 
       await pool.query('DELETE FROM lotes WHERE id = $1', [lotId]);
     }
     await pool.query('DELETE FROM productos WHERE id = $1', [productId]);
+    await pool.query('DELETE FROM categorias WHERE id = $1', [categoryId]);
     await pool.end();
   });
 
