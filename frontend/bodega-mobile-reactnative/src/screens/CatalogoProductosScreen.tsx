@@ -45,6 +45,8 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   // Producto que se está editando; null cuando el formulario registra uno nuevo.
   const [editing, setEditing] = useState<BackendProduct | null>(null);
+  // Foto elegida en el formulario (ya reducida): se sube después de guardar el producto.
+  const [formPhoto, setFormPhoto] = useState<string | null>(null);
   const requestId = useRef(0);
   const canCreate = role === 'ADMIN';
   const canEditPhoto = role === 'ADMIN' || role === 'BODEGUERO';
@@ -75,27 +77,33 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, categoryId]);
 
-  // Foto del producto: cámara o galería -> se reduce en el teléfono -> el servidor la comprime y la guarda.
+  // Cámara o galería -> se reduce en el teléfono. Devuelve el archivo listo para subir, o null si se canceló.
+  const capturePhoto = async (source: 'camera' | 'library'): Promise<string | null> => {
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        notify('Sin permiso de cámara', 'Activa el permiso de la cámara para esta app en los ajustes del teléfono.');
+        return null;
+      }
+    }
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false };
+    const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+    const asset = result.canceled ? undefined : result.assets?.[0];
+    if (!asset) return null;
+    return (await compressPhoto(asset.uri, asset.width, asset.height)).uri;
+  };
+
+  // Foto de un producto de la lista: se sube enseguida y el servidor la comprime y la guarda.
   const pickPhoto = async (source: 'camera' | 'library') => {
     const product = photoTarget;
     setPhotoTarget(null);
     if (!product) return;
     try {
-      if (source === 'camera') {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) {
-          notify('Sin permiso de cámara', 'Activa el permiso de la cámara para esta app en los ajustes del teléfono.');
-          return;
-        }
-      }
-      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false };
-      const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
-      const asset = result.canceled ? undefined : result.assets?.[0];
-      if (!asset) return;
+      const uri = await capturePhoto(source);
+      if (!uri) return;
 
       setUploadingId(product.id);
-      const compressed = await compressPhoto(asset.uri, asset.width, asset.height);
-      const { product: updated, image } = await api.uploadProductImage(product.id, compressed.uri);
+      const { product: updated, image } = await api.uploadProductImage(product.id, uri);
       setProducts(current => current.map(item => (item.id === updated.id ? { ...item, imagenUrl: updated.imagenUrl } : item)));
       notify('Foto actualizada', `Se envió ${formatBytes(image.originalBytes)} y se guardó ${formatBytes(image.bytes)} (${image.width}×${image.height}).`);
       void onCatalogChanged();
@@ -106,8 +114,23 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     }
   };
 
+  // Foto del formulario: queda elegida y se sube al guardar. El formulario se cierra un momento para que
+  // la cámara o la galería no se abran encima de otro modal (iOS lo rechaza); sus datos se conservan.
+  const pickFormPhoto = async (source: 'camera' | 'library') => {
+    setFormOpen(false);
+    try {
+      const uri = await capturePhoto(source);
+      if (uri) setFormPhoto(uri);
+    } catch (error: unknown) {
+      notify('No se pudo preparar la foto', getServerMessage(error) || 'Inténtalo de nuevo.');
+    } finally {
+      setFormOpen(true);
+    }
+  };
+
   const openEdit = (product: BackendProduct) => {
     setEditing(product);
+    setFormPhoto(null);
     setBarcode(product.codigoBarras);
     setForm(formFromProduct(product));
     setFormError(null);
@@ -116,6 +139,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
 
   const openRegistration = (code = '') => {
     setEditing(null);
+    setFormPhoto(null);
     setBarcode(normalizeBarcode(code));
     setForm({ ...EMPTY_FORM, categoriaId: categories.length === 1 ? categories[0].id : '' });
     setFormError(null);
@@ -145,6 +169,21 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     openRegistration(normalized);
   };
 
+  // Sube la foto elegida en el formulario, si hay. El producto ya está guardado: si la foto falla no se deshace
+  // nada, solo se avisa para que se vuelva a intentar desde la miniatura de la lista.
+  const uploadFormPhoto = async (productId: string): Promise<{ imagenUrl?: string | null; failure?: string }> => {
+    if (!formPhoto) return {};
+    try {
+      const { product } = await api.uploadProductImage(productId, formPhoto);
+      return { imagenUrl: product.imagenUrl };
+    } catch (error: unknown) {
+      return { failure: getServerMessage(error) || 'Revisa la conexión con la tienda.' };
+    }
+  };
+  const photoFailureNote = (failure?: string) => (failure
+    ? ` La foto no se pudo guardar: ${failure.replace(/[.\s]+$/, '')}. Vuelve a intentarlo tocando la miniatura del producto.`
+    : '');
+
   const saveProduct = async () => {
     if (!editing && validateScannedBarcode(barcode) !== 'valid') return setFormError('Escanea o escribe un código EAN válido.');
     const parsed = parseProductForm(form);
@@ -153,7 +192,9 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     setSaving(true); setFormError(null);
     try {
       if (editing) {
-        const { product: updated, cambioPrecio } = await api.updateProduct(editing.id, { ...values, descripcion: values.descripcion ?? null });
+        const { product: saved, cambioPrecio } = await api.updateProduct(editing.id, { ...values, descripcion: values.descripcion ?? null });
+        const { imagenUrl, failure } = await uploadFormPhoto(saved.id);
+        const updated = imagenUrl ? { ...saved, imagenUrl } : saved;
         setFormOpen(false);
         // Si el producto cambió de pasillo y hay un pasillo filtrado, deja de pertenecer a esta lista.
         const leavesFilter = Boolean(categoryId) && updated.categoriaId !== categoryId;
@@ -162,15 +203,16 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
           : current.map(item => (item.id === updated.id ? { ...item, ...updated } : item))));
         if (leavesFilter) setTotal(current => Math.max(0, current - 1));
         void onCatalogChanged();
-        notify('Producto actualizado', cambioPrecio
+        notify('Producto actualizado', `${cambioPrecio
           ? `${updated.nombre}: el PVP pasó de $${cambioPrecio.anterior.toFixed(2)} a $${cambioPrecio.nuevo.toFixed(2)}.`
-          : `${updated.nombre} se guardó con los datos nuevos.`);
+          : `${updated.nombre} se guardó con los datos nuevos.`}${photoFailureNote(failure)}`);
       } else {
         const created = await api.createProduct({ ...values, codigoBarras: barcode });
+        const { failure } = await uploadFormPhoto(created.id);
         setFormOpen(false);
         setQuery(created.codigoBarras);
         await onCatalogChanged();
-        notify('Producto registrado', `${created.nombre} ya se puede recibir en bodega.`);
+        notify('Producto registrado', `${created.nombre} ya se puede recibir en bodega.${photoFailureNote(failure)}`);
       }
     } catch (error: unknown) {
       setFormError(getServerMessage(error) || (editing ? 'No se pudieron guardar los cambios.' : 'No se pudo registrar el producto.'));
@@ -199,6 +241,9 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       setSavingCategory(false);
     }
   };
+
+  // Vista previa: la foto recién elegida o, al editar, la que el producto ya tiene.
+  const formPhotoPreview = formPhoto ?? (editing ? mediaUrl(editing.imagenUrl) : null);
 
   const categoryName = (id: string) => categories.find(category => category.id === id)?.nombre || 'Sin categoría';
 
@@ -334,6 +379,27 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
               </View>
             </View>
             <Field label="Avisar con menos de (unidades)" keyboardType="number-pad" value={form.minStockAlerta} onChangeText={value => setForm(current => ({ ...current, minStockAlerta: value }))} />
+            <Text style={styles.label}>Foto (opcional)</Text>
+            <View style={styles.formPhoto}>
+              <View style={styles.formPhotoBox}>
+                {formPhotoPreview
+                  ? <Image source={{ uri: formPhotoPreview }} style={styles.formPhotoImage} resizeMode="contain" accessibilityIgnoresInvertColors />
+                  : <Ionicons name="image-outline" size={30} color={colors.inkFaint} />}
+              </View>
+              <View style={styles.flex}>
+                <Button label="Tomar foto" icon="camera" variant="outline" compact onPress={() => void pickFormPhoto('camera')} />
+                <View style={styles.photoGap} />
+                <Button label="Elegir de la galería" icon="images-outline" variant="outline" compact onPress={() => void pickFormPhoto('library')} />
+              </View>
+            </View>
+            {formPhoto ? (
+              <View style={styles.formPhotoNote}>
+                <Text style={styles.photoHint}>La foto se sube al guardar.</Text>
+                <TouchableOpacity onPress={() => setFormPhoto(null)} accessibilityLabel="Quitar la foto elegida" style={styles.formPhotoRemove}>
+                  <Text style={styles.formPhotoRemoveText}>Quitar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
             <Button label={editing ? 'Guardar cambios' : 'Guardar producto'} variant="danger" loading={saving} onPress={() => void saveProduct()} />
           </ScrollView>
         </View>
@@ -400,6 +466,15 @@ const styles = themed(() => StyleSheet.create({
   cameraBadge: { position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   photoHint: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.inkSoft, marginBottom: 14 },
   photoGap: { height: 10 },
+  formPhoto: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, marginBottom: 6 },
+  formPhotoBox: {
+    width: 96, height: 96, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule,
+    backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
+  formPhotoImage: { width: 96, height: 96 },
+  formPhotoNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  formPhotoRemove: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
+  formPhotoRemoveText: { fontFamily: fonts.bold, fontSize: 14, color: colors.karenText },
   rowMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
   editIcon: { marginTop: 4 },
   rowInfo: { flex: 1, minWidth: 0 },
