@@ -41,7 +41,8 @@ function createAuthMiddleware(jwtSecret, tokenBlacklistRepo = null) {
         nombre: payload.nombre,
         email: payload.email,
         rol: String(payload.rol).toUpperCase(),
-        jti: payload.jti
+        jti: payload.jti,
+        exp: payload.exp
       };
       return next();
     } catch (err) {

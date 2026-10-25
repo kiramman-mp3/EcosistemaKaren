@@ -1023,6 +1023,10 @@ class PostgresUserRepository {
     return res.rows.length ? new User(res.rows[0]) : null;
   }
 
+  async updatePasswordHash(id, passwordHash) {
+    await this.pool.query('UPDATE usuarios SET password_hash = $2 WHERE id = $1', [id, passwordHash]);
+  }
+
   async save(user) {
     const res = await this.pool.query(
       `INSERT INTO usuarios (nombre, email, rol, password_hash)

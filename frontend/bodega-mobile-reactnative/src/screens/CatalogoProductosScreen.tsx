@@ -11,6 +11,7 @@ import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, Field, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorStatus, getServerMessage } from '../utils/errors';
 
 const PAGE_SIZE = 30;
 const EMPTY_FORM = { categoriaId: '', nombre: '', descripcion: '', precioVenta: '', impuestoPorcentaje: '15', minStockAlerta: '10' };
@@ -48,8 +49,8 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       if (id !== requestId.current) return;
       setProducts(current => append ? [...current, ...result.items] : result.items);
       setTotal(result.total);
-    } catch (error: any) {
-      if (id === requestId.current) notify('No se pudo cargar el catálogo', error.response?.data?.message || 'Revisa la conexión con la tienda.');
+    } catch (error: unknown) {
+      if (id === requestId.current) notify('No se pudo cargar el catálogo', getServerMessage(error) || 'Revisa la conexión con la tienda.');
     } finally {
       if (id === requestId.current) { setLoading(false); setLoadingMore(false); setRefreshing(false); }
     }
@@ -86,8 +87,8 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
         notify('Ya está en el catálogo', existing.nombre);
         return;
       }
-    } catch (error: any) {
-      if (error.response?.status !== 404) {
+    } catch (error: unknown) {
+      if (getErrorStatus(error) !== 404) {
         notify('Sin conexión', 'No se pudo comprobar el código en el catálogo.');
         return;
       }
@@ -115,8 +116,8 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       setQuery(created.codigoBarras);
       await onCatalogChanged();
       notify('Producto registrado', `${created.nombre} ya se puede recibir en bodega.`);
-    } catch (error: any) {
-      setFormError(error.response?.data?.message || 'No se pudo registrar el producto.');
+    } catch (error: unknown) {
+      setFormError(getServerMessage(error) || 'No se pudo registrar el producto.');
     } finally { setSaving(false); }
   };
 
@@ -136,8 +137,8 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       setCategoryId(created.id);
       setForm(current => ({ ...current, categoriaId: created.id }));
       notify('Categoría creada', `${created.nombre} ya está disponible.`);
-    } catch (error: any) {
-      setCategoryError(error.response?.data?.message || 'No se pudo crear la categoría.');
+    } catch (error: unknown) {
+      setCategoryError(getServerMessage(error) || 'No se pudo crear la categoría.');
     } finally {
       setSavingCategory(false);
     }

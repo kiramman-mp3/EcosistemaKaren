@@ -21,6 +21,7 @@
     "docker:down": "docker compose down",
     "test:services": "node scripts/smoke-services.js",
     "test:http-errors": "node scripts/probe-http-errors.js",
+    "test:e2e-split": "node scripts/e2e-split.js",
     "test:migrations": "node scripts/verify-migrations.js",
     "test:endpoints": "node scripts/test-endpoints.js",
     "test:performance": "node scripts/performance-smoke.js",

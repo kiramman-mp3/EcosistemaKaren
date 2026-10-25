@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { getServerMessage } from '../utils/errors';
 
 // The deployment must provide VITE_API_URL when /api/v1 is not reverse-proxied.
-const BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -220,11 +221,8 @@ export const api = {
     try {
       const res = await apiClient.post<{ success: boolean; data: BackendReservation }>('/reservations', payload);
       return res.data.data;
-    } catch (err: any) {
-      if (err.response?.data?.message) {
-        throw new Error(err.response.data.message);
-      }
-      throw new Error('No se pudo conectar con el servidor para crear la reserva.');
+    } catch (err: unknown) {
+      throw new Error(getServerMessage(err) ?? 'No se pudo conectar con el servidor para crear la reserva.');
     }
   },
 
@@ -232,11 +230,8 @@ export const api = {
     try {
       const res = await apiClient.get<{ success: boolean; data: BackendReservation }>(`/reservations/code/${encodeURIComponent(code.trim())}`);
       return res.data.data;
-    } catch (err: any) {
-      if (err.response?.data?.message) {
-        throw new Error(err.response.data.message);
-      }
-      throw new Error('No se pudo conectar con el servidor para consultar la reserva.');
+    } catch (err: unknown) {
+      throw new Error(getServerMessage(err) ?? 'No se pudo conectar con el servidor para consultar la reserva.');
     }
   },
 
@@ -245,11 +240,8 @@ export const api = {
     try {
       const res = await apiClient.post<{ success: boolean; data: AuthResponse }>('/auth/login', credentials);
       return res.data.data;
-    } catch (err: any) {
-      if (err.response?.data?.message) {
-        throw new Error(err.response.data.message);
-      }
-      throw new Error('No se pudo conectar con el servidor para iniciar sesión.');
+    } catch (err: unknown) {
+      throw new Error(getServerMessage(err) ?? 'No se pudo conectar con el servidor para iniciar sesión.');
     }
   },
 
@@ -257,11 +249,8 @@ export const api = {
     try {
       const res = await apiClient.post<{ success: boolean; data: AuthResponse }>('/auth/register', data);
       return res.data.data;
-    } catch (err: any) {
-      if (err.response?.data?.message) {
-        throw new Error(err.response.data.message);
-      }
-      throw new Error('No se pudo conectar con el servidor para crear la cuenta.');
+    } catch (err: unknown) {
+      throw new Error(getServerMessage(err) ?? 'No se pudo conectar con el servidor para crear la cuenta.');
     }
   },
 

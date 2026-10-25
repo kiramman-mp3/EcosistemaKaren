@@ -24,6 +24,7 @@ import { reservationToPass, selectActiveReservation } from './src/reservations/r
 import { isAwaitingStore, waitForStoreResolution } from './src/reservations/awaitStore';
 import { formatDate } from './src/utils/dates';
 import { notify } from './src/utils/dialogs';
+import { getErrorMessage, getErrorStatus, getServerMessage } from './src/utils/errors';
 import { colors, themed } from './src/theme/tokens';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
@@ -147,10 +148,10 @@ function PortalAppContent() {
       });
       setOffers(mappedOffers);
       setDataState(mappedProducts.length > 0 ? 'ready' : 'empty');
-    } catch (error: any) {
+    } catch (error: unknown) {
       setIsOnline(false);
-      setDataState(error?.response ? 'error' : 'offline');
-      setDataError(error?.response?.data?.message || 'La tienda no respondió.');
+      setDataState(getErrorStatus(error) !== undefined ? 'error' : 'offline');
+      setDataError(getServerMessage(error) || 'La tienda no respondió.');
     }
   }, [checkHeartbeat]);
 
@@ -287,8 +288,8 @@ function PortalAppContent() {
       setCart([]);
       void syncReservations(currentUser);
       void loadBackendData();
-    } catch (err: any) {
-      notify('No pudimos apartar tus productos', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+    } catch (err: unknown) {
+      notify('No pudimos apartar tus productos', getErrorMessage(err, 'Revisa tu conexión con la tienda.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -328,8 +329,8 @@ function PortalAppContent() {
       });
       void syncReservations(currentUser);
       void loadBackendData();
-    } catch (err: any) {
-      notify('No pudimos apartar la oferta', err.response?.data?.message || err.message || 'Revisa tu conexión con la tienda.');
+    } catch (err: unknown) {
+      notify('No pudimos apartar la oferta', getErrorMessage(err, 'Revisa tu conexión con la tienda.'));
     } finally {
       setReservingOfferId(null);
     }

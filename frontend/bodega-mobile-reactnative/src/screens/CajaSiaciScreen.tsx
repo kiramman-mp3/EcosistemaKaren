@@ -7,6 +7,7 @@ import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { formatDateTime, formatTime } from '../utils/dates';
 import { Button, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorMessage, getErrorStatus } from '../utils/errors';
 
 interface CajaSiaciScreenProps {
   onReservationUpdated?: () => void;
@@ -52,11 +53,11 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({ onReservationU
     setSuccessMsg(null);
     try {
       setReservation(await api.getReservationByCode(value));
-    } catch (err: any) {
+    } catch (err: unknown) {
       setReservation(null);
-      setError(err.response?.status === 404
+      setError(getErrorStatus(err) === 404
         ? `No existe ninguna reserva con el código ${value}.`
-        : err.response?.data?.message || err.message || 'No se pudo consultar la reserva.');
+        : getErrorMessage(err, 'No se pudo consultar la reserva.'));
     } finally {
       setLoading(false);
     }
@@ -72,8 +73,8 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({ onReservationU
       setReservation({ ...reservation, ...updated, detalles: reservation.detalles });
       setSuccessMsg(`Cobro registrado. Entrega los productos de ${reservation.clienteNombre || 'el cliente'}.`);
       onReservationUpdated?.();
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'No se pudo registrar el cobro.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'No se pudo registrar el cobro.'));
       void lookup(reservation.codigoRetiro);
     } finally {
       setConfirming(false);

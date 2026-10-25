@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { confirmAction } from '../utils/dialogs';
 import { Button, Chip, Field, Notice } from './ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { getErrorMessage } from '../utils/errors';
 
 interface MermaModalProps {
   visible: boolean;
@@ -43,8 +44,8 @@ export const MermaModal: React.FC<MermaModalProps> = ({ visible, lotId, lotNumbe
     try {
       await onConfirmMerma(lotId, qty, razon.trim());
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'No se pudo registrar la merma.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'No se pudo registrar la merma.'));
     } finally {
       setLoading(false);
     }

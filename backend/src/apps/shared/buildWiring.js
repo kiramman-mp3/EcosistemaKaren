@@ -125,7 +125,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
   let promotionUseCases = {};
 
   if (store) {
-    alertStreamManager = new AlertStreamManager();
+    // Los streams de alertas se cierran cuando su token expira o se revoca.
+    alertStreamManager = new AlertStreamManager({ isRevoked: (jti) => tokenBlacklistRepo.isRevoked(jti) });
     const geminiAdapter = new GeminiAdapter(process.env.GEMINI_API_KEY);
     const cacheTtlSeconds = process.env.GEMINI_CACHE_TTL_SECONDS === undefined
       ? 900

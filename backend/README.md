@@ -36,7 +36,9 @@ Con `NODE_ENV=production` el servicio **se niega a arrancar** si:
 - `DB_PASSWORD` falta o es una contraseña de ejemplo (`karen_pass`, `change_me...`);
 - `STORE_SERVICE_KEY` es igual a `JWT_SECRET`.
 
-Además avisa si `TRUST_PROXY_HOPS` es 0. Use secretos distintos en store-api y portal-api: así un token de
+Además avisa si `TRUST_PROXY_HOPS` es 0. Las contraseñas se cifran con bcrypt a costo `BCRYPT_ROUNDS` (12 por
+defecto, entre 10 y 14); las cuentas con un costo menor se actualizan solas la próxima vez que inician
+sesión. Los streams SSE de alertas se cierran cuando el token expira o se revoca. Use secretos distintos en store-api y portal-api: así un token de
 un servicio no es válido en el otro.
 
 ## Servicios: store-api y portal-api
