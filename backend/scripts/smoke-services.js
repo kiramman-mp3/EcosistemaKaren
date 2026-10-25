@@ -76,7 +76,9 @@ async function main() {
     const server = await new Promise(resolve => { const s = app.listen(0, () => resolve(s)); });
     const base = `http://127.0.0.1:${server.address().port}`;
     try {
-      for (const [method, path, expected] of service.expect) {
+      // Sondas de operación: la liveness siempre responde; la readiness exige base de datos y migraciones.
+      const probes = [['GET', '/healthz', 200], ['GET', '/readyz', reachable ? 200 : 503]];
+      for (const [method, path, expected] of [...probes, ...service.expect]) {
         const response = await fetch(base + path, { method });
         const ok = response.status === expected;
         if (!ok) failures += 1;
