@@ -14,7 +14,9 @@ import {
   WasteAuditResult,
   ExpiryAlertItem,
   InventoryMovement,
+  InventorySummary,
   InventoryWaste,
+  SummaryPeriod,
 } from '../types';
 
 
@@ -233,6 +235,13 @@ export const api = {
       `${getServerUrl()}/inventory/movements`, { ...authorizedConfig(7000), params: { limit } }
     );
     return res.data.data || [];
+  },
+
+  async getInventorySummary(periodo: SummaryPeriod): Promise<InventorySummary> {
+    const res = await axios.get<{ success: boolean; data: InventorySummary }>(
+      `${getServerUrl()}/inventory/summary`, { ...authorizedConfig(7000), params: { periodo } }
+    );
+    return res.data.data;
   },
 
   async getInventoryWastes(limit = 200): Promise<InventoryWaste[]> {

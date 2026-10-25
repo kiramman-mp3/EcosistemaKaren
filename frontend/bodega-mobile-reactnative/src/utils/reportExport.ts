@@ -1,4 +1,4 @@
-import { InventoryMovement, InventoryWaste } from '../types';
+import { InventoryMovement, InventoryWaste, SummaryPeriod } from '../types';
 import { STORE_INFO } from '../config/storeInfo';
 import { formatDateTime } from './dates';
 
@@ -17,8 +17,18 @@ export const formatCount = (value: number) => thousands(Number(value) || 0, 0);
 
 export interface ReportTotals { ingresos: number; ventas: number; mermas: number; costoMerma: number }
 
+export const SUMMARY_PERIODS: { id: SummaryPeriod; label: string }[] = [
+  { id: 'hoy', label: 'Hoy' },
+  { id: '7d', label: 'Últimos 7 días' },
+  { id: '30d', label: 'Últimos 30 días' },
+];
+
+export const periodLabel = (id: SummaryPeriod) => SUMMARY_PERIODS.find(period => period.id === id)?.label || id;
+
 export interface ReportData {
   totals: ReportTotals;
+  /** Período de los indicadores, por ejemplo "Últimos 7 días". */
+  period: string;
   wastes: InventoryWaste[];
   movements: InventoryMovement[];
   issuedAt: Date;
@@ -45,7 +55,7 @@ export function csvCell(value: unknown): string {
 
 const csvRow = (cells: unknown[]) => cells.map(csvCell).join(',');
 
-export function buildCsv({ totals, wastes, movements, issuedAt }: ReportData): string {
+export function buildCsv({ totals, period, wastes, movements, issuedAt }: ReportData): string {
   const lines: string[] = [];
   lines.push(csvRow([`${STORE_INFO.tradeName.toUpperCase()} - REPORTE DE MOVIMIENTOS Y MERMAS`]));
   lines.push(csvRow(['Fecha de emisión', issuedAt.toLocaleString('es-EC')]));
@@ -54,6 +64,7 @@ export function buildCsv({ totals, wastes, movements, issuedAt }: ReportData): s
   lines.push(csvRow(['Dirección', `${STORE_INFO.address}, ${STORE_INFO.city}`]));
   lines.push('');
   lines.push(csvRow(['RESUMEN DE MÉTRICAS']));
+  lines.push(csvRow(['Período', period]));
   lines.push(csvRow(['Unidades recibidas', totals.ingresos]));
   lines.push(csvRow(['Unidades vendidas', totals.ventas]));
   lines.push(csvRow(['Unidades de merma', totals.mermas]));
@@ -85,7 +96,7 @@ export function buildCsv({ totals, wastes, movements, issuedAt }: ReportData): s
   return `﻿${lines.join('\r\n')}`;
 }
 
-export function buildReportHtml({ totals, wastes, movements, issuedAt }: ReportData): string {
+export function buildReportHtml({ totals, period, wastes, movements, issuedAt }: ReportData): string {
   const e = escapeHtml;
   const wasteRows = wastes.map(item => `
     <tr>
@@ -132,7 +143,7 @@ export function buildReportHtml({ totals, wastes, movements, issuedAt }: ReportD
 <body>
   <div class="header">
     <h1 class="brand">${e(STORE_INFO.tradeName)}</h1>
-    <div class="sub">Sistema de bodega · Reporte de movimientos y bajas</div>
+    <div class="sub">Sistema de bodega · Reporte de movimientos y bajas · Indicadores: ${e(period)}</div>
     <div class="sub"><strong>Emitido:</strong> ${e(issuedAt.toLocaleDateString('es-EC'))} ${e(issuedAt.toLocaleTimeString('es-EC'))} · ${e(STORE_INFO.legalName)} · RUC ${e(STORE_INFO.ruc)} · ${e(STORE_INFO.address)}, ${e(STORE_INFO.city)}</div>
   </div>
 

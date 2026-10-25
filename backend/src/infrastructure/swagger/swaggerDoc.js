@@ -295,6 +295,22 @@ const swaggerDocument = {
         responses: { '200': { description: 'Mermas con razón, responsable y costo total' } }
       }
     },
+    '/inventory/summary': {
+      get: {
+        tags: ['Lotes e Inventario'],
+        summary: 'Resumir lo recibido, vendido y dado de baja en un mismo período',
+        description: 'Los períodos son días completos en la zona horaria del negocio: hoy, los últimos 7 o los últimos 30 días, incluido el de hoy.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'periodo', in: 'query', schema: { type: 'string', enum: ['hoy', '7d', '30d'], default: '7d' } }
+        ],
+        responses: {
+          '200': { description: 'periodo, desde, hasta, ingresos, ventas, mermas y costoMerma' },
+          '400': { description: 'Período no válido' },
+          '403': { description: 'Rol sin acceso al inventario' }
+        }
+      }
+    },
     '/reservations': {
       post: {
         tags: ['Reservaciones'],
@@ -673,6 +689,7 @@ const OPERATION_OWNERS = [
   ['/lots/{id}/merma', null, 'store'],
   ['/inventory/movements', null, 'store'],
   ['/inventory/wastes', null, 'store'],
+  ['/inventory/summary', null, 'store'],
   ['/reservations/{id}/confirm', null, 'store'],
   ['/alerts', null, 'store'],
   ['/alerts/{id}/atender', null, 'store'],

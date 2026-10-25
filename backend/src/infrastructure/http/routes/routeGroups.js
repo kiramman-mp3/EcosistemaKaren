@@ -47,6 +47,7 @@ function inventoryRoutes(router, { lotController }, { authenticate, authorize })
   router.post('/lots/:id/merma', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.wasteBody }), (req, res, next) => lotController.registerMerma(req, res, next));
   router.get('/inventory/movements', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.movementQuery }), (req, res, next) => lotController.getMovements(req, res, next));
   router.get('/inventory/wastes', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.wasteQuery }), (req, res, next) => lotController.getWastes(req, res, next));
+  router.get('/inventory/summary', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.summaryQuery }), (req, res, next) => lotController.getSummary(req, res, next));
 }
 
 // Reservas que originan los clientes (portal)

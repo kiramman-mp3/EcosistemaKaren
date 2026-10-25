@@ -3,11 +3,11 @@ import { ActivityIndicator, Modal, RefreshControl, ScrollView, StyleSheet, Text,
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { formatDateTime } from '../utils/dates';
-import { InventoryMovement, InventoryWaste } from '../types';
-import { Button, Notice, ScreenTitle } from '../components/ui';
+import { InventoryMovement, InventorySummary, InventoryWaste, SummaryPeriod } from '../types';
+import { Button, Chip, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage, getServerMessage } from '../utils/errors';
-import { buildCsv, buildReportHtml, formatAmount, formatCount, money, MOVEMENT_LABEL } from '../utils/reportExport';
+import { buildCsv, buildReportHtml, formatAmount, formatCount, money, MOVEMENT_LABEL, periodLabel, SUMMARY_PERIODS } from '../utils/reportExport';
 import { exportCsvFile, exportPdfFile } from '../utils/exportReport';
 import { notify } from '../utils/dialogs';
 
@@ -19,6 +19,11 @@ export const ReportesScreen: React.FC = () => {
   const [selectedMovement, setSelectedMovement] = useState<InventoryMovement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  // Los indicadores salen del resumen del servidor para un mismo período; las listas de abajo
+  // siguen siendo los últimos registros.
+  const [period, setPeriod] = useState<SummaryPeriod>('7d');
+  const [summary, setSummary] = useState<InventorySummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true); setError(undefined);
@@ -30,12 +35,25 @@ export const ReportesScreen: React.FC = () => {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
+  const loadSummary = useCallback(async (selected: SummaryPeriod) => {
+    setSummaryLoading(true);
+    try {
+      setSummary(await api.getInventorySummary(selected));
+    } catch (err: unknown) {
+      setSummary(null);
+      setError(getServerMessage(err) || 'No se pudo cargar el resumen del período.');
+    } finally { setSummaryLoading(false); }
+  }, []);
+  useEffect(() => { void loadSummary(period); }, [loadSummary, period]);
+
+  const refresh = useCallback(() => { void load(); void loadSummary(period); }, [load, loadSummary, period]);
+
   const totals = useMemo(() => ({
-    ingresos: movements.filter(item => item.tipo === 'INGRESO').reduce((sum, item) => sum + Number(item.cantidad), 0),
-    ventas: movements.filter(item => item.tipo === 'VENTA').reduce((sum, item) => sum + Number(item.cantidad), 0),
-    mermas: wastes.reduce((sum, item) => sum + Number(item.cantidad), 0),
-    costoMerma: wastes.reduce((sum, item) => sum + Number(item.costoTotal || 0), 0),
-  }), [movements, wastes]);
+    ingresos: summary?.ingresos ?? 0,
+    ventas: summary?.ventas ?? 0,
+    mermas: summary?.mermas ?? 0,
+    costoMerma: summary?.costoMerma ?? 0,
+  }), [summary]);
   const selectedWaste = selectedMovement ? wastes.find(item => item.movimientoId === selectedMovement.id) : undefined;
 
   // PDF y Excel (CSV): en el navegador se descargan o imprimen; en el teléfono abren la hoja de compartir.
@@ -44,7 +62,7 @@ export const ReportesScreen: React.FC = () => {
     if (exporting) return;
     setExporting(kind);
     try {
-      const report = { totals, wastes, movements, issuedAt: new Date() };
+      const report = { totals, period: periodLabel(period), wastes, movements, issuedAt: new Date() };
       if (kind === 'pdf') await exportPdfFile(buildReportHtml(report));
       else await exportCsvFile(buildCsv(report), `reporte_bodega_karen_${new Date().toISOString().slice(0, 10)}.csv`);
     } catch (cause: unknown) {
@@ -58,11 +76,11 @@ export const ReportesScreen: React.FC = () => {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.ink} colors={[colors.ink]} />}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.ink} colors={[colors.ink]} />}
     >
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
-          <ScreenTitle title="Movimientos y mermas" subtitle={`Últimos ${movements.length} movimientos y ${wastes.length} bajas registradas.`} />
+          <ScreenTitle title="Movimientos y mermas" subtitle="Indicadores del período elegido. Debajo, las bajas y los movimientos más recientes." />
         </View>
         <View style={styles.actionsBar}>
           <TouchableOpacity
@@ -89,9 +107,14 @@ export const ReportesScreen: React.FC = () => {
       </View>
       {loading && !movements.length ? <ActivityIndicator style={styles.loading} color={colors.ink} /> : error ? <>
         <Notice tone="error" text={error} />
-        <Button label="Intentar de nuevo" variant="outline" onPress={() => void load()} />
+        <Button label="Intentar de nuevo" variant="outline" onPress={refresh} />
       </> : <>
-        <View style={styles.grid}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.periods}>
+          {SUMMARY_PERIODS.map(option => (
+            <Chip key={option.id} label={option.label} active={period === option.id} onPress={() => setPeriod(option.id)} />
+          ))}
+        </ScrollView>
+        <View style={[styles.grid, summaryLoading && styles.dimmed]} accessibilityLabel={`Indicadores: ${periodLabel(period)}`}>
           <Metric label="Unidades recibidas" value={formatCount(totals.ingresos)} />
           <Metric label="Unidades vendidas" value={formatCount(totals.ventas)} />
           <Metric label="Unidades de merma" value={formatCount(totals.mermas)} />
@@ -99,6 +122,7 @@ export const ReportesScreen: React.FC = () => {
         </View>
 
         <Text style={styles.section}>Bajas recientes</Text>
+        <Text style={styles.sectionHint}>Las últimas {wastes.length} registradas, de cualquier fecha.</Text>
         {wastes.slice(0, 20).map(item => (
           <TouchableOpacity
             key={item.id}
@@ -122,6 +146,7 @@ export const ReportesScreen: React.FC = () => {
         {wastes.length === 0 && <Text style={styles.empty}>Sin bajas registradas.</Text>}
 
         <Text style={styles.section}>Últimos movimientos</Text>
+        <Text style={styles.sectionHint}>Los {Math.min(movements.length, 30)} más recientes de los últimos {movements.length}.</Text>
         {movements.slice(0, 30).map(item => (
           <TouchableOpacity key={item.id} style={styles.row} onPress={() => setSelectedMovement(item)}>
             <View style={styles.rowText}>
@@ -205,11 +230,14 @@ const styles = themed(() => StyleSheet.create({
   excelBtn: { backgroundColor: '#0E7A43' },
   exportBtnText: { fontFamily: fonts.bold, fontSize: 13, color: '#FFFFFF' },
   loading: { margin: 40 },
+  periods: { gap: 8, paddingBottom: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  dimmed: { opacity: 0.5 },
   metric: { flexGrow: 1, flexBasis: '45%', backgroundColor: colors.card, padding: 14, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule },
   metricValue: { fontFamily: fonts.tag, fontSize: 26, lineHeight: 30, color: colors.ink },
   metricLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted },
-  section: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink, marginTop: 24, marginBottom: 10 },
+  section: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink, marginTop: 24, marginBottom: 2 },
+  sectionHint: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted, marginBottom: 10 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.card, borderRadius: radius.tag,
     borderWidth: 1, borderColor: colors.rule, padding: 12, marginBottom: 8,

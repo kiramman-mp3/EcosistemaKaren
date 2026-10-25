@@ -1,5 +1,5 @@
 class LotController {
-  constructor(getLotsUC, getPublicLotAvailabilityUC, ingresarLoteUC, updateLotLocationUC, registerMermaUC, getInventoryMovementsUC, getWastesUC) {
+  constructor(getLotsUC, getPublicLotAvailabilityUC, ingresarLoteUC, updateLotLocationUC, registerMermaUC, getInventoryMovementsUC, getWastesUC, getInventorySummaryUC) {
     this.getLotsUC = getLotsUC;
     this.getPublicLotAvailabilityUC = getPublicLotAvailabilityUC;
     this.ingresarLoteUC = ingresarLoteUC;
@@ -7,6 +7,7 @@ class LotController {
     this.registerMermaUC = registerMermaUC;
     this.getInventoryMovementsUC = getInventoryMovementsUC;
     this.getWastesUC = getWastesUC;
+    this.getInventorySummaryUC = getInventorySummaryUC;
   }
 
   async getPublicAvailability(req, res, next) {
@@ -88,6 +89,13 @@ class LotController {
     try {
       const data = await this.getWastesUC.execute(req.query, req.user);
       res.json({ success: true, count: data.length, data });
+    } catch (err) { next(err); }
+  }
+
+  async getSummary(req, res, next) {
+    try {
+      const data = await this.getInventorySummaryUC.execute(req.query, req.user);
+      res.json({ success: true, data });
     } catch (err) { next(err); }
   }
 }

@@ -196,6 +196,19 @@ ventas, mermas y vencimientos. Requiere rol operativo o ADMIN.
 Consulta las mermas auditables con cantidad, razón, responsable, costo unitario,
 costo total y vínculo al movimiento que modificó el inventario.
 
+### `GET /inventory/summary?periodo=hoy|7d|30d`
+Totales de un mismo período para los indicadores del reporte de bodega: unidades
+recibidas (`INGRESO`) y vendidas (`VENTA`) según `inventario_movimientos`, y unidades
+y costo de merma según `mermas`. El período son días completos en la zona horaria del
+negocio e incluye el día en curso (`7d` empieza a la medianoche de hace seis días).
+Sin `periodo` se usa `7d`. Requiere rol operativo o ADMIN.
+
+```json
+{ "success": true, "data": { "periodo": "7d", "desde": "2026-10-19T05:00:00.000Z",
+  "hasta": "2026-10-25T18:30:00.000Z", "ingresos": 1240, "ventas": 860,
+  "mermas": 95, "costoMerma": 152.4 } }
+```
+
 ---
 
 ## 3. Reservaciones de Stock Anti-Overbooking (`/reservations`)
