@@ -58,7 +58,7 @@ export function replyTo(message: string): BotReply {
     return { text: 'Las reservas tienen una duración de 30 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.' };
   }
   if (['oferta', 'descuento', 'fefo', 'caducidad'].some(word => lower.includes(word))) {
-    return { text: 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 20% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.' };
+    return { text: 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 5% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.' };
   }
   if (['pago', 'tarjeta', 'efectivo', 'precio'].some(word => lower.includes(word))) {
     return { text: 'El pago se realiza en caja física al momento de retirar tu pedido. Aceptamos efectivo, tarjetas y transferencias.' };
