@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, Modal, Pressable, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image, Modal, Pressable, View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { confirmAction } from '../utils/dialogs';
 import { colors, fonts, radius, themed } from '../theme/tokens';
@@ -21,12 +21,16 @@ const ROLE_LABEL: Record<string, string> = {
 
 const LOGO_WIDTH = 104;
 const LOGO_HEIGHT = 40;
+// Por debajo de este ancho el estado se reduce a su punto de color y el cambio de tema queda solo
+// en el menú de perfil: si no, el nombre del operador no cabe (en 375 px quedaba en "A.").
+const COMPACT_WIDTH = 480;
 
 export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
   isOnline, operatorName, operatorRole, onOpenReports, onLogout,
 }) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
+  const compact = useWindowDimensions().width < COMPACT_WIDTH;
   const role = ROLE_LABEL[operatorRole] || operatorRole;
 
   const confirmLogout = () => {
@@ -40,7 +44,7 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
     <View style={styles.container}>
       <View style={styles.brand}>
         {/* Logo transparente; en modo oscuro se usa la versión con el texto en crema. */}
-        <View style={styles.logoBox} accessible accessibilityLabel="Supermercado Karen">
+        <View style={[styles.logoBox, compact && styles.logoBoxCompact]} accessible accessibilityLabel="Supermercado Karen">
           <Image
             source={isDark ? require('../../assets/supermercado_karen_dark.png') : require('../../assets/supermercado_karen.png')}
             style={{ width: '100%', height: '100%' }}
@@ -54,21 +58,24 @@ export const HeaderBodega: React.FC<HeaderBodegaProps> = ({
       </View>
 
       <View
-        style={[styles.status, { backgroundColor: isOnline ? '#0E7A43' : colors.karen }]}
+        style={[styles.status, compact && styles.statusCompact, { backgroundColor: isOnline ? '#0E7A43' : colors.karen }]}
+        accessible
         accessibilityLabel={isOnline ? 'Tienda en línea: las reservas web están activas' : 'Sin conexión con la tienda: reservas web en pausa'}
       >
         <View style={[styles.dot, { backgroundColor: isOnline ? '#7CF0B5' : '#FFFFFF' }]} />
-        <Text style={styles.statusText}>{isOnline ? 'En línea' : 'Sin conexión'}</Text>
+        {!compact && <Text style={styles.statusText}>{isOnline ? 'En línea' : 'Sin conexión'}</Text>}
       </View>
 
-      <TouchableOpacity
-        style={styles.iconBtn}
-        onPress={toggleTheme}
-        accessibilityRole="button"
-        accessibilityLabel={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-      >
-        <Ionicons name={isDark ? 'sunny' : 'moon-outline'} size={22} color={colors.ink} />
-      </TouchableOpacity>
+      {!compact && (
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={toggleTheme}
+          accessibilityRole="button"
+          accessibilityLabel={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+        >
+          <Ionicons name={isDark ? 'sunny' : 'moon-outline'} size={22} color={colors.ink} />
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={styles.iconBtn}
@@ -111,10 +118,12 @@ const styles = themed(() => StyleSheet.create({
   },
   brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
   logoBox: { width: LOGO_WIDTH, height: LOGO_HEIGHT, borderRadius: radius.tag, padding: 3 },
+  logoBoxCompact: { width: 84, height: 34 },
   brandText: { flex: 1, minWidth: 0 },
   title: { fontFamily: fonts.tag, fontSize: 16, color: colors.karenText, lineHeight: 18 },
   operator: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkSoft },
   status: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6 },
+  statusCompact: { paddingHorizontal: 8, paddingVertical: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   statusText: { fontFamily: fonts.bold, fontSize: 12, color: '#FFFFFF' },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
