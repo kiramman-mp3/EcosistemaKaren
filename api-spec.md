@@ -214,6 +214,10 @@ que siempre:
   su código) o `RECHAZADA` (con `motivoRechazo` y `mensajeRechazo`).
 * `503` sin guardar nada si no hay un heartbeat vigente de la tienda.
 
+Una reserva `PENDIENTE` cuyo plazo ya pasó, pero que la tienda todavía no marcó como vencida (por ejemplo,
+porque está sin conexión), se devuelve con `"vencidaSinConfirmar": true`; su estado no cambia hasta que
+la tienda lo informe.
+
 Estados que puede ver el cliente: `PENDIENTE_SYNC`, `PENDIENTE`, `CONFIRMADA`, `EXPIRADA`,
 `CANCELADA` y `RECHAZADA`. `POST /reservations/:id/cancel` cancela de inmediato; el stock se
 libera cuando la tienda procesa el aviso. Si la reserva ya estaba confirmada en caja, el estado
