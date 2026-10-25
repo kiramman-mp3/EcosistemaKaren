@@ -140,8 +140,14 @@ const swaggerDocument = {
       get: {
         tags: ['Lotes e Inventario'],
         summary: 'Consultar disponibilidad pública de lotes vigentes',
+        description: 'Respuesta cacheable 5 s (`Cache-Control: public, max-age=5`, con ETag). Con `productoId` devuelve solo los lotes de ese producto; un parámetro desconocido se ignora.',
+        parameters: [
+          { name: 'productoId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' }, description: 'Filtra por producto. Vacío equivale a no filtrar.' }
+        ],
         responses: {
-          '200': { description: 'Disponibilidad sanitizada, sin lotes vencidos ni agotados' }
+          '200': { description: 'Disponibilidad sanitizada, sin lotes vencidos ni agotados' },
+          '304': { description: 'Sin cambios respecto al ETag enviado en If-None-Match' },
+          '400': { description: 'productoId no es un UUID válido' }
         }
       }
     },

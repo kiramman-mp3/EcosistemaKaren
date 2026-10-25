@@ -29,7 +29,10 @@ la app de bodega con Bearer.
 
 El catálogo, las promociones activas, el heartbeat de lectura y `GET /availability`
 son públicos. Este último solo expone identificador de lote/producto, fecha, estado y
-cantidad disponible; excluye lotes vencidos o sin disponibilidad.
+cantidad disponible; excluye lotes vencidos o sin disponibilidad. Acepta el filtro opcional
+`?productoId=<uuid>` (UUID inválido responde `400`; un parámetro desconocido se ignora) y se
+puede cachear 5 segundos (`Cache-Control: public, max-age=5` y `ETag`; una solicitud
+condicional con `If-None-Match` responde `304`).
 
 El servidor inicia con las reservas bloqueadas. El latido lo envía el backend de la tienda
 (store-api) a `POST /internal/v1/store/heartbeat`, un canal interno autenticado con la
