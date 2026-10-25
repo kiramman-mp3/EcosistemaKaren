@@ -29,6 +29,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { getPool, closePool, connectionSettings } = require('../src/infrastructure/db/postgres');
 const { runMigrations } = require('../src/infrastructure/db/migrations');
+const { buildPromotionCacheKey } = require('../src/domain/policies/PromotionPolicy');
 
 const args = Object.fromEntries(process.argv.slice(2).map(arg => {
   const [key, value] = arg.replace(/^--/, '').split('=');
@@ -579,6 +580,14 @@ function buildAlertsAndPromotions(lots, users) {
       cache_key: `seed:${lot.id}:${estado}`, cache_hit: false, created_at: iso(createdAt),
       aprobada_por: null, aprobada_at: null, rechazada_por: null, rechazada_at: null, motivo_rechazo: null
     };
+    // La aprobación compara esta clave con el lote y el precio actuales: un borrador sin cambios desde
+    // su generación lleva la clave real para que el ADMIN pueda publicarlo desde la bodega.
+    if (estado === 'PENDIENTE_APROBACION') {
+      row.cache_key = buildPromotionCacheKey({
+        loteId: lot.id, fechaCaducidad: dateOnly(lot.caducidad), cantidadDisponible: lot.disp,
+        precioVenta: lot.product.pvp, promptVersion: row.prompt_version, modelName: row.modelo_ia
+      });
+    }
     if (estado === 'APROBADA') {
       row.aprobada_por = pick(admins).id;
       row.aprobada_at = iso(Math.min(NOW - MIN_MS, createdAt + randInt(10, 240) * MIN_MS));
