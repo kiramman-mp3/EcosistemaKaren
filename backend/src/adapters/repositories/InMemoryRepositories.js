@@ -536,6 +536,10 @@ class InMemoryRepositories {
   get userRepository() {
     return {
       findByEmail: async (email) => this.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null,
+      updatePasswordHash: async (id, passwordHash) => {
+        const user = this.users.find(u => u.id === id);
+        if (user) user.passwordHash = passwordHash;
+      },
       save: async (userData) => {
         const user = new User({ ...userData, id: userData.id || randomUUID() });
         this.users.push(user);
