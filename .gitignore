@@ -41,3 +41,6 @@ Thumbs.db
 # Imágenes descargadas por el seed (npm run db:seed)
 backend/public/media/productos/
 dist-mobile/
+
+# Docker crea este archivo vacío en el host al montar init-db/dev/01-demo-data.sql dentro de init-db/store (solo desarrollo).
+backend/init-db/store/90-demo-data.sql
