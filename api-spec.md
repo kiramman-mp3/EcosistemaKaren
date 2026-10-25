@@ -73,7 +73,9 @@ públicamente en `GET /api/v1/media/productos/<archivo>` (`ETag`, `Cache-Control
 API pública. Cuerpo: `{ "section": "categorias|productos|lotes|promociones", "version": <entero creciente>, "items": [...] }`.
 Es un snapshot completo de la sección: el portal reemplaza su copia. Los productos incluyen `createdAt` y
 `vendidos30d`, opcionales para que una tienda con una versión anterior siga sincronizando: si faltan, el
-portal conserva lo que tenía (o usa la fecha actual y 0 en un producto nuevo). Responde
+portal conserva lo que tenía (o usa la fecha actual y 0 en un producto nuevo). Las promociones incluyen,
+también opcionales, `limitePorPedido`, `stockOferta`, `vigenteHasta` y `unidadesRestantes` (las calcula la
+tienda; `null` = sin tope). Una oferta vencida o sin unidades de oferta deja de enviarse. Responde
 `{ "success": true, "section", "version", "applied", "count" }`; si ya tiene una versión igual o
 mayor, `applied` es `false` y devuelve `currentVersion`. Campos no incluidos en el contrato
 (costos, ubicación, razones de IA, etc.) se rechazan con `400`. Solo está disponible cuando
@@ -268,8 +270,10 @@ que siempre:
 
 * `201` con `codigoRetiro`, `fechaExpiracion` y `detalles` (lote, cantidad, precio y datos del
   producto) si la tienda aceptó la reserva.
-* El error habitual si la rechazó: `409` sin stock suficiente, `400` (oferta no disponible o
-  reserva vencida), `404` (producto inexistente) o `503` (la tienda no pudo procesarla).
+* El error habitual si la rechazó: `409` sin stock suficiente, `409` con `"error": "OfferLimitException"`
+  si la línea con `promocionId` pasa el límite por pedido o las unidades de oferta que quedan, o la oferta
+  ya terminó (motivo `OFFER_LIMIT`), `400` (oferta no disponible o reserva vencida), `404` (producto
+  inexistente) o `503` (la tienda no pudo procesarla).
 * `202` con `"estado": "PENDIENTE_SYNC"` y sin `codigoRetiro` si la tienda tarda más. El
   cliente consulta `GET /reservations/user/:userId` hasta que pase a `PENDIENTE` (aceptada con
   su código) o `RECHAZADA` (con `motivoRechazo` y `mensajeRechazo`).
@@ -367,7 +371,18 @@ data: {"tipo":"NUEVO_LOTE_CADUCIDAD_CERCANA","loteId":"...","numeroLote":"LOT-YG
 1. **Generación**: Un usuario con rol `BODEGUERO`, `PERCHERO` o `ADMIN` solicita una promoción para un lote en alerta `ROJO` (1–6 días) o `AMARILLO` (7–14 días).
 2. **Borrador PENDIENTE_APROBACION**: Gemini genera un descuento dentro de los límites estrictos (`ROJO`: 20–50%, `AMARILLO`: 5–30%). El registro se guarda con `estado = 'PENDIENTE_APROBACION'` y `activa = false`.
 3. **Revisión y Aprobación**: Exclusivamente un `ADMIN` puede aprobar (`POST /promotions/:id/approve`) o rechazar (`POST /promotions/:id/reject`).
-4. **Publicación**: El catálogo público (`GET /promotions`) únicamente muestra promociones con `estado = 'APROBADA'` y `activa = true`.
+4. **Publicación**: El catálogo público (`GET /promotions`) únicamente muestra promociones con `estado = 'APROBADA'` y `activa = true`, vigentes y con unidades de oferta.
+
+### Límites de una oferta
+Al revisar el borrador, el `ADMIN` puede fijar tres límites opcionales (sin valor, la oferta cubre todo el lote hasta que caduque):
+
+| Campo | Qué limita |
+|---|---|
+| `limitePorPedido` | Unidades de la oferta que admite una sola reserva. |
+| `stockOferta` | Unidades del lote que se venden con descuento, sumando todas las reservas pendientes o confirmadas. Las vencidas o canceladas devuelven sus unidades. |
+| `vigenteHasta` | Fecha y hora (ISO 8601 con zona) en que la oferta deja de aplicarse. |
+
+Reglas: el límite por pedido no supera el stock de oferta, el stock de oferta no supera las unidades libres del lote y `vigenteHasta` es futura. Se validan al editar el borrador y otra vez al aprobarlo. Al reservar, la tienda bloquea la oferta y comprueba los tres límites en la misma transacción que descuenta el stock, de modo que reservas simultáneas nunca pasan de `stockOferta`. Cada línea reservada con descuento guarda su `promocion_id`.
 
 ---
 
@@ -410,7 +425,25 @@ Genera un borrador de promoción comercial mediante Google Gemini AI con salida 
 ### `GET /promotions`
 Retorna el catálogo público de promociones comerciales.
 * **Acceso**: Público (sin autenticación).
-* **Filtro**: Solo promociones con `estado = 'APROBADA'` y `activa = true`.
+* **Filtro**: Solo promociones con `estado = 'APROBADA'` y `activa = true`, sobre un lote vigente con existencias, con `vigenteHasta` futura (o sin ella) y con unidades de oferta (o sin `stockOferta`).
+* **Campos de límites**: `limitePorPedido`, `stockOferta`, `vigenteHasta` y `unidadesRestantes` (`null` = sin tope).
+
+---
+
+### `PATCH /promotions/:id`
+Edita un borrador `PENDIENTE_APROBACION`. Solo `ADMIN`.
+* **Body**:
+```json
+{
+  "descuentoPorcentaje": 25,
+  "frasePromocional": "Leche entera a precio Karen",
+  "limitePorPedido": 2,
+  "stockOferta": 10,
+  "vigenteHasta": "2026-10-26T21:00:00-05:00"
+}
+```
+`descuentoPorcentaje` (5–50) y `frasePromocional` son obligatorios. Los límites son opcionales: sin enviar se conservan; `null` los quita.
+* **Errores**: `400` si un límite no cumple las reglas de arriba o el borrador ya no está pendiente; `403` si no es `ADMIN`.
 
 ---
 

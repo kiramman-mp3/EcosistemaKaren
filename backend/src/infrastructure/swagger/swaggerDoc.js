@@ -376,7 +376,7 @@ const swaggerDocument = {
           '202': { description: 'Solo con portal y tienda separados: la tienda aún confirma la reserva (estado PENDIENTE_SYNC, sin código). Consultar GET /reservations/user/{userId}.' },
           '400': { description: 'Datos inválidos, oferta no disponible o reserva vencida antes de que la tienda la atendiera' },
           '404': { description: 'Producto inexistente' },
-          '409': { description: 'Stock insuficiente (Overbooking)' },
+          '409': { description: 'Stock insuficiente (Overbooking) o la línea en oferta pasa su límite por pedido, sus unidades de oferta o su hora de fin (OfferLimitException)' },
           '503': { description: 'Heartbeat ausente o vencido; reservas bloqueadas, o la tienda no pudo procesar la reserva' }
         }
       }
@@ -545,7 +545,7 @@ const swaggerDocument = {
       get: {
         tags: ['Promociones e IA'],
         summary: 'Obtener promociones comerciales aprobadas y activas (Público)',
-        description: 'Retorna exclusivamente las promociones que han sido aprobadas por un Administrador y se encuentran activas en el catálogo.',
+        description: 'Retorna exclusivamente las promociones aprobadas por un Administrador, activas, vigentes y con unidades de oferta. Cada una trae sus límites: limitePorPedido, stockOferta, vigenteHasta y unidadesRestantes (null = sin tope).',
         responses: {
           '200': { description: 'Lista de promociones aprobadas' }
         }
@@ -563,6 +563,54 @@ const swaggerDocument = {
         }
       }
     },
+    '/promotions/{id}': {
+      patch: {
+        tags: ['Promociones e IA'],
+        summary: 'Editar un borrador y fijar sus límites (Solo ADMIN)',
+        description: 'Solo borradores PENDIENTE_APROBACION. Los límites son opcionales: sin enviar se conservan y null los quita (todo el lote, hasta que caduque). Reglas: limitePorPedido ≤ stockOferta ≤ unidades libres del lote, y vigenteHasta futura.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['descuentoPorcentaje', 'frasePromocional'],
+                properties: {
+                  descuentoPorcentaje: { type: 'number', minimum: 5, maximum: 50, example: 25 },
+                  frasePromocional: { type: 'string', maxLength: 180, example: 'Leche entera a precio Karen' },
+                  limitePorPedido: { type: 'integer', minimum: 1, nullable: true, example: 2 },
+                  stockOferta: { type: 'integer', minimum: 1, nullable: true, example: 10 },
+                  vigenteHasta: { type: 'string', format: 'date-time', nullable: true, example: '2026-10-26T21:00:00-05:00' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Borrador actualizado' },
+          '400': { description: 'Límites inválidos o el borrador ya no está pendiente' },
+          '403': { description: 'Requiere rol ADMIN' },
+          '404': { description: 'Promoción no encontrada' }
+        }
+      },
+      delete: {
+        tags: ['Promociones e IA'],
+        summary: 'Eliminar un borrador sin publicarlo (Solo ADMIN)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          '204': { description: 'Borrador eliminado' },
+          '400': { description: 'Solo se pueden eliminar borradores pendientes' },
+          '403': { description: 'Requiere rol ADMIN' }
+        }
+      }
+    },
     '/promotions/{id}/approve': {
       post: {
         tags: ['Promociones e IA'],
@@ -574,7 +622,7 @@ const swaggerDocument = {
         ],
         responses: {
           '200': { description: 'Promoción aprobada y publicada' },
-          '400': { description: 'La promoción ya fue aprobada/rechazada o ID inválido' },
+          '400': { description: 'La promoción ya fue aprobada/rechazada, ID inválido, o sus límites ya no caben (stock de oferta mayor que el lote u hora de fin pasada)' },
           '403': { description: 'Requiere rol ADMIN' },
           '404': { description: 'Promoción no encontrada' }
         }
@@ -727,6 +775,7 @@ const OPERATION_OWNERS = [
   ['/alerts/stream', null, 'store'],
   ['/promotions/generate', null, 'store'],
   ['/promotions/pending', null, 'store'],
+  ['/promotions/{id}', null, 'store'],
   ['/promotions/{id}/approve', null, 'store'],
   ['/promotions/{id}/reject', null, 'store'],
   ['/metrics/ai', null, 'store'],
