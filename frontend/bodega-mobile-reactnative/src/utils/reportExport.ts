@@ -41,9 +41,11 @@ const csvRow = (cells: unknown[]) => cells.map(csvCell).join(',');
 
 export function buildCsv({ totals, wastes, movements, issuedAt }: ReportData): string {
   const lines: string[] = [];
-  lines.push(csvRow([`${STORE_INFO.legalName.toUpperCase()} - REPORTE DE MOVIMIENTOS Y MERMAS`]));
+  lines.push(csvRow([`${STORE_INFO.tradeName.toUpperCase()} - REPORTE DE MOVIMIENTOS Y MERMAS`]));
   lines.push(csvRow(['Fecha de emisión', issuedAt.toLocaleString('es-EC')]));
-  lines.push(csvRow(['Sucursal', STORE_INFO.branch]));
+  lines.push(csvRow(['Razón social', STORE_INFO.legalName]));
+  lines.push(csvRow(['RUC', STORE_INFO.ruc]));
+  lines.push(csvRow(['Dirección', `${STORE_INFO.address}, ${STORE_INFO.city}`]));
   lines.push('');
   lines.push(csvRow(['RESUMEN DE MÉTRICAS']));
   lines.push(csvRow(['Unidades recibidas', totals.ingresos]));
@@ -102,7 +104,7 @@ export function buildReportHtml({ totals, wastes, movements, issuedAt }: ReportD
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Reporte de movimientos y mermas - ${e(STORE_INFO.legalName)}</title>
+  <title>Reporte de movimientos y mermas - ${e(STORE_INFO.tradeName)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; color: #2A1D14; background: #FFF; margin: 0; }
     .header { border-bottom: 3px solid #2A1D14; padding-bottom: 14px; margin-bottom: 20px; }
@@ -123,9 +125,9 @@ export function buildReportHtml({ totals, wastes, movements, issuedAt }: ReportD
 </head>
 <body>
   <div class="header">
-    <h1 class="brand">${e(STORE_INFO.legalName)}</h1>
+    <h1 class="brand">${e(STORE_INFO.tradeName)}</h1>
     <div class="sub">Sistema de bodega · Reporte de movimientos y bajas</div>
-    <div class="sub"><strong>Emitido:</strong> ${e(issuedAt.toLocaleDateString('es-EC'))} ${e(issuedAt.toLocaleTimeString('es-EC'))} · <strong>Sucursal:</strong> ${e(STORE_INFO.branch)} · RUC ${e(STORE_INFO.ruc)}</div>
+    <div class="sub"><strong>Emitido:</strong> ${e(issuedAt.toLocaleDateString('es-EC'))} ${e(issuedAt.toLocaleTimeString('es-EC'))} · ${e(STORE_INFO.legalName)} · RUC ${e(STORE_INFO.ruc)} · ${e(STORE_INFO.address)}, ${e(STORE_INFO.city)}</div>
   </div>
 
   <div class="kpis">
@@ -147,7 +149,7 @@ export function buildReportHtml({ totals, wastes, movements, issuedAt }: ReportD
     <tbody>${movementRows}</tbody>
   </table>
 
-  <div class="footer">Generado por el sistema de bodega de ${e(STORE_INFO.legalName)}.</div>
+  <div class="footer">Generado por el sistema de bodega de ${e(STORE_INFO.tradeName)}.</div>
 </body>
 </html>`;
 }
