@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from './ui/Button';
+import { getErrorMessage } from '../utils/errors';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -37,8 +38,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       onLoginSuccess(res.user);
       setPassword('');
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'No pudimos validar tus datos. Revisa el correo y la contraseña.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'No pudimos validar tus datos. Revisa el correo y la contraseña.'));
     } finally {
       setLoading(false);
     }

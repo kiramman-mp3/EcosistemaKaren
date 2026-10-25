@@ -23,6 +23,7 @@ import { api, BackendCategory, BackendReservation } from './api/client';
 import { reservationToPass, selectActiveReservation } from './reservations/recovery';
 import { isAwaitingStore, waitForStoreResolution } from './reservations/awaitStore';
 import { daysUntil, formatDate } from './utils/dates';
+import { getErrorMessage } from './utils/errors';
 
 // Foto neutra si un producto aún no tiene imagen propia.
 const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -401,8 +402,8 @@ export const App: React.FC = () => {
       setIsCartOpen(false);
       setIsPassModalOpen(true);
       void loadBackendData();
-    } catch (err: any) {
-      setCartError(err.message || 'No pudimos apartar tus productos. Intenta de nuevo.');
+    } catch (err: unknown) {
+      setCartError(getErrorMessage(err, 'No pudimos apartar tus productos. Intenta de nuevo.'));
     } finally {
       setIsSubmittingReservation(false);
     }

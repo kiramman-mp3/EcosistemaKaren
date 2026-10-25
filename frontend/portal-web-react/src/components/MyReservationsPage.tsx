@@ -4,6 +4,7 @@ import type { BackendReservation } from '../api/client';
 import { formatDateTime } from '../utils/dates';
 import { Button } from './ui/Button';
 import { Illustration } from './ui/Illustration';
+import { getErrorMessage } from '../utils/errors';
 
 interface Props {
   authenticated: boolean;
@@ -69,8 +70,8 @@ export const MyReservationsPage: React.FC<Props> = ({
     setError(null);
     try {
       await onCancel(id);
-    } catch (cause: any) {
-      setError(cause?.message || 'No se pudo cancelar la reserva. Inténtalo de nuevo.');
+    } catch (cause: unknown) {
+      setError(getErrorMessage(cause, 'No se pudo cancelar la reserva. Inténtalo de nuevo.'));
     } finally {
       setCancelling(null);
     }
