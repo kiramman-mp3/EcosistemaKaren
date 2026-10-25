@@ -6,7 +6,7 @@
     "start": "node start.js",
     "setup": "node start.js --setup",
     "down": "node start.js --down",
-    "test": "node --test dev/"
+    "test": "node --test dev/*.test.js"
   },
   "engines": {
     "node": ">=20.0.0"
