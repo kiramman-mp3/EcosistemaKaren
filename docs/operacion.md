@@ -104,5 +104,7 @@ vencidos) los purga el worker de mantenimiento (`RETENTION_DAYS`, 30 por defecto
 
 ## Imágenes de productos
 
-Las fotos locales (`backend/public/media`) viajan dentro de la imagen y no se sincronizan al
-portal: el portal solo muestra las que estén en una URL pública. Pendiente conocido.
+Las fotos locales de la tienda (`backend/public/media`, o `MEDIA_DIR`) se sincronizan solas al portal, que las guarda en
+su base: entran en el respaldo del portal y no hace falta un volumen de medios en la nube. En la tienda es
+conveniente montar `store_media` (ya está en el compose) para conservarlas entre despliegues. Si falta un archivo en
+la tienda, el portal conserva su copia.

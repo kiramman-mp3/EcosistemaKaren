@@ -48,6 +48,7 @@ dedicada, comparación con `timingSafeEqual`, secreto distinto de `JWT_SECRET`).
 | `GET /store/commands?wait=25&limit=20` | Long-poll. Entrega comandos `RESERVATION_CREATE` y `RESERVATION_CANCEL`. |
 | `POST /store/commands/:id/result` | Resultado del comando: `ACCEPTED` o `REJECTED` (con motivo) para `CREATE`; `APPLIED` o `IGNORED` (con el estado real) para `CANCEL`. Idempotente por id de comando. |
 | `POST /store/sync/catalog` | Snapshot completo de una sección del catálogo (`categorias`, `productos`, `lotes`, `promociones`) con `version` monótona. El portal reemplaza su copia de esa sección e ignora versiones iguales o anteriores. |
+| `POST /store/sync/media/manifest`, `PUT /store/sync/media` | Fotos locales de productos: la tienda informa ruta y hash de las que usa, el portal indica cuáles le faltan y la tienda las sube (binario, máx. 2 MB). El portal las guarda en su base y las sirve en `/api/v1/media/productos/*`. |
 | `POST /store/events` | Lote de cambios de estado de reservas hechos en la tienda (`CONFIRMADA`, `EXPIRADA`, `CANCELADA`). La disponibilidad viaja por la sincronización de catálogo. |
 
 ### Sincronización del catálogo (implementada)

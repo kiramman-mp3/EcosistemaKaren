@@ -1,3 +1,4 @@
+const path = require('node:path');
 const createAuthMiddleware = require('../../infrastructure/http/middlewares/auth');
 const AlertStreamManager = require('../../infrastructure/sse/AlertStreamManager');
 const ReservationCleanerWorker = require('../../infrastructure/workers/ReservationCleanerWorker');
@@ -7,6 +8,8 @@ const HttpHeartbeatTransport = require('../../infrastructure/heartbeat/HttpHeart
 const LocalHeartbeatTransport = require('../../infrastructure/heartbeat/LocalHeartbeatTransport');
 const CatalogSyncWorker = require('../../infrastructure/workers/CatalogSyncWorker');
 const HttpCatalogSyncTransport = require('../../infrastructure/sync/HttpCatalogSyncTransport');
+const MediaSyncWorker = require('../../infrastructure/workers/MediaSyncWorker');
+const HttpMediaSyncTransport = require('../../infrastructure/sync/HttpMediaSyncTransport');
 const PostgresCatalogSnapshotReader = require('../../infrastructure/sync/PostgresCatalogSnapshotReader');
 const packageInfo = require('../../../package.json');
 const HeartbeatMonitor = require('../../infrastructure/heartbeat/HeartbeatMonitor');
@@ -38,6 +41,9 @@ const PromotionController = require('../../adapters/controllers/PromotionControl
 const AuthController = require('../../adapters/controllers/AuthController');
 const HeartbeatController = require('../../adapters/controllers/HeartbeatController');
 const CatalogSyncController = require('../../adapters/controllers/CatalogSyncController');
+const MediaSyncController = require('../../adapters/controllers/MediaSyncController');
+const PostgresMediaMirrorRepository = require('../../adapters/repositories/PostgresMediaMirrorRepository');
+const { ReconcileMediaManifest, StoreMediaFile, GetMediaFile } = require('../../use-cases/catalog/MediaSyncUseCases');
 const PostgresCatalogMirrorRepository = require('../../adapters/repositories/PostgresCatalogMirrorRepository');
 const CatalogStatusController = require('../../adapters/controllers/CatalogStatusController');
 const wirePortalReservations = require('./wirePortalReservations');
@@ -92,6 +98,13 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
   const catalogMirrorRepo = portal && !store && pool ? new PostgresCatalogMirrorRepository(pool) : null;
   if (catalogMirrorRepo) {
     controllers.catalogSyncController = new CatalogSyncController(new ApplyCatalogSnapshot(catalogMirrorRepo));
+    // Las fotos de los productos llegan con el catálogo y se sirven desde la base del portal.
+    const mediaMirrorRepo = new PostgresMediaMirrorRepository(pool);
+    controllers.mediaSyncController = new MediaSyncController({
+      reconcileUC: new ReconcileMediaManifest(mediaMirrorRepo),
+      storeFileUC: new StoreMediaFile(mediaMirrorRepo),
+      getFileUC: new GetMediaFile(mediaMirrorRepo)
+    });
   }
   if (portal) {
     controllers.catalogStatusController = new CatalogStatusController(new GetCatalogSyncStatus(catalogMirrorRepo, {
@@ -178,6 +191,19 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
         intervalMs: serviceConfig.catalogSyncIntervalMs,
         resyncMs: serviceConfig.catalogResyncMs
       }));
+      // Las fotos locales de los productos también se copian al portal, que no alcanza la red de la tienda.
+      if (serviceConfig.mediaSyncEnabled) {
+        workers.push(new MediaSyncWorker({
+          listPaths: async () => (await pool.query(
+            "SELECT DISTINCT imagen_url FROM productos WHERE imagen_url LIKE '/api/v1/media/%'"
+          )).rows.map(row => row.imagen_url),
+          mediaDir: serviceConfig.mediaDir
+            ? path.resolve(serviceConfig.mediaDir)
+            : path.resolve(__dirname, '../../../public/media'),
+          transport: new HttpMediaSyncTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey }),
+          intervalMs: serviceConfig.mediaSyncIntervalMs
+        }));
+      }
     }
 
     // La tienda es quien emite el latido: por HTTP hacia el portal, o en proceso en el monolito.

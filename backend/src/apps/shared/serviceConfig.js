@@ -54,6 +54,10 @@ function readServiceConfig({ store, portal }, env = process.env) {
     storeId: (env.STORE_ID || 'tienda-principal').trim(),
     heartbeatEnabled,
     catalogSyncEnabled,
+    // Las fotos viajan por el mismo canal que el catálogo, por lo que dependen de él.
+    mediaSyncEnabled: catalogSyncEnabled && env.MEDIA_SYNC_ENABLED !== 'false',
+    mediaSyncIntervalMs: positiveSeconds(env.MEDIA_SYNC_INTERVAL_SECONDS, 60, 10) * 1000,
+    mediaDir: (env.MEDIA_DIR || '').trim() || null,
     reservationQueueEnabled,
     // Espera del long-poll con el que la tienda pide comandos de reserva al portal.
     reservationPollWaitSeconds: boundedSeconds(env.RESERVATION_POLL_WAIT_SECONDS, 25, 5, 30),
