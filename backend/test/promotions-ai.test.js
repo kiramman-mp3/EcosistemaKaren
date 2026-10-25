@@ -612,18 +612,19 @@ test('19. PostgreSQL Integración: guarda borrador con lock consultivo y maneja 
 
   const pgRepo = new PostgresPromotionRepository(pool);
   let productId = null;
+  let categoryId = null;
   t.after(async () => {
     if (productId) {
       await pool.query('DELETE FROM productos WHERE id = $1', [productId]).catch(() => {});
     }
+    if (categoryId) await pool.query('DELETE FROM categorias WHERE id = $1', [categoryId]).catch(() => {});
     await pool.end();
   });
 
-  const categoryRes = await pool.query('SELECT id FROM categorias LIMIT 1');
-  if (categoryRes.rows.length === 0) {
-    t.skip('No hay categorías en PostgreSQL para preparar la prueba');
-    return;
-  }
+  // Categoría propia: otra prueba en paralelo podría borrar una categoría tomada de la base.
+  categoryId = randomUUID();
+  await pool.query('INSERT INTO categorias (id, nombre) VALUES ($1, $2)', [categoryId, `Promos IA ${categoryId}`]);
+  const categoryRes = { rows: [{ id: categoryId }] };
   productId = randomUUID();
   const loteId = randomUUID();
   const barcode = `TEST-${Date.now()}-${Math.random()}`;
