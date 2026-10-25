@@ -446,6 +446,7 @@ function PortalAppContent() {
           {activeTab === 'productos' && (
             <CatalogScreen
               products={products}
+              offers={offers}
               categories={categoriesList}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
