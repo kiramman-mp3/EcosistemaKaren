@@ -40,6 +40,15 @@ test('el estado de la copia del catálogo es del portal, no de la tienda', () =>
   assert.ok(!store.includes('GET /catalog/status'));
 });
 
+test('el registro público de clientes existe en el portal y no en la tienda', () => {
+  assert.ok(portal.includes('POST /auth/register'));
+  assert.ok(monolith.includes('POST /auth/register'));
+  assert.ok(!store.includes('POST /auth/register'), 'store-api no debe crear cuentas desde la red local');
+  for (const route of ['POST /auth/login', 'GET /auth/me', 'POST /auth/logout']) {
+    assert.ok(store.includes(route) && portal.includes(route), `${route} debe existir en ambos servicios`);
+  }
+});
+
 test('portal-api no expone inventario, alertas ni administración', () => {
   for (const route of ['GET /lots', 'POST /lots', 'GET /alerts', 'POST /promotions/generate', 'POST /products', 'POST /reservations/:id/confirm']) {
     assert.ok(!portal.includes(route), `portal-api no debe exponer ${route}`);

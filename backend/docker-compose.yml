@@ -7,10 +7,13 @@ services:
       POSTGRES_USER: ${DB_USER:-karen_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-karen_pass}
     ports:
-      - "${DB_EXPOSED_PORT:-5433}:5432"
+      # Solo la propia máquina: la base y pgAdmin no deben ser alcanzables desde la red local.
+      - "127.0.0.1:${DB_EXPOSED_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db/store:/docker-entrypoint-initdb.d
+      # Datos de demostración (cuentas con contraseña conocida): solo desarrollo. Un compose de producción no lo monta.
+      - ./init-db/dev/01-demo-data.sql:/docker-entrypoint-initdb.d/90-demo-data.sql:ro
     networks:
       - karen_network
     healthcheck:
@@ -31,7 +34,7 @@ services:
       POSTGRES_USER: ${PORTAL_DB_USER:-karen_portal}
       POSTGRES_PASSWORD: ${PORTAL_DB_PASSWORD:-karen_portal_pass}
     ports:
-      - "${PORTAL_DB_EXPOSED_PORT:-5434}:5432"
+      - "127.0.0.1:${PORTAL_DB_EXPOSED_PORT:-5434}:5432"
     volumes:
       - postgres_portal_data:/var/lib/postgresql/data
     networks:
@@ -50,7 +53,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change_me_for_local_use}
       PGADMIN_LISTEN_PORT: 80
     ports:
-      - "${PGADMIN_PORT:-5051}:80"
+      - "127.0.0.1:${PGADMIN_PORT:-5051}:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:

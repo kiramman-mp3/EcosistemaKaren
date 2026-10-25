@@ -66,4 +66,16 @@ function mobileApiUrls({ args, lanHost, storePort, portalPort }) {
   };
 }
 
-module.exports = { isWeakKey, withServiceKey, portalDbEnv, servicePorts, buildSplitEnv, mobileApiUrls };
+// Variables que ya no hacen nada y siguen en algunos .env: se avisa para que se retiren.
+const DEPRECATED_ENV = {
+  HEARTBEAT_AUTO_PING: 'ya no existe: el latido lo emite store-api (ver HEARTBEAT_ENABLED)'
+};
+
+/** Variables obsoletas presentes en un .env ya leído: [{ name, reason }]. */
+function deprecatedEnvVars(env) {
+  return Object.entries(DEPRECATED_ENV)
+    .filter(([name]) => env[name] !== undefined)
+    .map(([name, reason]) => ({ name, reason }));
+}
+
+module.exports = { isWeakKey, withServiceKey, portalDbEnv, servicePorts, buildSplitEnv, mobileApiUrls, deprecatedEnvVars };

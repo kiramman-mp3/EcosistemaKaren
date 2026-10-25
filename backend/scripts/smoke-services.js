@@ -30,6 +30,7 @@ const SERVICES = [
       ['GET', '/api/v1/promotions/pending', 401],
       ['GET', '/api/v1/reservations/user/x', 404],
       ['GET', '/api/v1/catalog/status', 404],
+      ['POST', '/api/v1/auth/register', 404],
       ['POST', '/internal/v1/store/heartbeat', 404]
     ]
   },
@@ -44,6 +45,7 @@ const SERVICES = [
       ['GET', '/api/v1/promotions/pending', 404],
       ['GET', '/api/v1/reservations/user/x', 401],
       ['GET', '/api/v1/catalog/status', 200],
+      ['POST', '/api/v1/auth/register', 400],
       ['POST', '/internal/v1/store/heartbeat', 401]
     ]
   },

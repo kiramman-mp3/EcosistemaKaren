@@ -189,6 +189,14 @@ actor local y registran el `clienteId` y el origen en su metadata.
 6. `feature/clients-per-backend`: cada app apunta al backend que le corresponde.
 7. `chore/ci-and-docs`: CI por servicio, Swagger por servicio y documentación actualizada.
 
+## Cuentas y datos de demostración
+
+El esquema inicial de la tienda ya no crea cuentas. Los datos de demostración (con contraseñas
+conocidas) viven en `init-db/dev` y solo se montan en el compose de desarrollo; en producción
+store-api y portal-api no arrancan si quedan cuentas de demostración con su contraseña conocida.
+store-api tampoco expone el registro público: el personal se da de alta con `npm run user:create`
+y los clientes se registran únicamente en portal-api.
+
 ## Pendiente conocido
 
 - Las imágenes locales de productos (`/api/v1/media/...`) no se sincronizan: la carpeta

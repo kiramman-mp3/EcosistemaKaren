@@ -25,6 +25,7 @@ const PORTAL_GROUPS = [
   groups.reservationLookupRoutes,
   groups.publicPromotionRoutes,
   groups.authRoutes,
+  groups.registerRoutes,
   groups.heartbeatRoutes
 ];
 

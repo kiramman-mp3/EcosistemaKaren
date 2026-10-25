@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  isWeakKey, withServiceKey, portalDbEnv, servicePorts, buildSplitEnv, mobileApiUrls
+  isWeakKey, withServiceKey, portalDbEnv, servicePorts, buildSplitEnv, mobileApiUrls, deprecatedEnvVars
 } = require('./splitEnv');
 
 const KEY = 'k'.repeat(48);
@@ -78,4 +78,12 @@ test('sin IP de red local ni URL explícita no se inventa una', () => {
   const urls = mobileApiUrls({ args: { 'api-url': true }, lanHost: null, storePort: 4000, portalPort: 4001 });
   assert.equal(urls.portal, null);
   assert.equal(urls.bodega, null);
+});
+
+test('avisa de las variables obsoletas que siguen en el .env', () => {
+  assert.deepEqual(deprecatedEnvVars({ PORT: '4000' }), []);
+  const found = deprecatedEnvVars({ PORT: '4000', HEARTBEAT_AUTO_PING: 'FALSE' });
+  assert.equal(found.length, 1);
+  assert.equal(found[0].name, 'HEARTBEAT_AUTO_PING');
+  assert.match(found[0].reason, /HEARTBEAT_ENABLED/);
 });

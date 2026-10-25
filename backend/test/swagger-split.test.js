@@ -13,14 +13,14 @@ test('la documentación de store-api incluye inventario, caja y administración,
   for (const op of ['GET /lots', 'POST /lots', 'POST /reservations/{id}/confirm', 'GET /alerts', 'POST /promotions/generate', 'GET /metrics/ai', 'POST /products', 'POST /categories']) {
     assert.ok(ops.includes(op), `store-api debe documentar ${op}`);
   }
-  for (const op of ['POST /reservations', 'GET /reservations/user/{userId}', 'POST /reservations/{id}/cancel', 'GET /catalog/status']) {
+  for (const op of ['POST /reservations', 'GET /reservations/user/{userId}', 'POST /reservations/{id}/cancel', 'GET /catalog/status', 'POST /auth/register']) {
     assert.ok(!ops.includes(op), `store-api no debe documentar ${op}`);
   }
 });
 
 test('la documentación de portal-api incluye reservas, estado del catálogo y lectura pública, y no el inventario', () => {
   const ops = operations(documentFor({ store: false, portal: true }));
-  for (const op of ['POST /reservations', 'GET /reservations/user/{userId}', 'POST /reservations/{id}/cancel', 'GET /catalog/status', 'GET /products', 'GET /availability', 'GET /promotions', 'POST /auth/login', 'GET /heartbeat']) {
+  for (const op of ['POST /reservations', 'GET /reservations/user/{userId}', 'POST /reservations/{id}/cancel', 'GET /catalog/status', 'GET /products', 'GET /availability', 'GET /promotions', 'POST /auth/login', 'POST /auth/register', 'GET /heartbeat']) {
     assert.ok(ops.includes(op), `portal-api debe documentar ${op}`);
   }
   for (const op of ['GET /lots', 'POST /lots', 'POST /reservations/{id}/confirm', 'GET /alerts', 'POST /promotions/generate', 'POST /products', 'POST /categories', 'GET /metrics/ai']) {

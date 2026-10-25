@@ -46,6 +46,9 @@ function normalizeJsonBody(req, res, next) {
   return next();
 }
 
+// Contraseñas de base de datos de los archivos de ejemplo y del valor que se asumía si faltaba.
+const WEAK_DB_PASSWORDS = new Set(['karen_pass', 'karen_portal_pass', 'postgres', 'password', 'admin']);
+
 function validateProductionSecurity(env = process.env) {
   if (env.NODE_ENV !== 'production') return;
   const origins = (env.CORS_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
@@ -57,6 +60,25 @@ function validateProductionSecurity(env = process.env) {
   }
   if (env.SWAGGER_ENABLED === 'true' && (!env.SWAGGER_PASSWORD || env.SWAGGER_PASSWORD.length < 16)) {
     throw new Error('SWAGGER_PASSWORD debe tener al menos 16 caracteres en producción.');
+  }
+  // La base de datos no puede usar las credenciales de ejemplo (ni las que se asumen si faltan).
+  for (const name of ['DB_PASSWORD', 'PORTAL_DB_PASSWORD']) {
+    const value = env[name];
+    if (name === 'DB_PASSWORD' && !value) {
+      throw new Error('DB_PASSWORD es obligatoria en producción.');
+    }
+    if (value !== undefined && value !== '' && (WEAK_DB_PASSWORDS.has(value) || value.includes('change_me'))) {
+      throw new Error(`${name} no puede ser una contraseña de ejemplo en producción.`);
+    }
+  }
+  // La clave del canal tienda-portal y la firma de sesiones son secretos distintos: filtrar una
+  // no debe comprometer la otra.
+  if (env.STORE_SERVICE_KEY && env.STORE_SERVICE_KEY === env.JWT_SECRET) {
+    throw new Error('STORE_SERVICE_KEY y JWT_SECRET deben ser secretos distintos.');
+  }
+  // Detrás de un proxy inverso todos los usuarios compartirían IP en los límites de tasa.
+  if (!(Number(env.TRUST_PROXY_HOPS) > 0)) {
+    console.warn('⚠️ TRUST_PROXY_HOPS=0: si hay un proxy inverso delante, todos los clientes comparten una IP en los límites de tasa.');
   }
 }
 

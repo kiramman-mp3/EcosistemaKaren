@@ -627,6 +627,7 @@ const OPERATION_OWNERS = [
   ['/promotions/{id}/approve', null, 'store'],
   ['/promotions/{id}/reject', null, 'store'],
   ['/metrics/ai', null, 'store'],
+  ['/auth/register', ['post'], 'portal'],
   ['/reservations', ['post'], 'portal'],
   ['/reservations/user/{userId}', null, 'portal'],
   ['/reservations/{id}/cancel', null, 'portal'],

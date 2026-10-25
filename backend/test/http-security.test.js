@@ -98,7 +98,47 @@ test('producción rechaza secretos débiles y CORS abierto', () => {
     JWT_SECRET: 'un-secreto-aleatorio-de-mas-de-32-caracteres',
     CORS_ORIGINS: 'https://portal.example',
     SWAGGER_ENABLED: 'false',
+    DB_PASSWORD: 'una-clave-de-base-de-datos-real',
+    TRUST_PROXY_HOPS: '1',
   }));
+});
+
+test('producción rechaza credenciales de base de datos de ejemplo o ausentes', () => {
+  const valid = {
+    NODE_ENV: 'production', JWT_SECRET: 'un-secreto-aleatorio-de-mas-de-32-caracteres',
+    CORS_ORIGINS: 'https://portal.example', DB_PASSWORD: 'una-clave-de-base-de-datos-real', TRUST_PROXY_HOPS: '1'
+  };
+  assert.doesNotThrow(() => validateProductionSecurity(valid));
+  assert.throws(() => validateProductionSecurity({ ...valid, DB_PASSWORD: undefined }), /DB_PASSWORD es obligatoria/);
+  assert.throws(() => validateProductionSecurity({ ...valid, DB_PASSWORD: 'karen_pass' }), /DB_PASSWORD no puede ser/);
+  assert.throws(() => validateProductionSecurity({ ...valid, DB_PASSWORD: 'change_me_local' }), /DB_PASSWORD no puede ser/);
+  assert.throws(() => validateProductionSecurity({ ...valid, PORTAL_DB_PASSWORD: 'karen_portal_pass' }), /PORTAL_DB_PASSWORD no puede ser/);
+});
+
+test('producción exige que la clave del canal tienda-portal y la firma de sesiones sean distintas', () => {
+  const secret = 'un-secreto-aleatorio-de-mas-de-32-caracteres';
+  const env = {
+    NODE_ENV: 'production', JWT_SECRET: secret, CORS_ORIGINS: 'https://portal.example',
+    DB_PASSWORD: 'una-clave-de-base-de-datos-real', TRUST_PROXY_HOPS: '1'
+  };
+  assert.throws(() => validateProductionSecurity({ ...env, STORE_SERVICE_KEY: secret }), /distintos/);
+  assert.doesNotThrow(() => validateProductionSecurity({ ...env, STORE_SERVICE_KEY: 'otro-secreto-aleatorio-de-mas-de-32-caracteres' }));
+});
+
+test('producción avisa si no se configuró TRUST_PROXY_HOPS', () => {
+  const warnings = [];
+  const original = console.warn;
+  console.warn = (...args) => warnings.push(args.join(' '));
+  try {
+    validateProductionSecurity({
+      NODE_ENV: 'production', JWT_SECRET: 'un-secreto-aleatorio-de-mas-de-32-caracteres',
+      CORS_ORIGINS: 'https://portal.example', DB_PASSWORD: 'una-clave-de-base-de-datos-real'
+    });
+  } finally {
+    console.warn = original;
+  }
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /TRUST_PROXY_HOPS/);
 });
 
 test('operaciones por cookie rechazan CSRF desde otro origen en producción', async () => {

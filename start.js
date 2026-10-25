@@ -23,7 +23,7 @@ const path = require('path');
 const crypto = require('crypto');
 const http = require('http');
 const os = require('os');
-const { isWeakKey, withServiceKey, buildSplitEnv, mobileApiUrls } = require('./dev/splitEnv');
+const { isWeakKey, withServiceKey, buildSplitEnv, mobileApiUrls, deprecatedEnvVars } = require('./dev/splitEnv');
 
 const ROOT = __dirname;
 const BACKEND = path.join(ROOT, 'backend');
@@ -243,6 +243,7 @@ async function main() {
   ensureEnvFile();
   installDependencies();
   const backendEnv = readEnv(path.join(BACKEND, '.env'));
+  for (const { name, reason } of deprecatedEnvVars(backendEnv)) log(`aviso: backend/.env define ${name}, que ${reason}. Puede borrarla.`);
   const split = SPLIT ? buildSplitEnv({ env: backendEnv, serviceKey: serviceKey() }) : null;
   await ensureDatabase();
   seedIfNeeded(split);

@@ -85,8 +85,13 @@ function promotionAdminRoutes(router, { promotionController }, { authenticate, a
   router.get('/metrics/ai', authenticate, authorize('ADMIN'), (req, res) => promotionController.getAiMetrics(req, res));
 }
 
-function authRoutes(router, { authController }, { authenticate }) {
+// Registro público de clientes: solo existe en el portal. El personal de la tienda se da de alta con
+// `npm run user:create`; la tienda no debe crear cuentas desde la red local.
+function registerRoutes(router, { authController }) {
   router.post('/auth/register', validate({ body: schemas.registerBody }), (req, res, next) => authController.register(req, res, next));
+}
+
+function authRoutes(router, { authController }, { authenticate }) {
   router.post('/auth/login', validate({ body: schemas.loginBody }), (req, res, next) => authController.login(req, res, next));
   router.get('/auth/me', authenticate, (req, res) => authController.me(req, res));
   router.post('/auth/logout', validate({ body: schemas.emptyBody }), (req, res) => authController.logout(req, res));
@@ -111,5 +116,6 @@ module.exports = {
   publicPromotionRoutes,
   promotionAdminRoutes,
   authRoutes,
+  registerRoutes,
   heartbeatRoutes
 };
