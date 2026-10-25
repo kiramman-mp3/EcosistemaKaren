@@ -54,10 +54,10 @@ Las apps no se actualizan solas: todo lo que cambia en su código llega al telé
 
 | App | Cambios |
 |---|---|
-| Bodega | Datos reales de la tienda; encabezado y métricas compactos en pantallas angostas; resumen de reportes por período; el ADMIN puede cambiar el PVP al ingresar un lote; el ADMIN fija en cada oferta el máximo por pedido, el stock de oferta y la fecha y hora de fin. |
-| Portal | Datos reales de la tienda; filtros "Más vendidos" y "Nuevos" con datos reales; las ofertas muestran su hora real de fin, el máximo por pedido y las unidades que quedan; el pase de retiro dice "Supermercado Karen". |
+| Bodega | Datos reales de la tienda; encabezado y métricas compactos en pantallas angostas; resumen de reportes por período; el ADMIN puede cambiar el PVP al ingresar un lote; el ADMIN fija en cada oferta el máximo por pedido, el stock de oferta y la fecha y hora de fin; el ADMIN registra y edita productos desde el catálogo, con foto opcional. |
+| Portal | Datos reales de la tienda; filtros "Más vendidos" y "Nuevos" con datos reales; las ofertas muestran su hora real de fin, el máximo por pedido y las unidades que quedan; el pase de retiro dice "Supermercado Karen"; el cliente elige cuánto tiempo apartar (30 minutos a 2 horas) y puede sumar 30 minutos desde Mis reservas o desde el pase, hasta 4 horas; el catálogo se ordena por precio y filtra "En oferta"; aviso cuando el stock puede no estar al día; términos y condiciones por pestañas; datos de la tienda con teléfono, correo, WhatsApp, Facebook y "Cómo llegar"; copiar el código y guardar el pase como imagen. |
 
-Ninguno de estos cambios agrega módulos nativos: basta recompilar con los mismos pasos. Después de instalar, conviene
+Los cambios de la bodega no agregan módulos nativos: basta recompilar con los mismos pasos. El portal sí: suma `expo-clipboard`, `expo-sharing` y `react-native-view-shot` (copiar el código y guardar el pase como imagen), así que hay que recompilarlo y no sirve actualizar solo el JavaScript de un APK anterior. Después de instalar, conviene
 repasar la lista de [verificación en un teléfono](verificacion-telefono.md).
 
 ## Android (.apk)

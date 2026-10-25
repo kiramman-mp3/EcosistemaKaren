@@ -44,5 +44,12 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-23 | Ofertas → la oferta publicada en TEL-21 | Dice "Termina mañana a las 21:00" y "Máx. 2 por pedido". La app aparta de a una unidad: las tres primeras veces sale el pase; la cuarta falla con "Las unidades de esta oferta ya se agotaron" y la oferta desaparece de la lista. |
 | TEL-24 | Mis reservas con `cliente@demo.karen.ec` recién sembrado | Hay dos reservas por retirar con tiempo restante y el historial con retiradas, vencidas y canceladas. "Añadir más tiempo" suma 30 minutos. |
 | TEL-25 | Apartar con `cliente@demo.karen.ec` → abrir el pase → "¿Necesitas más tiempo? +30 min" | Aparece "+30 minutos añadidos con éxito" y el temporizador sube media hora. Tras llegar a 4 horas en total, el botón se reemplaza por "Llegaste al máximo de 4 horas para esta reserva". |
+| TEL-28 | Carrito → elegir 45 min, 1 h, 1 h 30 o 2 h → Apartar | El temporizador del pase parte del tiempo elegido (por ejemplo 90:00 para 1 h 30) y Mis reservas muestra el vencimiento correcto. La nota del carrito repite la duración elegida. |
+| TEL-29 | Catálogo → Ordenar: Menor precio y Mayor precio; filtro En oferta | El orden cambia según el precio (con el precio de oferta si lo hay); "En oferta" deja solo los productos con oferta vigente. |
+| TEL-30 | Inicio → bajar hasta los datos de la tienda | Se ven dirección, horario, teléfono, correo, WhatsApp y Facebook. Teléfono y correo abren la app de llamadas y de correo; "Cómo llegar" abre el mapa en la ubicación de la tienda y WhatsApp abre el chat con el mensaje escrito. |
+| TEL-31 | Inicio → Términos y condiciones | Abre con pestañas: Todas, Privacidad y LOPDP, Reservas y tiempos, FEFO y ofertas, Pagos y retiro. "Política de privacidad" abre directamente la pestaña de privacidad. |
+| TEL-32 | Pase de retiro → icono de copiar junto al código | El icono cambia a una marca de verificación y, al pegar en otra app, aparece el código KR-XXXXXX. |
+| TEL-33 | Pase de retiro → Guardar como imagen | Se abre la hoja de compartir con un PNG del pase (QR y código) sin los botones; se puede guardar en la galería o enviar por WhatsApp. |
+| TEL-34 | Con el portal-api encendido y la tienda apagada más de unos minutos | Aparece la franja "El stock que ves puede no estar al día"; desaparece al volver a sincronizar la tienda y refrescar el catálogo. |
 
 Registrar por cada caso: fecha, modelo del teléfono y versión de Android, versión del APK, resultado (Aprobado/Fallido) y captura cuando falle.
