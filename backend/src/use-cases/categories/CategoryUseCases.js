@@ -1,4 +1,4 @@
-const { ValidationException, ConflictException } = require('../../domain/exceptions/DomainExceptions');
+const { ConflictException } = require('../../domain/exceptions/DomainExceptions');
 
 class GetCategories {
   constructor(categoryRepository) {

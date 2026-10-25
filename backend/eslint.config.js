@@ -29,6 +29,11 @@ module.exports = [
     },
   },
   {
+    // Módulos ES (p. ej. el preload de las pruebas, que necesita await de nivel superior).
+    files: ['**/*.mjs'],
+    languageOptions: { sourceType: 'module' },
+  },
+  {
     ignores: [
       'node_modules/**',
       'public/media/**',
