@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, ScreenTitle } from '../components/ui';
 import { LotLabel } from '../components/LotLabel';
+import { contentFrame, useLayout } from '../theme/layout';
 import { colors, levelColors, themed } from '../theme/tokens';
 import { getErrorCode, getErrorMessage, getErrorStatus } from '../utils/errors';
 
@@ -34,6 +35,7 @@ const AI_ERRORS: Record<number, string> = {
 export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
   alerts, onRefresh, refreshing, onOpenAiPromo, onOpenMerma,
 }) => {
+  const { listColumns: columns, gutter } = useLayout();
   const [filter, setFilter] = useState<Filter>('TODOS');
   const [busyLotId, setBusyLotId] = useState<string | null>(null);
 
@@ -80,8 +82,11 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
 
   return (
     <FlatList
+      key={columns}
       style={styles.list}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, contentFrame, { padding: gutter }]}
+      numColumns={columns}
+      columnWrapperStyle={columns > 1 ? styles.columns : undefined}
       data={visible}
       keyExtractor={item => item.id || item.loteId}
       initialNumToRender={8}
@@ -118,6 +123,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
         const expired = item.nivel === 'VENCIDO';
         const busy = busyLotId === item.loteId;
         return (
+          <View style={styles.cell}>
           <LotLabel
             productName={item.productoNombre}
             lotNumber={item.numeroLote}
@@ -172,6 +178,7 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
               </>
             )}
           </LotLabel>
+          </View>
         );
       }}
     />
@@ -181,6 +188,9 @@ export const AlertasCaducidadScreen: React.FC<AlertasCaducidadScreenProps> = ({
 const styles = themed(() => StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 32 },
+  columns: { gap: 12 },
+  cell: { flex: 1, minWidth: 0 },
+
   filters: { gap: 8, paddingBottom: 14 },
   action: { flexGrow: 1 },
 }));

@@ -8,6 +8,7 @@ import { classifyExpiryDays } from '../config/businessRules';
 import { notify } from '../utils/dialogs';
 import { Button, Chip, EmptyState, ScreenTitle } from '../components/ui';
 import { LotLabel } from '../components/LotLabel';
+import { contentFrame, useLayout } from '../theme/layout';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage } from '../utils/errors';
 
@@ -22,6 +23,7 @@ type LocationFilter = 'TODOS' | 'BODEGA' | 'PERCHA';
 const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({ lots, onRefresh, refreshing }) => {
+  const { listColumns: columns, gutter } = useLayout();
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState<LocationFilter>('TODOS');
   const [movingLotId, setMovingLotId] = useState<string | null>(null);
@@ -55,8 +57,11 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({ lo
 
   return (
     <FlatList
+      key={columns}
       style={styles.list}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, contentFrame, { padding: gutter }]}
+      numColumns={columns}
+      columnWrapperStyle={columns > 1 ? styles.columns : undefined}
       data={visible}
       keyExtractor={lot => lot.id}
       initialNumToRender={8}
@@ -101,6 +106,7 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({ lo
         const days = daysUntil(lot.fechaCaducidad);
         const safeDays = Number.isFinite(days) ? days : 0;
         return (
+          <View style={styles.cell}>
           <LotLabel
             productName={lot.productoNombre || 'Producto'}
             lotNumber={lot.numeroLote}
@@ -127,6 +133,7 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({ lo
               style={styles.action}
             />
           </LotLabel>
+          </View>
         );
       }}
     />
@@ -136,6 +143,9 @@ export const InventarioLotesScreen: React.FC<InventarioLotesScreenProps> = ({ lo
 const styles = themed(() => StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 32 },
+  columns: { gap: 12 },
+  cell: { flex: 1, minWidth: 0 },
+
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 50, paddingLeft: 12,
     backgroundColor: colors.card, borderRadius: radius.tag, borderWidth: 1.5, borderColor: colors.ruleStrong,

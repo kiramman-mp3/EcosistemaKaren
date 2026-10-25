@@ -6,6 +6,7 @@ import { api } from '../api/client';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { formatDateTime, formatTime } from '../utils/dates';
 import { Button, Notice, ScreenTitle } from '../components/ui';
+import { formFrame } from '../theme/layout';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage, getErrorStatus } from '../utils/errors';
 
@@ -88,7 +89,7 @@ export const CajaSiaciScreen: React.FC<CajaSiaciScreenProps> = ({ onReservationU
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, formFrame]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} colors={[colors.ink]} />}
     >
