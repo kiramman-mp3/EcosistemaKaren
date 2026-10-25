@@ -91,7 +91,7 @@ test('PostgreSQL registra merma y movimiento en la misma transacción', async t 
   }
 
   const category = await pool.query('SELECT id FROM categorias ORDER BY id LIMIT 1');
-  const actor = await pool.query("SELECT id FROM usuarios WHERE rol = 'BODEGUERO' ORDER BY id LIMIT 1");
+  const actor = await pool.query("SELECT id FROM usuarios WHERE email = 'bodega@karen.com'");
   if (!category.rowCount || !actor.rowCount) {
     t.skip('Faltan semillas de producto o bodeguero');
     await pool.end();
@@ -143,7 +143,7 @@ test('PostgreSQL registra merma y movimiento en la misma transacción', async t 
   assert.equal(wastes[0].movimientoId, movements[0].id);
 
   const reservationRepo = new PostgresReservationRepository(pool);
-  const customer = await pool.query("SELECT id FROM usuarios WHERE rol = 'CLIENTE' ORDER BY id LIMIT 1");
+  const customer = await pool.query("SELECT id FROM usuarios WHERE email = 'cliente@karen.com'");
   const reservation = await reservationRepo.createWithLockedStock(new Reservation({
     usuarioId: customer.rows[0].id,
     fechaExpiracion: new Date(Date.now() + 10 * 60 * 1000),

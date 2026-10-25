@@ -686,7 +686,7 @@ test('19. PostgreSQL Integración: guarda borrador con lock consultivo y maneja 
   assert.equal(duplicateDraft.id, draft.id);
 
   // 3. Aprobar en transacción
-  const adminRes = await pool.query("SELECT id FROM usuarios WHERE rol = 'ADMIN' LIMIT 1");
+  const adminRes = await pool.query("SELECT id FROM usuarios WHERE email = 'admin@karen.com'");
   const adminId = adminRes.rows[0]?.id || 'd8a7b6c5-1111-2222-3333-444455556668';
 
   const approved = await pgRepo.approve(draft.id, adminId);
