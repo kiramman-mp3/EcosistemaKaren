@@ -135,6 +135,23 @@ Crea un nuevo producto en catálogo.
 }
 ```
 
+### `PUT /products/:id`
+Edita un producto. Solo `ADMIN` y solo store-api; el portal lo recibe en la siguiente sincronización del catálogo.
+* **Body Payload** (todos los campos salvo `descripcion`; no admite otros, y el código de barras no se cambia):
+```json
+{
+  "categoriaId": "f1b2c3...",
+  "nombre": "Queso Crema Toni 200g",
+  "descripcion": "Queso untable",
+  "precioVenta": 2.05,
+  "impuestoPorcentaje": 15,
+  "minStockAlerta": 10
+}
+```
+* **Respuesta (200)**: `{ "success": true, "data": <producto>, "cambioPrecio": { "anterior", "nuevo" } }`;
+  `cambioPrecio` es `null` si el PVP no cambió. Si cambió, queda en la bitácora de precios en la misma transacción.
+* Errores: `400` datos no válidos, `401`/`403` sin sesión o sin rol ADMIN, `404` producto o categoría inexistente.
+
 ### `PATCH /products/:id`
 Cambia el PVP de un producto. Solo `ADMIN` y solo store-api; el portal lo recibe en la siguiente
 sincronización del catálogo (unos 15 s).

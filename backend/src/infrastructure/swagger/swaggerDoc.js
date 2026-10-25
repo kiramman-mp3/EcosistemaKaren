@@ -75,6 +75,39 @@ const swaggerDocument = {
       }
     },
     '/products/{id}': {
+      put: {
+        tags: ['Productos'],
+        summary: 'Editar un producto (solo ADMIN)',
+        description: 'Reemplaza nombre, descripción, pasillo (categoría), IVA, stock mínimo y PVP. El código de barras y la foto no cambian aquí. Si el PVP cambia, queda en la bitácora de precios; el portal ve los cambios en la siguiente sincronización del catálogo.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['categoriaId', 'nombre', 'precioVenta', 'impuestoPorcentaje', 'minStockAlerta'],
+                additionalProperties: false,
+                properties: {
+                  categoriaId: { type: 'string', format: 'uuid' },
+                  nombre: { type: 'string', example: 'Leche Vita Entera 1 L' },
+                  descripcion: { type: 'string', nullable: true, example: 'Vita, caja de 1 L' },
+                  precioVenta: { type: 'number', example: 1.25 },
+                  impuestoPorcentaje: { type: 'number', example: 15 },
+                  minStockAlerta: { type: 'integer', example: 10 }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Producto actualizado y cambioPrecio { anterior, nuevo } (null si el PVP no cambió)' },
+          '400': { description: 'Datos no válidos' },
+          '403': { description: 'Solo el ADMIN edita productos' },
+          '404': { description: 'Producto o categoría inexistente' }
+        }
+      },
       patch: {
         tags: ['Productos'],
         summary: 'Cambiar el PVP de un producto (solo ADMIN)',

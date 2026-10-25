@@ -21,7 +21,7 @@ const aiMetrics = require('../../infrastructure/metrics/AiMetricsCollector');
 const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
-const { GetProducts, GetProductByBarcode, CreateProduct, SetProductImage, UpdateProductPrice, GetProductPriceHistory } = require('../../use-cases/products/ProductUseCases');
+const { GetProducts, GetProductByBarcode, CreateProduct, SetProductImage, UpdateProductPrice, UpdateProduct, GetProductPriceHistory } = require('../../use-cases/products/ProductUseCases');
 const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, GetInventorySummary, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
 const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, ExtendReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const {
@@ -82,7 +82,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       mediaStorage: new LocalMediaStorage({ mediaDir: resolveMediaDir(serviceConfig.mediaDir) })
     }) : undefined,
     store ? new UpdateProductPrice(productRepo) : undefined,
-    store ? new GetProductPriceHistory(productRepo) : undefined
+    store ? new GetProductPriceHistory(productRepo) : undefined,
+    store ? new UpdateProduct(productRepo, categoryRepo) : undefined
   );
   const getPublicLotAvailabilityUC = new GetPublicLotAvailability(lotRepo);
   const getReservationByCodeUC = new GetReservationByCode(reservationRepo);
