@@ -187,15 +187,24 @@ export const AprobacionesScreen: React.FC = () => {
               <Field label="Frase que verá el cliente" multiline maxLength={180} value={phrase} onChangeText={setPhrase} style={styles.textarea} />
               <Text style={styles.sectionLabel}>Límites de la oferta</Text>
               <Text style={styles.sectionHint}>Opcionales. Vacío: todo el lote, hasta que caduque.</Text>
+              {/* Cada campo va en su propia columna flexible: el estilo de Field se aplica al cuadro de texto. */}
               <View style={styles.cols}>
-                <Field label="Máx. por pedido" placeholder="Sin tope" keyboardType="number-pad" value={terms.limit} onChangeText={setTerm('limit')} style={styles.flex} />
-                <Field label="Stock de oferta" placeholder="Todo el lote"
-                  hint={selected.cantidadDisponible != null ? `Hasta ${selected.cantidadDisponible}.` : undefined}
-                  keyboardType="number-pad" value={terms.stock} onChangeText={setTerm('stock')} style={styles.flex} />
+                <View style={styles.col}>
+                  <Field label="Máx. por pedido" placeholder="Sin tope" keyboardType="number-pad" value={terms.limit} onChangeText={setTerm('limit')} />
+                </View>
+                <View style={styles.col}>
+                  <Field label="Stock de oferta" placeholder="Todo el lote"
+                    hint={selected.cantidadDisponible != null ? `Hasta ${selected.cantidadDisponible}.` : undefined}
+                    keyboardType="number-pad" value={terms.stock} onChangeText={setTerm('stock')} />
+                </View>
               </View>
               <View style={styles.cols}>
-                <Field label="Termina el" placeholder="AAAA-MM-DD" autoCapitalize="none" maxLength={10} value={terms.endDate} onChangeText={setTerm('endDate')} style={styles.flex} />
-                <Field label="A las" placeholder="HH:MM" maxLength={5} value={terms.endTime} onChangeText={setTerm('endTime')} style={styles.flex} />
+                <View style={styles.col}>
+                  <Field label="Termina el" placeholder="AAAA-MM-DD" autoCapitalize="none" maxLength={10} value={terms.endDate} onChangeText={setTerm('endDate')} />
+                </View>
+                <View style={styles.col}>
+                  <Field label="A las" placeholder="HH:MM" maxLength={5} value={terms.endTime} onChangeText={setTerm('endTime')} />
+                </View>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.presets}>
                 {END_PRESETS.map(preset => {
@@ -280,6 +289,7 @@ const styles = themed(() => StyleSheet.create({
   reasonLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, marginBottom: 4 },
   reasonText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.inkSoft },
   cols: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  col: { flex: 1, minWidth: 0 },
   sectionLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, marginTop: 6 },
   sectionHint: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted, marginTop: 2 },
   presets: { gap: 8, paddingBottom: 16 },
