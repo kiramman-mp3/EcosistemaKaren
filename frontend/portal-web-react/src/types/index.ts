@@ -19,6 +19,12 @@ export interface Product {
   promotionId?: string;
   offerLotId?: string;
   isOffer?: boolean;
+  /** Alta real del producto en la tienda y unidades vendidas en los últimos 30 días. */
+  createdAt?: string;
+  soldLast30d?: number;
+  /** Insignias calculadas con las reglas de config/catalogRules. */
+  isNew?: boolean;
+  isBestSeller?: boolean;
 }
 
 export interface FlashOffer {

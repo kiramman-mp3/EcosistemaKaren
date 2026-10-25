@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Check, Plus } from 'lucide-react';
+import { Check, Flame, Plus, Sparkles } from 'lucide-react';
 import { FlashOffer, Product } from '../types';
 import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui/Tag';
 import { Button } from './ui/Button';
@@ -56,6 +56,23 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
           </span>
         )}
 
+        {/* Insignias con datos reales: ventas de 30 días y fecha de alta (config/catalogRules). */}
+        {(product.isBestSeller || product.isNew) && (
+          <div className="absolute top-2 right-2 flex flex-col items-end gap-1 pointer-events-none">
+            {product.isBestSeller && (
+              <span className="inline-flex items-center gap-1 rounded-tag bg-naranja border border-mora/60 px-2 py-0.5 text-[11px] font-extrabold text-mora shadow-pop-xs">
+                <Flame className="w-3 h-3 text-karen-text fill-karen-text" />
+                Más vendido
+              </span>
+            )}
+            {product.isNew && (
+              <span className="inline-flex items-center gap-1 rounded-tag bg-aguacate-solid border border-mora/60 px-2 py-0.5 text-[11px] font-extrabold text-white shadow-pop-xs">
+                <Sparkles className="w-3 h-3 text-limon" />
+                Nuevo
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col px-1.5 pt-3 pb-1">

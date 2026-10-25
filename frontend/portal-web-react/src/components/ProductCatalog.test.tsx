@@ -162,4 +162,41 @@ describe('ProductCatalog sin stock', () => {
     expect(screen.getByText('1 producto')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Producto 29' })).toBeInTheDocument();
   });
+
+  it('filtra y ordena por más vendidos y nuevos, con insignia solo para quien tiene datos', () => {
+    const base = { category: 'Granos', price: 1, stock: 5, image: '/a.jpg' };
+    const products = [
+      { ...base, id: 'top', name: 'Arroz top', soldLast30d: 90, isBestSeller: true },
+      { ...base, id: 'nuevo', name: 'Avena nueva', createdAt: '2026-10-24T10:00:00Z', isNew: true },
+      { ...base, id: 'normal', name: 'Azúcar normal', soldLast30d: 3, createdAt: '2025-01-01T00:00:00Z' },
+    ];
+    render(<ProductCatalog
+      products={products}
+      categories={['Todos', 'Granos']}
+      selectedCategory="Todos"
+      onSelectCategory={() => {}}
+      onAddToCart={() => {}}
+      onOpenCart={() => {}}
+      cartCount={0}
+      state="ready"
+      onPageChange={() => {}}
+    />);
+
+    expect(screen.getAllByText('Más vendido')).toHaveLength(1);
+    expect(screen.getAllByText('Nuevo')).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Más vendidos' }));
+    expect(screen.getAllByRole('article').map(card => within(card).getByRole('heading').textContent)).toEqual(['Arroz top']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevos' }));
+    expect(screen.getAllByRole('article').map(card => within(card).getByRole('heading').textContent)).toEqual(['Avena nueva']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Todos' }));
+    fireEvent.change(screen.getByLabelText('Ordenar productos'), { target: { value: 'mas-vendidos' } });
+    expect(screen.getAllByRole('article').map(card => within(card).getByRole('heading').textContent))
+      .toEqual(['Arroz top', 'Azúcar normal', 'Avena nueva']);
+    fireEvent.change(screen.getByLabelText('Ordenar productos'), { target: { value: 'nuevos' } });
+    expect(screen.getAllByRole('article').map(card => within(card).getByRole('heading').textContent))
+      .toEqual(['Avena nueva', 'Azúcar normal', 'Arroz top']);
+  });
 });
