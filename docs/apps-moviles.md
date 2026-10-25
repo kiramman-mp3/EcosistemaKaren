@@ -27,6 +27,8 @@ Hace falta Android Studio (trae el JDK y el SDK). Desde la carpeta de cada app:
 
 ```bash
 export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
+# El JDK de Android Studio (25) imprime un aviso que el plugin de Android toma por un error.
+export JAVA_TOOL_OPTIONS="--enable-native-access=ALL-UNNAMED"
 export KAREN_ALLOW_CLEARTEXT=1 EXPO_PUBLIC_SERVER_CONFIG=1
 npx expo prebuild --platform android --no-install
 cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
