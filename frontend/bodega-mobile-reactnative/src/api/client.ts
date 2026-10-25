@@ -16,6 +16,7 @@ import {
   InventoryMovement,
   InventorySummary,
   InventoryWaste,
+  PriceChange,
   SummaryPeriod,
 } from '../types';
 
@@ -188,11 +189,11 @@ export const api = {
       return res.data.data || [];
   },
 
-  async createLot(payload: CreateLotPayload): Promise<BackendLot> {
-    const res = await axios.post<{ success: boolean; data: BackendLot }>(
+  async createLot(payload: CreateLotPayload): Promise<BackendLot & { cambioPrecio: PriceChange | null }> {
+    const res = await axios.post<{ success: boolean; data: BackendLot; cambioPrecio?: PriceChange | null }>(
       `${getServerUrl()}/lots`, payload, authorizedConfig(6000)
     );
-    return res.data.data;
+    return { ...res.data.data, cambioPrecio: res.data.cambioPrecio ?? null };
   },
 
   async updateLotLocation(lotId: string, location: 'BODEGA' | 'PERCHA'): Promise<BackendLot> {
