@@ -5,7 +5,7 @@ const {
   ServiceUnavailableException
 } = require('../../domain/exceptions/DomainExceptions');
 const Reservation = require('../../domain/entities/Reservation');
-const { RESERVATION_TTL_MINUTES } = require('../../domain/policies/BusinessRules');
+const { RESERVATION_TTL_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, RESERVATION_EXTENSION_MINUTES } = require('../../domain/policies/BusinessRules');
 const { normalizeReservationItems } = require('./ReservationUseCases');
 
 const defaultSleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -37,7 +37,7 @@ class RequestReservation {
     this.clock = options.clock || (() => Date.now());
   }
 
-  async execute({ usuarioId, items }) {
+  async execute({ usuarioId, items, ttlMinutos }) {
     if (!usuarioId) {
       throw new ValidationException('El usuario autenticado es requerido para realizar la reserva.');
     }
@@ -48,7 +48,7 @@ class RequestReservation {
 
     let reservation = await this.portalReservationRepository.createPending({
       clienteId: usuarioId,
-      fechaExpiracion: Reservation.calcularFechaExpiracionDefault(RESERVATION_TTL_MINUTES),
+      fechaExpiracion: Reservation.calcularFechaExpiracionDefault(ttlMinutos || RESERVATION_TTL_MINUTES),
       items: normalizedItems
     });
 
@@ -62,6 +62,52 @@ class RequestReservation {
 
     if (reservation.estado === 'RECHAZADA') throw rejectionToException(reservation);
     return reservation;
+  }
+}
+
+// portal-api: el cliente extiende el plazo de su reserva. El vencimiento lo decide la tienda, así que se le
+// encarga con un comando y se espera su respuesta unos segundos. Sin tienda conectada no se acepta, y un comando
+// que la tienda no llegó a recibir se descarta para que no extienda la reserva más tarde sin que el cliente lo sepa.
+class ExtendPortalReservation {
+  constructor(portalReservationRepository, heartbeatMonitor, options = {}) {
+    this.portalReservationRepository = portalReservationRepository;
+    this.heartbeatMonitor = heartbeatMonitor;
+    this.waitMs = options.waitMs ?? 8000;
+    this.pollMs = options.pollMs ?? 100;
+    this.maxPollMs = options.maxPollMs ?? 500;
+    this.sleep = options.sleep || defaultSleep;
+    this.clock = options.clock || (() => Date.now());
+    this.maxTotalMinutes = options.maxTotalMinutes ?? RESERVATION_MAX_TOTAL_MINUTES;
+  }
+
+  async execute(reservationId, actor, minutes = RESERVATION_EXTENSION_MINUTES) {
+    if (!actor || !actor.id) {
+      throw new ValidationException('La identidad del usuario es requerida para extender.');
+    }
+    await this.heartbeatMonitor.assertReservationsAvailable();
+    const { commandId } = await this.portalReservationRepository.requestExtension(reservationId, actor, minutes, this.maxTotalMinutes);
+
+    const deadline = this.clock() + this.waitMs;
+    let delay = this.pollMs;
+    let outcome = await this.portalReservationRepository.getCommandOutcome(commandId);
+    while (outcome && outcome.estado !== 'RESUELTO' && this.clock() < deadline) {
+      await this.sleep(delay);
+      delay = Math.min(this.maxPollMs, Math.ceil(delay * 1.5));
+      outcome = await this.portalReservationRepository.getCommandOutcome(commandId);
+    }
+
+    if (!outcome || outcome.estado !== 'RESUELTO') {
+      await this.portalReservationRepository.abandonCommand(commandId);
+      throw new ServiceUnavailableException('La tienda no respondió a tiempo. Revisa el estado de tu reserva e inténtalo de nuevo.');
+    }
+    const result = outcome.resultado;
+    if (result && result.status === 'REJECTED') {
+      const message = result.message || 'La tienda no pudo extender la reserva.';
+      if (result.reason === 'NOT_FOUND') throw new NotFoundException(message);
+      if (result.reason === 'STORE_ERROR') throw new ServiceUnavailableException(message);
+      throw new ValidationException(message);
+    }
+    return this.portalReservationRepository.findById(reservationId);
   }
 }
 
@@ -163,6 +209,7 @@ class ApplyReservationEvents {
 
 module.exports = {
   RequestReservation,
+  ExtendPortalReservation,
   GetPortalReservationByCode,
   GetPortalReservationsByUser,
   CancelPortalReservation,

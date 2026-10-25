@@ -95,6 +95,11 @@ function storeCommandResultBody() {
     z.strictObject({
       status: z.enum(['APPLIED', 'IGNORED']),
       estado: z.enum(['CANCELADA', 'CONFIRMADA', 'EXPIRADA', 'DESCONOCIDA'])
+    }),
+    // Respuesta a RESERVATION_EXTEND: el nuevo vencimiento que fijó la tienda.
+    z.strictObject({
+      status: z.literal('EXTENDED'),
+      fechaExpiracion: z.iso.datetime({ offset: true })
     })
   ]);
 }

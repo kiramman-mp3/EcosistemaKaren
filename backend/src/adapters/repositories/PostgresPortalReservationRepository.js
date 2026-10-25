@@ -1,8 +1,10 @@
 const {
   NotFoundException,
   ValidationException,
-  ForbiddenException
+  ForbiddenException,
+  ConflictException
 } = require('../../domain/exceptions/DomainExceptions');
+const { RESERVATION_MAX_TOTAL_MINUTES } = require('../../domain/policies/BusinessRules');
 
 const ACTIVE_STATES = ['PENDIENTE_SYNC', 'PENDIENTE'];
 
@@ -144,6 +146,76 @@ class PostgresPortalReservationRepository {
   }
 
   /**
+   * Encola la extensión del plazo de una reserva aceptada. Valida lo que el portal ya sabe (dueño, estado,
+   * vencimiento y tope de 4 h desde su creación); la tienda lo vuelve a validar con su propia copia. El comando
+   * lleva el vencimiento de destino absoluto, no los minutos: si se reentrega, no extiende dos veces.
+   * @returns {{commandId: string, until: Date}}
+   */
+  async requestExtension(id, actor, minutes, maxTotalMinutes = RESERVATION_MAX_TOTAL_MINUTES) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query(
+        `SELECT cliente_id AS "clienteId", estado, fecha_expiracion AS "fechaExpiracion", created_at
+         FROM reservas_portal WHERE id = $1 FOR UPDATE`, [id]
+      );
+      if (!found.rows.length) throw new NotFoundException(`Reserva con ID '${id}' no encontrada.`);
+      const row = found.rows[0];
+      if (row.clienteId !== actor.id) {
+        throw new ForbiddenException('Solo el propietario puede extender la reserva.');
+      }
+      if (row.estado === 'PENDIENTE_SYNC') {
+        throw new ValidationException('La tienda aún está confirmando la reserva; inténtalo de nuevo en unos segundos.');
+      }
+      if (row.estado !== 'PENDIENTE') {
+        throw new ValidationException(`No se puede extender una reserva en estado ${row.estado}.`);
+      }
+      const current = new Date(row.fechaExpiracion);
+      if (current <= new Date()) {
+        throw new ValidationException('La reserva ya ha expirado y no puede extenderse.');
+      }
+      const until = new Date(current.getTime() + minutes * 60000);
+      if (until.getTime() > new Date(row.created_at).getTime() + maxTotalMinutes * 60000) {
+        throw new ValidationException(`Una reserva puede durar como máximo ${maxTotalMinutes / 60} horas en total.`);
+      }
+      const inFlight = await client.query(
+        "SELECT 1 FROM comandos_tienda WHERE reserva_id = $1 AND tipo = 'RESERVATION_EXTEND' AND estado <> 'RESUELTO'", [id]
+      );
+      if (inFlight.rows.length) throw new ConflictException('Ya hay una extensión de esta reserva en curso.');
+
+      const command = await client.query(`
+        INSERT INTO comandos_tienda (tipo, reserva_id, payload)
+        VALUES ('RESERVATION_EXTEND', $1, $2::jsonb)
+        RETURNING id
+      `, [id, JSON.stringify({
+        clienteId: row.clienteId, minutosAdicionales: minutes, hasta: until.toISOString(), maxTotalMinutos: maxTotalMinutes
+      })]);
+      await client.query('COMMIT');
+      return { commandId: command.rows[0].id, until };
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /** Estado de un comando y, si ya se resolvió, lo que respondió la tienda. */
+  async getCommandOutcome(commandId) {
+    const res = await this.pool.query('SELECT estado, resultado FROM comandos_tienda WHERE id = $1', [commandId]);
+    return res.rows[0] || null;
+  }
+
+  /** Descarta un comando que la tienda aún no recibió. Devuelve false si ya se le entregó. */
+  async abandonCommand(commandId) {
+    const res = await this.pool.query(
+      "UPDATE comandos_tienda SET estado = 'RESUELTO', resuelto_at = CURRENT_TIMESTAMP WHERE id = $1 AND estado = 'PENDIENTE'",
+      [commandId]
+    );
+    return res.rowCount === 1;
+  }
+
+  /**
    * Marca como EXPIRADA toda reserva que la tienda nunca llegó a aceptar y cuyo plazo venció, y
    * descarta su comando de creación si todavía no se entregó. Las que la tienda sí aceptó las
    * expira la propia tienda y se lo informa al portal.
@@ -274,6 +346,17 @@ class PostgresPortalReservationRepository {
         } else {
           throw new ValidationException('El resultado no corresponde a un comando de creación.');
         }
+      } else if (command.tipo === 'RESERVATION_EXTEND') {
+        if (result.status === 'EXTENDED') {
+          // GREATEST: un resultado atrasado nunca acorta un plazo que ya se extendió más.
+          await client.query(`
+            UPDATE reservas_portal
+            SET fecha_expiracion = GREATEST(fecha_expiracion, $2), updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND estado = 'PENDIENTE'
+          `, [command.reservaId, result.fechaExpiracion]);
+        } else if (result.status !== 'REJECTED') {
+          throw new ValidationException('El resultado no corresponde a un comando de extensión.');
+        }
       } else if (result.status === 'APPLIED' || result.status === 'IGNORED') {
         await this._applyStoreState(client, command.reservaId, result.estado);
       } else {
@@ -281,7 +364,8 @@ class PostgresPortalReservationRepository {
       }
 
       await client.query(
-        "UPDATE comandos_tienda SET estado = 'RESUELTO', resuelto_at = CURRENT_TIMESTAMP WHERE id = $1", [commandId]
+        "UPDATE comandos_tienda SET estado = 'RESUELTO', resuelto_at = CURRENT_TIMESTAMP, resultado = $2::jsonb WHERE id = $1",
+        [commandId, JSON.stringify(result)]
       );
       await client.query('COMMIT');
       return { applied: true };
