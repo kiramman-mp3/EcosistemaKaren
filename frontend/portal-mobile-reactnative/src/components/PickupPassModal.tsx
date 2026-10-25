@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import * as Clipboard from 'expo-clipboard';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 import { ReservationPass } from '../types';
 import { Button } from './ui';
 import { Illustration } from './Illustration';
@@ -9,6 +12,7 @@ import { Pulse, Stamp, tap } from './motion';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, formatMinutes } from '../config/reservationRules';
 import { getErrorMessage } from '../utils/errors';
+import { notify } from '../utils/dialogs';
 
 interface PickupPassModalProps {
   pass: ReservationPass;
@@ -36,6 +40,47 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
     const timer = setTimeout(() => setNotice(null), 3000);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  const ticketRef = useRef<View>(null);
+  const [copied, setCopied] = useState(false);
+  // Mientras se toma la imagen del pase se ocultan los botones, que no deben salir en ella.
+  const [capturing, setCapturing] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return undefined;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const copyCode = async () => {
+    try {
+      await Clipboard.setStringAsync(pass.code);
+      setCopied(true);
+      tap('success');
+    } catch {
+      notify('No se pudo copiar', 'Anota el código a mano o toma una captura de pantalla.');
+    }
+  };
+
+  // Imagen del pase (PNG) para guardarla o enviarla desde la hoja de compartir del teléfono.
+  const saveImage = async () => {
+    if (capturing || !ticketRef.current) return;
+    setCapturing(true);
+    try {
+      // Espera a que desaparezcan los botones antes de capturar.
+      await new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 60)));
+      const uri = await captureRef(ticketRef, { format: 'png', quality: 1, result: 'tmpfile' });
+      if (!(await Sharing.isAvailableAsync())) {
+        notify('No se pudo compartir la imagen', 'Este dispositivo no permite compartir archivos. Toma una captura de pantalla.');
+        return;
+      }
+      await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Pase de retiro', UTI: 'public.png' });
+    } catch {
+      notify('No se pudo guardar la imagen', 'Inténtalo de nuevo o toma una captura de pantalla.');
+    } finally {
+      setCapturing(false);
+    }
+  };
 
   const extend = async () => {
     if (!pass.id || !onExtend || extending) return;
@@ -67,7 +112,7 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.ticket}>
+          <View ref={ticketRef} collapsable={false} style={styles.ticket}>
             {!expired && (
               <Stamp style={styles.stamp}>
                 <Text style={styles.stampText}>¡APARTADO!</Text>
@@ -81,7 +126,19 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
             <View style={styles.qr}>
               <QRCode value={pass.code} size={170} ecl="M" color={colors.mora} backgroundColor="#FFFFFF" />
             </View>
-            <Text style={styles.code} accessibilityLabel={`Código ${pass.code.split('').join(' ')}`}>{pass.code}</Text>
+            <View style={styles.codeRow}>
+              <Text style={styles.code} accessibilityLabel={`Código ${pass.code.split('').join(' ')}`}>{pass.code}</Text>
+              {pass.code && !capturing ? (
+                <TouchableOpacity
+                  style={styles.copy}
+                  onPress={() => void copyCode()}
+                  accessibilityRole="button"
+                  accessibilityLabel={copied ? 'Código copiado' : 'Copiar código'}
+                >
+                  <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={20} color={copied ? '#0E7A43' : INK} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
 
             <View style={[styles.timer, expired ? styles.timerExpired : urgent ? styles.timerUrgent : null]} accessibilityLiveRegion="polite">
               {expired ? (
@@ -101,7 +158,7 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
               )}
             </View>
 
-            {!expired && pass.id && onExtend ? (
+            {!expired && pass.id && onExtend && !capturing ? (
               <View style={styles.extendBox}>
                 {pass.canExtend === false ? (
                   <Text style={styles.extendMax}>Llegaste al máximo de {formatMinutes(RESERVATION_MAX_TOTAL_MINUTES)} para esta reserva.</Text>
@@ -140,6 +197,16 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
             )}
             <Text style={styles.note}>Muestra este código en caja. Pagas ahí mismo.</Text>
           </View>
+          {!expired && pass.code ? (
+            <Button
+              label={capturing ? 'Preparando imagen…' : 'Guardar como imagen'}
+              icon="download-outline"
+              variant="outline"
+              loading={capturing}
+              onPress={() => void saveImage()}
+              style={styles.done}
+            />
+          ) : null}
           <Button label="Listo" variant="sticker" onPress={onClose} style={styles.done} />
         </ScrollView>
       </View>
@@ -161,7 +228,9 @@ const styles = themed(() => StyleSheet.create({
   customer: { fontFamily: fonts.medium, fontSize: 14, color: INK, textAlign: 'center', marginBottom: 12 },
   customerName: { fontFamily: fonts.tag },
   qr: { alignSelf: 'center', padding: 8, borderWidth: 2, borderColor: INK, borderRadius: radius.tag },
-  code: { fontFamily: fonts.stamp, fontSize: 38, color: INK, textAlign: 'center', letterSpacing: 2, marginTop: 10 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 },
+  code: { fontFamily: fonts.stamp, fontSize: 38, color: INK, textAlign: 'center', letterSpacing: 2 },
+  copy: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   timer: { backgroundColor: '#FFD400', borderRadius: radius.tag, borderWidth: 2, borderColor: INK, padding: 12, alignItems: 'center', marginTop: 12 },
   timerUrgent: { backgroundColor: '#FF7A1A' },
   timerExpired: { backgroundColor: '#EFEAF5' },
