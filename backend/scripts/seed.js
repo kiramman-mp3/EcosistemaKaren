@@ -353,7 +353,9 @@ function simulate({ products, lots, users }) {
     const t = TODAY - day * DAY_MS + hourLocal * 3600000 + randInt(0, 3599) * 1000;
     if (t < NOW - 15 * MIN_MS) events.push({ t, kind: 'reserva' });
   }
-  events.sort((a, b) => a.t - b.t);
+  // Un traslado, un vencimiento o un retiro calculado a partir de la fecha del lote puede caer
+  // después de este momento: esos eventos todavía no ocurrieron y no se siembran.
+  const timeline = events.filter(event => event.t < NOW).sort((a, b) => a.t - b.t);
 
   const allocate = (product, qty, t) => {
     const allocation = [];
@@ -429,7 +431,7 @@ function simulate({ products, lots, users }) {
     }
   };
 
-  for (const event of events) {
+  for (const event of timeline) {
     const { lot, t } = event;
     if (event.kind === 'ingreso') {
       lot.received = true;
@@ -535,10 +537,10 @@ function buildAlertsAndPromotions(lots, users) {
     };
     if (estado === 'APROBADA') {
       row.aprobada_por = pick(admins).id;
-      row.aprobada_at = iso(createdAt + randInt(10, 240) * MIN_MS);
+      row.aprobada_at = iso(Math.min(NOW - MIN_MS, createdAt + randInt(10, 240) * MIN_MS));
     } else if (estado === 'RECHAZADA') {
       row.rechazada_por = pick(admins).id;
-      row.rechazada_at = iso(createdAt + randInt(10, 240) * MIN_MS);
+      row.rechazada_at = iso(Math.min(NOW - MIN_MS, createdAt + randInt(10, 240) * MIN_MS));
       row.motivo_rechazo = pick(REJECT_REASONS);
     }
     promotions.push(row);
