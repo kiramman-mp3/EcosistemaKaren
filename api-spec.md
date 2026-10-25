@@ -71,7 +71,9 @@ públicamente en `GET /api/v1/media/productos/<archivo>` (`ETag`, `Cache-Control
 
 `POST /internal/v1/store/sync/catalog`, autenticado con la cabecera `x-store-key` y fuera de la
 API pública. Cuerpo: `{ "section": "categorias|productos|lotes|promociones", "version": <entero creciente>, "items": [...] }`.
-Es un snapshot completo de la sección: el portal reemplaza su copia. Responde
+Es un snapshot completo de la sección: el portal reemplaza su copia. Los productos incluyen `createdAt` y
+`vendidos30d`, opcionales para que una tienda con una versión anterior siga sincronizando: si faltan, el
+portal conserva lo que tenía (o usa la fecha actual y 0 en un producto nuevo). Responde
 `{ "success": true, "section", "version", "applied", "count" }`; si ya tiene una versión igual o
 mayor, `applied` es `false` y devuelve `currentVersion`. Campos no incluidos en el contrato
 (costos, ubicación, razones de IA, etc.) se rechazan con `400`. Solo está disponible cuando
@@ -100,11 +102,17 @@ Consulta el catálogo con búsqueda y paginación. Admite `q`, `categoriaId`, `l
       "descripcion": "Leche pasteurizada UHT",
       "precioVenta": 0.95,
       "impuestoPorcentaje": 15,
-      "minStockAlerta": 20
+      "minStockAlerta": 20,
+      "vendidos30d": 118,
+      "created_at": "2026-03-14T15:20:00.000Z"
     }
   ]
 }
 ```
+* `created_at` es el alta real del producto en la tienda y `vendidos30d` las unidades vendidas (movimientos
+  `VENTA`) en los últimos 30 días. Con ellos los portales marcan **Nuevo** (alta de hace 14 días o menos) y
+  **Más vendido** (el 10 % superior del catálogo, solo productos con ventas). En portal-api llegan con la
+  sincronización del catálogo; en store-api y el monolito se calculan al consultar.
 
 ### `GET /products/barcode/:barcode`
 Busca un producto por lectura de código de barras.

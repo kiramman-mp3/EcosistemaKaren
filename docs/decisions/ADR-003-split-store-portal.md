@@ -58,7 +58,9 @@ desde el último envío confirmado, y todas cada 10 minutos para que el portal s
 datos. Se eligieron snapshots por sección y no deltas porque el catálogo es pequeño, no hay
 orden de eventos que preservar y un envío fallido se corrige solo con el siguiente.
 
-- **Qué viaja:** categorías, productos (sin stock mínimo), lotes vigentes con existencias
+- **Qué viaja:** categorías, productos (sin stock mínimo, con su fecha de alta y las unidades
+  vendidas en los últimos 30 días, que alimentan los filtros "Nuevos" y "Más vendidos"; esa cifra
+  cambia con cada venta, así que la sección de productos se reenvía más a menudo), lotes vigentes con existencias
   (`estado = ACTIVO`, no vencidos, `cantidad_disponible > 0`) y promociones aprobadas y activas
   sobre esos lotes. Nunca costos, ubicación, fechas de elaboración, cantidades reservadas,
   razones ni metadatos de IA, ni quién aprobó una promoción. El esquema rechaza cualquier campo
