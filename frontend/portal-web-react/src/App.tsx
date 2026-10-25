@@ -84,6 +84,11 @@ export const App: React.FC = () => {
     toastTimer.current = window.setTimeout(() => setToastMessage(null), 3500);
   }, []);
 
+  // Con la lista abierta el aviso sobra (el producto ya se ve en ella) y taparía el selector de tiempo.
+  useEffect(() => {
+    if (isCartOpen) setToastMessage(null);
+  }, [isCartOpen]);
+
   const goTo = useCallback((tab: NavTab) => {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
