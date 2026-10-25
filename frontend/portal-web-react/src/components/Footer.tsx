@@ -3,6 +3,7 @@ import { Phone, Mail, MapPin, Clock, MessageSquare, ShieldCheck, FileText, Exter
 import { NavTab } from '../types';
 import { Logo } from './ui/Logo';
 import { StoreMap } from './ui/StoreMap';
+import { STORE_INFO, whatsappLink } from '../config/storeInfo';
 
 interface FooterProps {
   onNavigate: (tab: NavTab) => void;
@@ -37,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
                 <Logo alt="Supermercado Karen Logo" className="w-full" />
               </div>
               <div className="min-w-0">
-                <span className="block font-display font-extrabold text-xl leading-tight">Supermercado Karen</span>
+                <span className="block font-display font-extrabold text-xl leading-tight">{STORE_INFO.tradeName}</span>
                 <span className="text-sm text-ink-muted">Apártalo hoy, retíralo en caja</span>
               </div>
             </div>
@@ -55,11 +56,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
             <ul className="space-y-2.5 text-sm">
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-karen-text shrink-0" />
-                <a href="tel:+59342987654" className="hover:text-karen-text transition-colors">(04) 2-987654 / 2-987655</a>
+                <a href={STORE_INFO.phone.href} className="hover:text-karen-text transition-colors">{STORE_INFO.phone.label}</a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-karen-text shrink-0" />
-                <a href="mailto:atencion@karen.com.ec" className="hover:text-karen-text transition-colors">atencion@karen.com.ec</a>
+                <a href={`mailto:${STORE_INFO.email}`} className="hover:text-karen-text transition-colors">{STORE_INFO.email}</a>
               </li>
             </ul>
             <button onClick={onOpenChat} className="inline-flex items-center gap-2 text-sm font-bold text-aguacate hover:text-karen-text transition-colors">
@@ -68,7 +69,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
             </button>
             <div className="flex flex-col gap-2 pt-1">
               <a
-                href="https://wa.me/593983553724?text=Hola%20Supermercado%20Karen,%20necesito%20ayuda%20con%20una%20reserva"
+                href={whatsappLink(`Hola ${STORE_INFO.tradeName}, necesito ayuda con una reserva`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={channel}
@@ -78,12 +79,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
                 </span>
                 <span className="flex flex-col text-left">
                   <span className="text-sm font-extrabold leading-none">WhatsApp Oficial</span>
-                  <span className="text-xs leading-none mt-1 tabular">+593 98 355 3724</span>
+                  <span className="text-xs leading-none mt-1 tabular">{STORE_INFO.whatsapp.label}</span>
                 </span>
                 <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-60 group-hover:opacity-100" />
               </a>
               <a
-                href="https://www.facebook.com/profile.php?id=100063795716014"
+                href={STORE_INFO.facebookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={channel}
@@ -105,11 +106,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-karen-text shrink-0 mt-0.5" />
-                <span>Av. Principal 1024 y Calle 4ta, Guayaquil</span>
+                <span>{STORE_INFO.address}, {STORE_INFO.city}</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Clock className="w-4 h-4 text-karen-text shrink-0 mt-0.5" />
-                <span>Lunes a Sábado: 07:00 – 21:00 · Domingos: 08:00 – 19:00</span>
+                <span>{STORE_INFO.hours.long}</span>
               </li>
             </ul>
             <button
@@ -148,7 +149,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
 
       <div className="border-t-2 border-aisle-rule pt-4 pb-16 sm:pb-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ink-muted">
-          <p>© {new Date().getFullYear()} Supermercado Karen S.A. · RUC 0992345678001</p>
+          <p>© {new Date().getFullYear()} {STORE_INFO.tradeName} · {STORE_INFO.legalName} · RUC {STORE_INFO.ruc}</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <button onClick={() => onOpenTerms('reservas')} className="hover:text-karen-text transition-colors underline underline-offset-2">
               Política de Reserva (TTL)
@@ -156,7 +157,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate: _onNavigate, onOpenT
             <button onClick={() => onOpenTerms('privacidad')} className="hover:text-karen-text transition-colors underline underline-offset-2">
               Protección de Datos LOPDP
             </button>
-            <span>Guayaquil, Ecuador</span>
+            <span>{STORE_INFO.city}, Ecuador</span>
           </div>
         </div>
       </div>

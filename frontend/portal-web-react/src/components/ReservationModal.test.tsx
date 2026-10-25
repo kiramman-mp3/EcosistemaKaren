@@ -10,7 +10,7 @@ describe('ReservationModal', () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     render(<ReservationModal isOpen onClose={() => {}} pass={{
       code: 'KR-TEST01', status: 'ACTIVA', initialSeconds: 600, remainingSeconds: 590,
-      customerName: 'Cliente', storeLocation: 'Sucursal Matriz', items: [], total: 0,
+      customerName: 'Cliente', storeLocation: 'Supermercado Karen', items: [], total: 0,
     }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Guardar comprobante como imagen' }));
