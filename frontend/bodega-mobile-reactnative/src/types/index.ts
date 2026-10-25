@@ -11,6 +11,14 @@ export interface BackendCategory {
   created_at?: string;
 }
 
+/** Resultado de subir una foto de producto: lo que el servidor recibió y lo que guardó tras comprimirla. */
+export interface ProductImageInfo {
+  width: number;
+  height: number;
+  bytes: number;
+  originalBytes: number;
+}
+
 export interface BackendProduct {
   id: string;
   categoriaId: string;

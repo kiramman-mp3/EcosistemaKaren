@@ -1,4 +1,3 @@
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -8,6 +7,7 @@ const { testConnection, getPool } = require('../../infrastructure/db/postgres');
 const { runMigrations } = require('../../infrastructure/db/migrations');
 const { createSecurityMiddlewares, validateProductionSecurity, cookieCsrfProtection } = require('../../infrastructure/http/middlewares/security');
 const { assertNoDefaultAccounts } = require('../../infrastructure/security/defaultAccounts');
+const { resolveMediaDir } = require('../../infrastructure/media/mediaPaths');
 const { createHealthRouter } = require('../../infrastructure/http/health');
 const { createAccessLog, isEnabled: accessLogEnabled } = require('../../infrastructure/http/middlewares/accessLog');
 
@@ -66,8 +66,7 @@ async function createBaseApp({ database = 'store', migrations = ['store'] } = {}
   if (database === 'portal') {
     app.use('/api/v1/media', (req, res, next) => (app.locals.serveMedia ? app.locals.serveMedia(req, res, next) : next()));
   } else {
-    const mediaDir = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.resolve(__dirname, '../../../public/media');
-    app.use('/api/v1/media', express.static(mediaDir, { maxAge: '7d', fallthrough: false }));
+    app.use('/api/v1/media', express.static(resolveMediaDir(process.env.MEDIA_DIR), { maxAge: '7d', fallthrough: false }));
   }
   app.use('/api/v1', httpSecurity.general);
   app.use('/api/v1/auth', httpSecurity.auth);

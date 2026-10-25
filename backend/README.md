@@ -90,6 +90,14 @@ reservas, que encarga a la tienda.
 
 ### Fotos de productos
 
+**Subida y compresión.** `PUT /api/v1/products/:id/image` (ADMIN o BODEGUERO, store-api) acepta la foto tal como sale
+de la cámara (JPEG, PNG, WebP o HEIC, hasta 15 MB y 120 MP). Con `sharp` la endereza según EXIF, la reduce a 1024 px
+por lado como máximo, la convierte a JPEG progresivo (calidad 80, baja hasta 40 si pasara de 2 MB), le quita los
+metadatos y la guarda como `<código>-<hash>.jpg` en `MEDIA_DIR`. Una foto de 12 MP queda en 100-250 KB. Se rechazan
+archivos que no sean imágenes y "bombas" de píxeles. Luego el worker la sincroniza con el portal (abajo).
+
+**Sincronización con el portal.**
+
 Las fotos locales (`/api/v1/media/productos/<archivo>`) viajan con el catálogo: store-api manda al portal el
 manifiesto (ruta y SHA-256) en `POST /internal/v1/store/sync/media/manifest`, el portal responde cuáles le faltan
 y la tienda las sube una a una con `PUT /internal/v1/store/sync/media?ruta=…`. El portal las guarda en su base

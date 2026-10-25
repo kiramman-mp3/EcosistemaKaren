@@ -91,6 +91,8 @@ jobs:
       - run: docker build -t karen-backend backend
       - name: La imagen no corre como root
         run: test "$(docker run --rm --entrypoint id karen-backend -u)" != "0"
+      - name: sharp (compresión de fotos) funciona dentro de la imagen
+        run: docker run --rm --entrypoint node karen-backend -e "require('sharp')({create:{width:8,height:8,channels:3,background:'#fff'}}).jpeg().toBuffer().then(b=>{if(!b.length)process.exit(1)})"
       - name: El compose de ejemplo es válido
         env:
           DB_NAME: karen

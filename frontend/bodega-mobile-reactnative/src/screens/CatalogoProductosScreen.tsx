@@ -4,11 +4,14 @@ import {
   RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { api, mediaUrl } from '../api/client';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { BackendCategory, BackendProduct } from '../types';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { notify } from '../utils/dialogs';
+import { formatBytes } from '../utils/photo';
+import { compressPhoto } from '../utils/photoUpload';
 import { Button, Chip, EmptyState, Field, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorStatus, getServerMessage } from '../utils/errors';
@@ -37,8 +40,11 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
   const [categoryForm, setCategoryForm] = useState({ nombre: '', descripcion: '' });
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
+  const [photoTarget, setPhotoTarget] = useState<BackendProduct | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const requestId = useRef(0);
   const canCreate = role === 'ADMIN';
+  const canEditPhoto = role === 'ADMIN' || role === 'BODEGUERO';
 
   const load = useCallback(async (append = false) => {
     const id = ++requestId.current;
@@ -65,6 +71,37 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     // products.length se excluye a propósito: solo los filtros inician una búsqueda nueva.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, categoryId]);
+
+  // Foto del producto: cámara o galería -> se reduce en el teléfono -> el servidor la comprime y la guarda.
+  const pickPhoto = async (source: 'camera' | 'library') => {
+    const product = photoTarget;
+    setPhotoTarget(null);
+    if (!product) return;
+    try {
+      if (source === 'camera') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          notify('Sin permiso de cámara', 'Activa el permiso de la cámara para esta app en los ajustes del teléfono.');
+          return;
+        }
+      }
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false };
+      const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+      const asset = result.canceled ? undefined : result.assets?.[0];
+      if (!asset) return;
+
+      setUploadingId(product.id);
+      const compressed = await compressPhoto(asset.uri, asset.width, asset.height);
+      const { product: updated, image } = await api.uploadProductImage(product.id, compressed.uri);
+      setProducts(current => current.map(item => (item.id === updated.id ? { ...item, imagenUrl: updated.imagenUrl } : item)));
+      notify('Foto actualizada', `Se envió ${formatBytes(image.originalBytes)} y se guardó ${formatBytes(image.bytes)} (${image.width}×${image.height}).`);
+      void onCatalogChanged();
+    } catch (error: unknown) {
+      notify('No se pudo guardar la foto', getServerMessage(error) || 'Revisa la conexión con la tienda e inténtalo de nuevo.');
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   const openRegistration = (code = '') => {
     setBarcode(normalizeBarcode(code));
@@ -189,11 +226,20 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
         const image = mediaUrl(item.imagenUrl);
         return (
           <View style={styles.row}>
-            <View style={styles.thumb}>
-              {image
-                ? <Image source={{ uri: image }} style={styles.thumbImage} resizeMode="contain" accessibilityIgnoresInvertColors />
-                : <Ionicons name="image-outline" size={24} color={colors.inkFaint} />}
-            </View>
+            <TouchableOpacity
+              style={styles.thumb}
+              disabled={!canEditPhoto || uploadingId !== null}
+              onPress={() => setPhotoTarget(item)}
+              accessibilityRole={canEditPhoto ? 'button' : undefined}
+              accessibilityLabel={canEditPhoto ? `Cambiar la foto de ${item.nombre}` : `Foto de ${item.nombre}`}
+            >
+              {uploadingId === item.id
+                ? <ActivityIndicator color={colors.ink} />
+                : image
+                  ? <Image source={{ uri: image }} style={styles.thumbImage} resizeMode="contain" accessibilityIgnoresInvertColors />
+                  : <Ionicons name={canEditPhoto ? 'camera-outline' : 'image-outline'} size={24} color={colors.inkFaint} />}
+              {canEditPhoto && uploadingId !== item.id && image ? <View style={styles.cameraBadge}><Ionicons name="camera" size={11} color="#FFFFFF" /></View> : null}
+            </TouchableOpacity>
             <View style={styles.rowInfo}>
               <Text style={styles.name} numberOfLines={2}>{item.nombre}</Text>
               <Text style={styles.meta} numberOfLines={1}>{categoryName(item.categoriaId)}</Text>
@@ -254,6 +300,23 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
       </KeyboardAvoidingView>
     </Modal>
 
+    <Modal visible={photoTarget !== null} transparent animationType="fade" onRequestClose={() => setPhotoTarget(null)}>
+      <View style={styles.centerBackdrop}>
+        <View style={styles.dialog}>
+          <View style={styles.sheetHead}>
+            <Text style={styles.sheetTitle} numberOfLines={2}>Foto de {photoTarget?.nombre}</Text>
+            <TouchableOpacity onPress={() => setPhotoTarget(null)} accessibilityLabel="Cerrar" style={styles.close}>
+              <Ionicons name="close" size={26} color={colors.inkMuted} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.photoHint}>La foto se reduce y comprime sola: puedes usar la original de la cámara.</Text>
+          <Button label="Tomar foto" icon="camera" variant="danger" onPress={() => void pickPhoto('camera')} />
+          <View style={styles.photoGap} />
+          <Button label="Elegir de la galería" icon="images-outline" variant="outline" onPress={() => void pickPhoto('library')} />
+        </View>
+      </View>
+    </Modal>
+
     <Modal visible={categoryFormOpen} transparent animationType="fade" onRequestClose={() => setCategoryFormOpen(false)}>
       <KeyboardAvoidingView style={styles.centerBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.dialog}>
@@ -294,6 +357,9 @@ const styles = themed(() => StyleSheet.create({
   },
   thumb: { width: 60, height: 60, borderRadius: radius.tag, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   thumbImage: { width: 60, height: 60 },
+  cameraBadge: { position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  photoHint: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.inkSoft, marginBottom: 14 },
+  photoGap: { height: 10 },
   rowInfo: { flex: 1, minWidth: 0 },
   name: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
   meta: { fontFamily: fonts.body, fontSize: 12, color: colors.inkMuted, marginTop: 2 },

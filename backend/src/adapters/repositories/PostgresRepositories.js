@@ -112,6 +112,25 @@ class PostgresProductRepository {
     return res.rows.length ? new Product(res.rows[0]) : null;
   }
 
+  async updateImage(id, imagenUrl) {
+    const res = await this.pool.query(
+      `UPDATE productos SET imagen_url = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1
+       RETURNING id, categoria_id as "categoriaId", codigo_barras as "codigoBarras",
+                 nombre, descripcion, precio_venta as "precioVenta",
+                 impuesto_porcentaje as "impuestoPorcentaje",
+                 min_stock_alerta as "minStockAlerta", imagen_url as "imagenUrl",
+                 created_at, updated_at`,
+      [id, imagenUrl]
+    );
+    return res.rows.length ? new Product(res.rows[0]) : null;
+  }
+
+  /** Cuántos productos usan esa foto: una foto compartida no se borra del disco. */
+  async countByImageUrl(imagenUrl) {
+    const res = await this.pool.query('SELECT COUNT(*)::int AS total FROM productos WHERE imagen_url = $1', [imagenUrl]);
+    return Number(res.rows[0].total);
+  }
+
   async save(product) {
     const res = await this.pool.query(
       `INSERT INTO productos (categoria_id, codigo_barras, nombre, descripcion, precio_venta, impuesto_porcentaje, min_stock_alerta)

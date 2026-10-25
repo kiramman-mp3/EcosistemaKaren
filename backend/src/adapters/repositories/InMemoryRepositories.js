@@ -228,7 +228,15 @@ class InMemoryRepositories {
         const prod = new Product({ id: randomUUID(), ...prodData });
         this.products.push(prod);
         return prod;
-      }
+      },
+      updateImage: async (id, imagenUrl) => {
+        const prod = this.products.find(p => p.id === id);
+        if (!prod) return null;
+        prod.imagenUrl = imagenUrl;
+        prod.updated_at = new Date();
+        return prod;
+      },
+      countByImageUrl: async (imagenUrl) => this.products.filter(p => p.imagenUrl === imagenUrl).length
     };
   }
 

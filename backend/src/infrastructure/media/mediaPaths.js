@@ -7,7 +7,12 @@
 const path = require('node:path');
 
 const MEDIA_URL_PREFIX = '/api/v1/media/';
+// Tamaño máximo de una foto ya procesada (la que se guarda, se sincroniza y se sirve).
 const MAX_MEDIA_BYTES = 2 * 1024 * 1024;
+// Tamaño máximo de la foto original que se sube: una foto de cámara de 12-50 MP pesa entre 3 y 15 MB.
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+// Tipos con los que se sube una foto de producto (la app puede enviar la original de la cámara).
+const UPLOAD_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 const CONTENT_TYPES = {
   '.jpg': 'image/jpeg',
@@ -27,9 +32,17 @@ function contentTypeFor(mediaPath) {
   return CONTENT_TYPES[path.extname(mediaPath).toLowerCase()] || null;
 }
 
+/** Carpeta de medios: la configurada (MEDIA_DIR) o backend/public/media. */
+function resolveMediaDir(configured) {
+  return configured ? path.resolve(configured) : path.resolve(__dirname, '../../../public/media');
+}
+
 /** Ruta dentro de la carpeta de medios (`/api/v1/media/productos/x.jpg` -> `<dir>/productos/x.jpg`). */
 function localFileFor(mediaDir, mediaPath) {
   return path.join(mediaDir, mediaPath.slice(MEDIA_URL_PREFIX.length));
 }
 
-module.exports = { MEDIA_URL_PREFIX, MAX_MEDIA_BYTES, MEDIA_PATH_PATTERN, isMediaPath, contentTypeFor, localFileFor };
+module.exports = {
+  MEDIA_URL_PREFIX, MAX_MEDIA_BYTES, MAX_UPLOAD_BYTES, UPLOAD_CONTENT_TYPES, MEDIA_PATH_PATTERN,
+  isMediaPath, contentTypeFor, localFileFor, resolveMediaDir
+};

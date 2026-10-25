@@ -1,4 +1,6 @@
-const path = require('node:path');
+const { resolveMediaDir } = require('../../infrastructure/media/mediaPaths');
+const SharpImageProcessor = require('../../infrastructure/media/SharpImageProcessor');
+const LocalMediaStorage = require('../../infrastructure/media/LocalMediaStorage');
 const createAuthMiddleware = require('../../infrastructure/http/middlewares/auth');
 const AlertStreamManager = require('../../infrastructure/sse/AlertStreamManager');
 const ReservationCleanerWorker = require('../../infrastructure/workers/ReservationCleanerWorker');
@@ -19,7 +21,7 @@ const aiMetrics = require('../../infrastructure/metrics/AiMetricsCollector');
 const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
-const { GetProducts, GetProductByBarcode, CreateProduct } = require('../../use-cases/products/ProductUseCases');
+const { GetProducts, GetProductByBarcode, CreateProduct, SetProductImage } = require('../../use-cases/products/ProductUseCases');
 const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
 const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const {
@@ -73,7 +75,12 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
   const productController = new ProductController(
     new GetProducts(productRepo),
     new GetProductByBarcode(productRepo),
-    store ? new CreateProduct(productRepo, categoryRepo) : undefined
+    store ? new CreateProduct(productRepo, categoryRepo) : undefined,
+    store ? new SetProductImage({
+      productRepository: productRepo,
+      imageProcessor: new SharpImageProcessor(),
+      mediaStorage: new LocalMediaStorage({ mediaDir: resolveMediaDir(serviceConfig.mediaDir) })
+    }) : undefined
   );
   const getPublicLotAvailabilityUC = new GetPublicLotAvailability(lotRepo);
   const getReservationByCodeUC = new GetReservationByCode(reservationRepo);
@@ -200,9 +207,7 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
           listPaths: async () => (await pool.query(
             "SELECT DISTINCT imagen_url FROM productos WHERE imagen_url LIKE '/api/v1/media/%'"
           )).rows.map(row => row.imagen_url),
-          mediaDir: serviceConfig.mediaDir
-            ? path.resolve(serviceConfig.mediaDir)
-            : path.resolve(__dirname, '../../../public/media'),
+          mediaDir: resolveMediaDir(serviceConfig.mediaDir),
           transport: new HttpMediaSyncTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey }),
           intervalMs: serviceConfig.mediaSyncIntervalMs
         }));

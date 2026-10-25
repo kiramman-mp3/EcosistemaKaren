@@ -5,6 +5,7 @@ import { clearSession, loadSession, saveSession, StoredStaffUser } from '../auth
 import {
   BackendLot,
   BackendProduct,
+  ProductImageInfo,
   BackendCategory,
   CreateProductPayload,
   BackendPromotion,
@@ -146,6 +147,37 @@ export const api = {
       `${getServerUrl()}/products`, payload, authorizedConfig(6000)
     );
     return res.data.data;
+  },
+
+  /**
+   * Sube la foto de un producto (archivo local, ya reducido en el teléfono). El servidor la vuelve a comprimir
+   * y la sincroniza con el portal. Se usa fetch y no axios porque el cuerpo es un archivo binario.
+   */
+  async uploadProductImage(productId: string, fileUri: string): Promise<{ product: BackendProduct; image: ProductImageInfo }> {
+    const photo = await (await fetch(fileUri)).blob();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    try {
+      const response = await fetch(`${getServerUrl()}/products/${encodeURIComponent(productId)}/image`, {
+        method: 'PUT',
+        headers: { 'Content-Type': photo.type || 'image/jpeg', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+        body: photo,
+        signal: controller.signal,
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 401) {
+          authToken = null;
+          await clearSession();
+          sessionExpiredListener?.();
+        }
+        // Misma forma que un error de axios, para que getServerMessage/getErrorStatus lo entiendan.
+        throw Object.assign(new Error(body.message || 'No se pudo subir la foto.'), { response: { status: response.status, data: body } });
+      }
+      return { product: body.data, image: body.image };
+    } finally {
+      clearTimeout(timer);
+    }
   },
 
   // 3. Gestión de Lotes (Bodega e Inventario)

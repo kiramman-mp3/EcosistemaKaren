@@ -15,6 +15,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
+const sharp = require('sharp');
 const { Pool } = require('pg');
 
 const BACKEND = path.resolve(__dirname, '..');
@@ -238,6 +239,31 @@ async function run() {
   check('la tienda libera el stock', afterAdmin.r === reserved.r - 1 && afterAdmin.d === reserved.d + 1);
   check('el portal pasa a CANCELADA por el aviso de la tienda', Boolean(await waitFor(async () => (await portalDb.query('SELECT estado FROM reservas_portal WHERE id = $1', [toCancelId])).rows[0].estado === 'CANCELADA', 15000)));
   check('el cliente ve la reserva cancelada', (await portal('GET', `/reservations/code/${toCancel.body.data?.codigoRetiro}`, null, client)).body.data?.estado === 'CANCELADA');
+
+  console.log('');
+  console.log('Foto tomada con la cámara');
+  // Foto de 12 MP con ruido (no comprime bien) y orientación EXIF, como la que entrega un teléfono.
+  const camera = await sharp(crypto.randomBytes(4000 * 3000 * 3), { raw: { width: 4000, height: 3000, channels: 3 } })
+    .withMetadata({ orientation: 6 }).jpeg({ quality: 95 }).toBuffer();
+  const uploadUrl = `http://127.0.0.1:${STORE_PORT}/api/v1/products/${data.productId}/image`;
+  const uploaded = await fetch(uploadUrl, { method: 'PUT', headers: { 'content-type': 'image/jpeg', authorization: `Bearer ${admin}` }, body: camera });
+  const uploadedBody = await uploaded.json().catch(() => ({}));
+  check('la tienda acepta la foto original de la cámara', uploaded.status === 200, `${uploaded.status} (${(camera.length / 1048576).toFixed(1)} MB)`);
+  check('la comprime a menos de 500 KB', uploadedBody.image?.bytes < 500 * 1024, `${Math.round((uploadedBody.image?.bytes || 0) / 1024)} KB`);
+  const newPath = uploadedBody.data?.imagenUrl || '';
+  const fromStore = await fetch(`http://127.0.0.1:${STORE_PORT}${newPath}`);
+  check('la tienda sirve la foto comprimida', fromStore.status === 200 && fromStore.headers.get('content-type') === 'image/jpeg');
+  const storeBytes = Buffer.from(await fromStore.arrayBuffer());
+  const atPortal = await waitFor(async () => {
+    const response = await fetch(`http://127.0.0.1:${PORTAL_PORT}${newPath}`).catch(() => null);
+    return response && response.status === 200 ? response : null;
+  }, 60000);
+  check('la foto comprimida llega al portal', Boolean(atPortal) && Buffer.from(await atPortal.arrayBuffer()).equals(storeBytes));
+  check('el portal muestra la nueva dirección de la foto en el producto', Boolean(await waitFor(async () => {
+    const product = (await portal('GET', `/products/barcode/${String(STAMP).padStart(13, '7')}`)).body.data;
+    return product?.imagenUrl === newPath;
+  }, 30000)));
+  check('un cliente no puede cambiar la foto', [401, 403].includes((await fetch(uploadUrl, { method: 'PUT', headers: { 'content-type': 'image/jpeg', authorization: `Bearer ${client}` }, body: camera.subarray(0, 1000) })).status));
 }
 
 async function main() {

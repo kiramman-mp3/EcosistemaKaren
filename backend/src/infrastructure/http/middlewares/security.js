@@ -3,6 +3,7 @@ const helmet = require('helmet');
 const hpp = require('hpp');
 const { rateLimit } = require('express-rate-limit');
 const { ValidationException } = require('../../../domain/exceptions/DomainExceptions');
+const { UPLOAD_CONTENT_TYPES } = require('../../media/mediaPaths');
 
 function positiveInteger(value, fallback) {
   const parsed = Number(value);
@@ -34,7 +35,11 @@ function rejectDangerousKeys(req, res, next) {
   return next();
 }
 
+// PUT /api/v1/products/:id/image recibe la foto como binario, no como JSON.
+const PHOTO_UPLOAD_PATH = /^\/api\/v1\/products\/[^/]+\/image\/?$/;
+
 function normalizeJsonBody(req, res, next) {
+  if (req.method === 'PUT' && PHOTO_UPLOAD_PATH.test(req.path) && req.is(UPLOAD_CONTENT_TYPES)) return next();
   // Un POST sin datos (cerrar sesión, cancelar) llega con Content-Length: 0 y sin Content-Type: no es un cuerpo.
   const hasBody = Number(req.headers['content-length']) > 0 || req.headers['transfer-encoding'] !== undefined;
   if (hasBody && ['POST', 'PUT', 'PATCH'].includes(req.method) && !req.is('application/json')) {

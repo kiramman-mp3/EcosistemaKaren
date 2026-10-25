@@ -1,5 +1,7 @@
+const express = require('express');
 const validate = require('../middlewares/validateRequest');
 const schemas = require('../validation/requestSchemas');
+const { MAX_UPLOAD_BYTES, UPLOAD_CONTENT_TYPES } = require('../../media/mediaPaths');
 
 // Cada grupo registra un conjunto de rutas en un Router. Los routers de store-api y
 // portal-api (y el monolito de transición) se arman combinando grupos, de modo que
@@ -27,6 +29,15 @@ function catalogReadRoutes(router, { categoryController, productController, lotC
 function catalogAdminRoutes(router, { categoryController, productController }, { authenticate, authorize }) {
   router.post('/categories', authenticate, authorize('ADMIN'), validate({ body: schemas.categoryBody }), (req, res, next) => categoryController.createCategory(req, res, next));
   router.post('/products', authenticate, authorize('ADMIN'), validate({ body: schemas.productBody }), (req, res, next) => productController.createProduct(req, res, next));
+  // Foto del producto (binario, p. ej. directo de la cámara): se autentica antes de leer el cuerpo.
+  router.put(
+    '/products/:id/image',
+    authenticate,
+    authorize('ADMIN', 'BODEGUERO'),
+    validate({ params: schemas.idParams }),
+    express.raw({ type: UPLOAD_CONTENT_TYPES, limit: MAX_UPLOAD_BYTES }),
+    (req, res, next) => productController.setImage(req, res, next)
+  );
 }
 
 function inventoryRoutes(router, { lotController }, { authenticate, authorize }) {
