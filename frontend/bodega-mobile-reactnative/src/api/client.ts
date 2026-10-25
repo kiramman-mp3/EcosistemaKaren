@@ -8,6 +8,7 @@ import {
   ProductImageInfo,
   BackendCategory,
   CreateProductPayload,
+  UpdateProductPayload,
   BackendPromotion,
   BackendReservation,
   CreateLotPayload,
@@ -150,6 +151,14 @@ export const api = {
       `${getServerUrl()}/products`, payload, authorizedConfig(6000)
     );
     return res.data.data;
+  },
+
+  /** Edita nombre, descripción, pasillo, IVA, stock mínimo y PVP de un producto (solo ADMIN). El EAN no cambia. */
+  async updateProduct(productId: string, payload: UpdateProductPayload): Promise<{ product: BackendProduct; cambioPrecio: PriceChange | null }> {
+    const res = await axios.put<{ success: boolean; data: BackendProduct; cambioPrecio?: PriceChange | null }>(
+      `${getServerUrl()}/products/${encodeURIComponent(productId)}`, payload, authorizedConfig(6000)
+    );
+    return { product: res.data.data, cambioPrecio: res.data.cambioPrecio ?? null };
   },
 
   /**

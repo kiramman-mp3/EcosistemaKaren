@@ -44,6 +44,16 @@ export interface CreateProductPayload {
   minStockAlerta?: number;
 }
 
+/** Edición de un producto: sin código de barras, que no se cambia. `descripcion: null` la borra. */
+export interface UpdateProductPayload {
+  categoriaId: string;
+  nombre: string;
+  descripcion: string | null;
+  precioVenta: number;
+  impuestoPorcentaje: number;
+  minStockAlerta: number;
+}
+
 export interface BackendLot {
   id: string;
   productoId: string;
