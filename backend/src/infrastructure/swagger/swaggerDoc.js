@@ -74,6 +74,32 @@ const swaggerDocument = {
         }
       }
     },
+    '/products/{id}/image': {
+      put: {
+        tags: ['Productos'],
+        summary: 'Subir o reemplazar la foto de un producto (se comprime)',
+        description: 'ADMIN o BODEGUERO. El cuerpo es la foto en binario, tal como sale de la cámara (JPEG, PNG, WebP o HEIC; hasta 15 MB y 120 MP). El servidor la endereza según su orientación EXIF, la reduce a un máximo de 1024 px por lado, la convierte a JPEG, le quita los metadatos (ubicación, cámara) y la guarda con un nombre que incluye su hash. La tienda la sincroniza luego con el portal.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'image/jpeg': { schema: { type: 'string', format: 'binary' } },
+            'image/png': { schema: { type: 'string', format: 'binary' } },
+            'image/webp': { schema: { type: 'string', format: 'binary' } }
+          }
+        },
+        responses: {
+          '200': { description: 'Foto guardada. `data` es el producto con su nuevo `imagenUrl`; `image` indica ancho, alto y bytes antes y después.' },
+          '400': { description: 'El archivo no es una imagen legible o tiene demasiados píxeles' },
+          '401': { description: 'Sin sesión' },
+          '403': { description: 'Rol sin permiso' },
+          '404': { description: 'Producto no encontrado' },
+          '413': { description: 'La foto original supera 15 MB' },
+          '415': { description: 'Tipo de contenido no admitido' }
+        }
+      }
+    },
     '/products': {
       get: {
         tags: ['Productos'],
@@ -619,6 +645,7 @@ function swaggerBasicAuth(username, password) {
 const OPERATION_OWNERS = [
   ['/categories', ['post'], 'store'],
   ['/products', ['post'], 'store'],
+  ['/products/{id}/image', null, 'store'],
   ['/lots', null, 'store'],
   ['/lots/{id}/location', null, 'store'],
   ['/lots/{id}/merma', null, 'store'],
