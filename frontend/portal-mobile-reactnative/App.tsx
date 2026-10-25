@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ActivityIndicator, AppState, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -11,7 +11,8 @@ import { PickupPassModal } from './src/components/PickupPassModal';
 import { CartDrawerMobile } from './src/components/CartDrawerMobile';
 import { LoginModalMobile } from './src/components/LoginModalMobile';
 import { ChatBotModal } from './src/components/ChatBotModal';
-import { PrivacyPolicyModal } from './src/components/PrivacyPolicyModal';
+import { TermsModal } from './src/components/TermsModal';
+import type { TermsCategory } from './src/config/terms';
 import { ServerConfigModal } from './src/components/ServerConfigModal';
 import { PopPressable } from './src/components/motion';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,7 +34,7 @@ import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { bestSellerIds, isNewProduct } from './src/config/catalogRules';
 import { offerEnded, offerUnitsAvailable } from './src/config/offerRules';
 import { STORE_INFO } from './src/config/storeInfo';
-import { RESERVATION_EXTENSION_MINUTES } from './src/config/reservationRules';
+import { DEFAULT_RESERVATION_MINUTES, RESERVATION_EXTENSION_MINUTES } from './src/config/reservationRules';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
@@ -65,6 +66,7 @@ function PortalAppContent() {
   const [currentUser, setCurrentUser] = useState<{ id: string; nombre: string; email: string; rol?: string } | null>(null);
 
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [catalogStale, setCatalogStale] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [reservingOfferId, setReservingOfferId] = useState<string | null>(null);
   const [dataState, setDataState] = useState<DataLoadState>('loading');
@@ -75,7 +77,10 @@ function PortalAppContent() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  // Pestaña de los términos que está abierta; null si el modal está cerrado.
+  const [termsCategory, setTermsCategory] = useState<TermsCategory | null>(null);
+  const lastTermsCategory = useRef<TermsCategory>('todos');
+  const openTerms = (category: TermsCategory) => { lastTermsCategory.current = category; setTermsCategory(category); };
   const [isServerOpen, setIsServerOpen] = useState(false);
   const [serverUrl, setServerUrl] = useState(getServerUrl());
 
@@ -108,6 +113,7 @@ function PortalAppContent() {
     setDataError(undefined);
     try {
       await checkHeartbeat();
+      void api.getCatalogStatus().then(status => setCatalogStale(Boolean(status?.stale)));
       const [backendCats, backendProds, backendLots, backendPromos] = await Promise.all([
         api.getCategories(), api.getProducts(), api.getLots(), api.getPromotions(),
       ]);
@@ -281,7 +287,7 @@ function PortalAppContent() {
     notify('Tu reserva está en proceso', 'Aparecerá en Mis reservas apenas la tienda la confirme.');
   };
 
-  const handleConfirmReservation = async () => {
+  const handleConfirmReservation = async (ttlMinutos: number = DEFAULT_RESERVATION_MINUTES) => {
     if (cart.length === 0) return;
     if (!currentUser) {
       setIsCartOpen(false);
@@ -292,6 +298,7 @@ function PortalAppContent() {
     try {
       const created = await api.createReservation({
         usuarioId: currentUser.id,
+        ttlMinutos,
         items: cart.map(i => ({ productoId: i.product.id, cantidad: i.quantity })),
       });
       const reservation = await settleReservation(created, currentUser);
@@ -306,6 +313,7 @@ function PortalAppContent() {
       await openPassFor(reservation.codigoRetiro, {
         code: reservation.codigoRetiro,
         status: reservation.estado,
+        initialSeconds: ttlMinutos * 60,
         remainingSeconds: secondsUntilExpiration(reservation.fechaExpiracion),
         storeLocation: STORE_INFO.tradeName,
         customerName: currentUser.nombre,
@@ -413,6 +421,13 @@ function PortalAppContent() {
         isOnline={isOnline}
       />
 
+      {isOnline && catalogStale && (
+        <View style={styles.staleBar} accessibilityRole="alert">
+          <Ionicons name="warning-outline" size={16} color={colors.mora} />
+          <Text style={styles.staleText}>El stock que ves puede no estar al día. Si algo ya no está, te avisaremos al apartar.</Text>
+        </View>
+      )}
+
       {SERVER_CONFIG_ENABLED && (
         <TouchableOpacity
           style={styles.serverBar}
@@ -440,12 +455,14 @@ function PortalAppContent() {
               activePassCode={activeCode}
               onOpenPass={() => setIsPassOpen(true)}
               userName={currentUser?.nombre.split(' ')[0]}
-              onOpenPrivacy={() => setIsPrivacyOpen(true)}
+              onOpenPrivacy={() => openTerms('privacidad')}
+              onOpenTerms={() => openTerms('todos')}
             />
           )}
           {activeTab === 'productos' && (
             <CatalogScreen
               products={products}
+              offers={offers}
               categories={categoriesList}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
@@ -512,7 +529,7 @@ function PortalAppContent() {
           onClose={() => setIsCartOpen(false)}
           items={cart}
           onUpdateQuantity={handleUpdateQuantity}
-          onConfirmReservation={() => void handleConfirmReservation()}
+          onConfirmReservation={ttl => void handleConfirmReservation(ttl)}
           isSubmitting={isSubmitting}
           isLoggedIn={Boolean(currentUser)}
           isOnline={isOnline}
@@ -526,7 +543,7 @@ function PortalAppContent() {
             setCurrentUser(user);
             void syncReservations(user);
           }}
-          onOpenPrivacy={() => { setIsLoginOpen(false); setIsPrivacyOpen(true); }}
+          onOpenPrivacy={() => { setIsLoginOpen(false); openTerms('privacidad'); }}
           onLogout={() => {
             setCurrentUser(null);
             setPass(null);
@@ -536,7 +553,7 @@ function PortalAppContent() {
         />
 
         <ChatBotModal visible={isChatOpen} onClose={() => setIsChatOpen(false)} />
-        <PrivacyPolicyModal visible={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+        <TermsModal visible={termsCategory !== null} category={termsCategory ?? lastTermsCategory.current} onClose={() => setTermsCategory(null)} />
         {SERVER_CONFIG_ENABLED && (
           <ServerConfigModal visible={isServerOpen} onClose={() => setIsServerOpen(false)} onChanged={handleServerChanged} />
         )}
@@ -560,6 +577,8 @@ const styles = themed(() => StyleSheet.create({
   body: { flex: 1, backgroundColor: colors.aisle },
   tabs: { backgroundColor: colors.card },
   serverBar: { backgroundColor: colors.mora, paddingVertical: 5, paddingHorizontal: 12, alignItems: 'center' },
+  staleBar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.sticker, paddingVertical: 6, paddingHorizontal: 14, borderBottomWidth: 2, borderBottomColor: colors.mora },
+  staleText: { flex: 1, fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16, color: colors.mora },
   serverBarText: { fontFamily: fonts.medium, fontSize: 11, color: '#FFFFFF' },
   chatFab: { position: 'absolute', right: 14, bottom: 14 },
   chatFabBody: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },

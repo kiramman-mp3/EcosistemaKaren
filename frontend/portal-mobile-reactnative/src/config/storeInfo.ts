@@ -9,11 +9,24 @@ export const STORE_INFO = {
   ruc: process.env.EXPO_PUBLIC_STORE_RUC || '1850410612001',
   address: process.env.EXPO_PUBLIC_STORE_ADDRESS || 'Av. 17 de Abril y García Moreno',
   city: process.env.EXPO_PUBLIC_STORE_CITY || 'Quero, Tungurahua',
+  coords: { lat: -1.3790517, lng: -78.6087482 },
   whatsapp: { number: '593983553724', label: '+593 98 355 3724' },
-  // Correo y horario todavía son de ejemplo: reemplazarlos cuando la tienda los confirme.
+  facebookUrl: 'https://www.facebook.com/profile.php?id=100063795716014',
+  // Teléfono, correos y horario todavía son de ejemplo: reemplazarlos cuando la tienda los confirme.
+  phone: { href: 'tel:+59342987654', label: '(04) 2-987654 / 2-987655' },
+  email: 'atencion@karen.com.ec',
   privacyEmail: 'privacidad@karen.com.ec',
+  hours: {
+    long: 'Lunes a Sábado: 07:00 – 21:00 · Domingos: 08:00 – 19:00',
+  },
   hoursSentence: 'Lunes a Sábado de 07:00 a 21:00 y Domingos o Feriados de 08:00 a 19:00',
 } as const;
+
+/** Dirección completa para mostrar o copiar. */
+export const STORE_FULL_ADDRESS = `${STORE_INFO.address}, ${STORE_INFO.city}, Ecuador`;
+
+/** Mapa de la tienda: abre la app de mapas del teléfono (o el navegador). */
+export const STORE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${STORE_INFO.coords.lat},${STORE_INFO.coords.lng}`;
 
 /** Enlace de WhatsApp de la tienda con un mensaje inicial. */
 export const whatsappLink = (text: string) =>

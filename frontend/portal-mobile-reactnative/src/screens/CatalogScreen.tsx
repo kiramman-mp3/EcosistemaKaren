@@ -1,14 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CartItem, DataLoadState, Product } from '../types';
+import { CartItem, DataLoadState, FlashOffer, Product } from '../types';
 import { Button, Chip, EmptyState } from '../components/ui';
 import { Skeleton } from '../components/motion';
 import { ProductTag } from '../components/ProductTag';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { QuickFilter, SortKey, sortForQuickFilter, visibleProducts } from '../config/catalogView';
 
 interface CatalogScreenProps {
   products: Product[];
+  offers: FlashOffer[];
   categories: string[];
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
@@ -20,23 +22,26 @@ interface CatalogScreenProps {
   onRefresh: () => void;
 }
 
-const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
-// Filtros rápidos con datos reales: cada uno ordena por su criterio (ventas de 30 días o fecha de alta).
-type QuickFilter = 'todos' | 'mas-vendidos' | 'nuevos';
+// Filtros rápidos con datos reales. "Más vendidos" (ventas de 30 días) y "Nuevos" (fecha de alta) además ordenan.
 const QUICK_FILTERS: { id: QuickFilter; label: string }[] = [
   { id: 'todos', label: 'Todo' },
   { id: 'mas-vendidos', label: 'Más vendidos' },
   { id: 'nuevos', label: 'Nuevos' },
+  { id: 'ofertas', label: 'En oferta' },
 ];
-const createdTime = (product: Product) => (product.createdAt ? new Date(product.createdAt).getTime() : 0);
+const SORT_OPTIONS: { id: SortKey; label: string }[] = [
+  { id: 'nombre', label: 'Nombre' },
+  { id: 'precio-asc', label: 'Menor precio' },
+  { id: 'precio-desc', label: 'Mayor precio' },
+];
 
 export const CatalogScreen: React.FC<CatalogScreenProps> = ({
-  products, categories, selectedCategory, onSelectCategory, cart, onAddToCart, state, error, refreshing, onRefresh,
+  products, offers, categories, selectedCategory, onSelectCategory, cart, onAddToCart, state, error, refreshing, onRefresh,
 }) => {
   const [query, setQuery] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('todos');
+  const [sort, setSort] = useState<SortKey>('nombre');
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
@@ -47,18 +52,15 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
 
   const inCart = useMemo(() => new Map(cart.map(item => [item.product.id, item.quantity])), [cart]);
 
-  const visible = useMemo(() => {
-    const q = fold(query.trim());
-    return products
-      .filter(product => (selectedCategory === 'Todos' || product.category === selectedCategory)
-        && (!onlyInStock || product.stock > 0)
-        && (quickFilter !== 'mas-vendidos' || Boolean(product.isBestSeller))
-        && (quickFilter !== 'nuevos' || Boolean(product.isNew))
-        && (!q || fold(product.name).includes(q) || (product.barcode || '').includes(q)))
-      .sort((a, b) => (quickFilter === 'mas-vendidos' ? (b.soldLast30d ?? 0) - (a.soldLast30d ?? 0) : 0)
-        || (quickFilter === 'nuevos' ? createdTime(b) - createdTime(a) : 0)
-        || a.name.localeCompare(b.name, 'es'));
-  }, [products, selectedCategory, onlyInStock, quickFilter, query]);
+  const visible = useMemo(
+    () => visibleProducts({ products, offers, selectedCategory, onlyInStock, quickFilter, sort, query }),
+    [products, offers, selectedCategory, onlyInStock, quickFilter, sort, query]
+  );
+
+  const chooseQuickFilter = (filter: QuickFilter) => {
+    setQuickFilter(filter);
+    setSort(current => sortForQuickFilter(filter, current));
+  };
 
   return (
     <FlatList
@@ -105,7 +107,13 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           </ScrollView>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quick}>
             {QUICK_FILTERS.map(option => (
-              <Chip key={option.id} label={option.label} active={quickFilter === option.id} onPress={() => setQuickFilter(option.id)} />
+              <Chip key={option.id} label={option.label} active={quickFilter === option.id} onPress={() => chooseQuickFilter(option.id)} />
+            ))}
+          </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quick}>
+            <Text style={styles.sortLabel}>Ordenar:</Text>
+            {SORT_OPTIONS.map(option => (
+              <Chip key={option.id} label={option.label} active={sort === option.id} onPress={() => setSort(option.id)} />
             ))}
           </ScrollView>
           <View style={styles.titleRow}>
@@ -128,7 +136,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           : state === 'offline' || state === 'error'
             ? <EmptyState illustration="offline" title="No pudimos cargar los productos" text={error || 'La tienda no respondió.'} action={<Button label="Intentar de nuevo" compact onPress={onRefresh} />} />
             : <EmptyState illustration="search" title="No encontramos ese producto" text="Prueba con otra palabra o date una vuelta por todos los pasillos."
-                action={<Button label="Ver todos" variant="outline" compact onPress={() => { setQuery(''); setOnlyInStock(false); setQuickFilter('todos'); onSelectCategory('Todos'); }} />} />
+                action={<Button label="Ver todos" variant="outline" compact onPress={() => { setQuery(''); setOnlyInStock(false); setQuickFilter('todos'); setSort('nombre'); onSelectCategory('Todos'); }} />} />
       }
       renderItem={({ item }) => (
         <View style={styles.cell}>
@@ -151,7 +159,8 @@ const styles = themed(() => StyleSheet.create({
   searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.ink, paddingVertical: 10 },
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   chips: { gap: 8, paddingVertical: 12 },
-  quick: { gap: 8, paddingBottom: 12 },
+  quick: { gap: 8, paddingBottom: 12, alignItems: 'center' },
+  sortLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.inkMuted },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   title: { flex: 1, fontFamily: fonts.tag, fontSize: 30, lineHeight: 32, color: colors.ink },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },

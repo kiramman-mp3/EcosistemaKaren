@@ -18,6 +18,7 @@
   },
   "plugins": [
     "expo-secure-store",
+    "expo-sharing",
     "expo-font"
   ],
   "extra": {

@@ -18,8 +18,16 @@ export function selectActiveReservation(
   ) || null;
 }
 
+/** Duración total de la reserva (de que se creó a que vence), para dibujar la barra de tiempo. */
+function totalSeconds(reservation: BackendReservation): number | undefined {
+  if (!reservation.created_at) return undefined;
+  const seconds = Math.round((new Date(reservation.fechaExpiracion).getTime() - new Date(reservation.created_at).getTime()) / 1000);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+}
+
 export function reservationToPass(reservation: BackendReservation, now = Date.now()): ReservationPass {
   return {
+    initialSeconds: totalSeconds(reservation),
     id: reservation.id,
     canExtend: canExtendReservation(reservation, now),
     // Solo las reservas aceptadas por la tienda (PENDIENTE) llegan aquí, y ésas siempre traen código.
