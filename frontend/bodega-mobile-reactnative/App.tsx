@@ -19,6 +19,7 @@ import { AprobacionesScreen } from './src/screens/AprobacionesScreen';
 import { CatalogoProductosScreen } from './src/screens/CatalogoProductosScreen';
 import { AiPromoModal } from './src/components/AiPromoModal';
 import { MermaModal } from './src/components/MermaModal';
+import { ServerBar } from './src/components/ServerBar';
 import {
   BodegaTab,
   BackendLot,
@@ -27,6 +28,7 @@ import {
   BackendPromotion,
 } from './src/types';
 import { api } from './src/api/client';
+import { loadServerUrl } from './src/api/serverConfig';
 import { classifyExpiryDays } from './src/config/businessRules';
 import { daysUntil } from './src/utils/dates';
 import { useFonts } from 'expo-font';
@@ -69,7 +71,9 @@ function BodegaAppContent() {
   // Check server connection
   useEffect(() => {
     const unsubscribe = api.onSessionExpired(() => setCurrentUser(null));
-    void api.restoreSession()
+    // La dirección guardada del servidor se carga antes de restaurar la sesión.
+    void loadServerUrl()
+      .then(() => api.restoreSession())
       .then(user => {
         if (user) {
           setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
@@ -201,6 +205,15 @@ function BodegaAppContent() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={colors.mora} />
+
+      {/* Otro servidor es otra base de usuarios: se cierra la sesión y se vuelve a pedir el ingreso. */}
+      <ServerBar onChanged={() => {
+        void api.logout();
+        setCurrentUser(null);
+        setProducts([]);
+        setLots([]);
+        setAlerts([]);
+      }} />
 
       {/* Header Bodega */}
       <HeaderBodega

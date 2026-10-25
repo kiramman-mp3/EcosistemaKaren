@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Scro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api, BodegaAuthResponse } from '../api/client';
 import { Button, Field, Notice } from '../components/ui';
+import { ServerBar } from '../components/ServerBar';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage } from '../utils/errors';
 
@@ -35,6 +36,7 @@ export const BodegaLoginScreen: React.FC<Props> = ({ onLogin }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ServerBar onChanged={() => setError(null)} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           contentContainerStyle={styles.scroll}
