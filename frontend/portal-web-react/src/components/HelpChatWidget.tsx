@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, ExternalLink } from 'lucide-react';
 import { STORE_INFO, whatsappLink } from '../config/storeInfo';
+import { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, RESERVATION_RANGE_TEXT, formatMinutes } from '../config/reservationRules';
 
 interface ChatMessage {
   id: string;
@@ -24,12 +25,12 @@ const FAQ_CHIPS = [
   {
     label: '¿Cómo retiro con mi código KR?',
     query: 'como retiro con el codigo',
-    response: `¡Es muy fácil! Cuando confirmas tu reserva en la web, generas un Pase de Retiro con un PIN como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en ${STORE_INFO.tradeName}, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 30 minutos.`,
+    response: `¡Es muy fácil! Cuando confirmas tu reserva en la web, generas un Pase de Retiro con un PIN como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en ${STORE_INFO.tradeName}, mostrar el código a la cajera y pagar tus productos antes de que termine el tiempo que elegiste.`,
   },
   {
-    label: '¿Qué pasa si pasan los 30 minutos?',
-    query: 'que pasa si pasan los 30 minutos',
-    response: 'Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta exactamente por 30 minutos. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!',
+    label: '¿Qué pasa si se acaba el tiempo?',
+    query: 'que pasa si se acaba el tiempo',
+    response: `Las unidades se apartan por el tiempo que elegiste (${RESERVATION_RANGE_TEXT}). Antes de que termine puedes sumar ${RESERVATION_EXTENSION_MINUTES} minutos desde Mis reservas, hasta ${formatMinutes(RESERVATION_MAX_TOTAL_MINUTES)} en total. Si el tiempo expira, los productos vuelven a la percha. No hay multas ni penalizaciones: ¡puedes volver a reservar cuando estés cerca!`,
   },
   {
     label: '¿Qué formas de pago aceptan?',
@@ -98,9 +99,9 @@ export const HelpChatWidget: React.FC = () => {
         actionUrl = matchedFaq.actionUrl;
         actionLabel = matchedFaq.actionLabel;
       } else if (lower.includes('reserva') || lower.includes('tiempo') || lower.includes('minuto') || lower.includes('ttl')) {
-        replyText = 'Las reservas web tienen una duración de 30 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.';
+        replyText = `Al apartar eliges cuánto tiempo guardamos tus productos: ${RESERVATION_RANGE_TEXT}. Luego dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.`;
       } else if (lower.includes('oferta') || lower.includes('descuento') || lower.includes('fefo') || lower.includes('caducidad')) {
-        replyText = 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 20% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.';
+        replyText = 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 5% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.';
       } else if (lower.includes('pago') || lower.includes('tarjeta') || lower.includes('efectivo') || lower.includes('precio')) {
         replyText = 'El pago se realiza en caja física al momento de retirar tu pedido. Aceptamos efectivo, tarjetas y transferencias.';
       } else if (lower.includes('hola') || lower.includes('buenas') || lower.includes('buenos dias')) {

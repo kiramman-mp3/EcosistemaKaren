@@ -6,6 +6,7 @@ import { ReservationPass } from '../types';
 import { api } from '../api/client';
 import { Button } from './ui/Button';
 import { Illustration } from './ui/Illustration';
+import { RESERVATION_EXTENSION_MINUTES } from '../config/reservationRules';
 
 interface ReservationModalProps {
   pass: ReservationPass;
@@ -60,9 +61,9 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
     setExtending(true);
     setExtendedNotice(null);
     try {
-      await api.extendReservation(pass.id, 30);
-      setSecondsLeft(prev => prev + 1800);
-      setExtendedNotice('+30 minutos añadidos con éxito.');
+      await api.extendReservation(pass.id, RESERVATION_EXTENSION_MINUTES);
+      setSecondsLeft(prev => prev + RESERVATION_EXTENSION_MINUTES * 60);
+      setExtendedNotice(`+${RESERVATION_EXTENSION_MINUTES} minutos añadidos con éxito.`);
       setTimeout(() => setExtendedNotice(null), 3000);
     } catch (err: any) {
       setExtendedNotice(err.message || 'No se pudo extender el tiempo.');
@@ -179,7 +180,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ pass, isOpen
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-page text-mora border-2 border-mora shadow-sm hover:bg-limon transition-colors"
                 >
                   <Clock className={`w-3.5 h-3.5 ${extending ? 'animate-spin' : ''}`} />
-                  {extending ? 'Extendiendo…' : '¿Necesitas más tiempo? +30 min'}
+                  {extending ? 'Extendiendo…' : `¿Necesitas más tiempo? +${RESERVATION_EXTENSION_MINUTES} min`}
                 </button>
                 {extendedNotice && (
                   <p className="mt-1 text-xs font-bold text-aguacate-solid">{extendedNotice}</p>

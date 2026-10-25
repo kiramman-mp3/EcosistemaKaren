@@ -7,6 +7,7 @@ import { CountUp } from './ui/CountUp';
 import { Illustration } from './ui/Illustration';
 import { categoryTone } from '../lib/categoryTone';
 import { STORE_INFO } from '../config/storeInfo';
+import { DEFAULT_RESERVATION_MINUTES, RESERVATION_DURATION_OPTIONS, RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, formatMinutes } from '../config/reservationRules';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onConfirmReservation,
   isSubmitting = false, error = null, isLoggedIn = true,
 }) => {
-  const [selectedTtl, setSelectedTtl] = useState<number>(30);
+  const [selectedTtl, setSelectedTtl] = useState<number>(DEFAULT_RESERVATION_MINUTES);
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -138,10 +139,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-mora" /> Tiempo para retirar
                   </span>
-                  <span className="text-mora font-black">{selectedTtl} minutos</span>
+                  <span className="text-mora font-black">{formatMinutes(selectedTtl)}</span>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5">
-                  {[30, 45, 60, 90, 120].map(mins => (
+                  {RESERVATION_DURATION_OPTIONS.map(mins => (
                     <button
                       key={mins}
                       type="button"
@@ -157,7 +158,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   ))}
                 </div>
                 <p className="text-[11px] text-ink-muted">
-                  Guardamos tus productos {selectedTtl} min en {STORE_INFO.tradeName}. Puedes extender más tiempo luego con tu código.
+                  Guardamos tus productos {formatMinutes(selectedTtl)} en {STORE_INFO.tradeName}. Si te hace falta, desde Mis reservas sumas {RESERVATION_EXTENSION_MINUTES} minutos más, hasta {formatMinutes(RESERVATION_MAX_TOTAL_MINUTES)} en total.
                 </p>
               </div>
 

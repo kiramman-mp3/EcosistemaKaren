@@ -1,5 +1,6 @@
 import React from 'react';
 import { ListChecks, ShoppingBasket, Store } from 'lucide-react';
+import { RESERVATION_RANGE_TEXT } from '../config/reservationRules';
 
 const STEPS = [
   {
@@ -9,8 +10,8 @@ const STEPS = [
   },
   {
     icon: ShoppingBasket,
-    title: 'Te lo apartamos 30 minutos',
-    text: 'Al apartar recibes un código. Nadie más puede llevarse esas unidades mientras esté vigente.',
+    title: 'Te lo apartamos el tiempo que elijas',
+    text: `Eliges ${RESERVATION_RANGE_TEXT} y recibes un código. Nadie más puede llevarse esas unidades mientras esté vigente.`,
   },
   {
     icon: Store,
