@@ -45,7 +45,7 @@ dedicada, comparación con `timingSafeEqual`, secreto distinto de `JWT_SECRET`).
 | Método y ruta | Uso |
 |---|---|
 | `POST /store/heartbeat` | Latido de la tienda: `{ storeId, version, pendingEvents }`. El portal registra la hora con su propio reloj. |
-| `GET /store/commands?wait=25&limit=20` | Long-poll. Entrega comandos `RESERVATION_CREATE` y `RESERVATION_CANCEL`. |
+| `GET /store/commands?wait=25&limit=20` | Long-poll. Entrega comandos `RESERVATION_CREATE`, `RESERVATION_CANCEL` y `RESERVATION_EXTEND`. |
 | `POST /store/commands/:id/result` | Resultado del comando: `ACCEPTED` o `REJECTED` (con motivo) para `CREATE`; `APPLIED` o `IGNORED` (con el estado real) para `CANCEL`. Idempotente por id de comando. |
 | `POST /store/sync/catalog` | Snapshot completo de una sección del catálogo (`categorias`, `productos`, `lotes`, `promociones`) con `version` monótona. El portal reemplaza su copia de esa sección e ignora versiones iguales o anteriores. |
 | `POST /store/sync/media/manifest`, `PUT /store/sync/media` | Fotos locales de productos: la tienda informa ruta y hash de las que usa, el portal indica cuáles le faltan y la tienda las sube (binario, máx. 2 MB). El portal las guarda en su base y las sirve en `/api/v1/media/productos/*`. |
@@ -213,6 +213,16 @@ enterarse aunque la tienda caiga justo después. Las cancelaciones que pide el p
 El ADMIN opera desde la tienda, así que `POST /reservations/:id/cancel` existe también en store-api, solo para
 `ADMIN` (el cliente cancela en el portal). La tienda libera el stock y el portal pasa la reserva a `CANCELADA`
 cuando recibe el aviso.
+
+## Extender el plazo de una reserva
+
+El vencimiento lo decide la tienda (es quien libera el stock al expirar), así que `POST /reservations/:id/extend` en portal-api
+valida lo que ya sabe (dueño, estado, que no haya vencido, tope de 4 h desde la creación y que no haya otra extensión en curso) y
+encola `RESERVATION_EXTEND` con el vencimiento de **destino absoluto** (`hasta`), no con minutos: si el comando se reentrega, no
+extiende dos veces. La tienda lo vuelve a validar con su tope, responde `EXTENDED { fechaExpiracion }` o `REJECTED`, y el portal
+guarda el resultado (`comandos_tienda.resultado`) y toma `GREATEST` de los vencimientos. Si la tienda no responde en el plazo de
+espera, el comando que aún no se entregó se descarta para que no extienda la reserva más tarde sin que el cliente lo sepa. El ADMIN no
+extiende reservas de clientes.
 
 ## Pendiente conocido
 

@@ -250,6 +250,14 @@ Esto evita sobreventa, dobles confirmaciones y liberaciones duplicadas bajo conc
 Confirma una reserva pendiente y descuenta el stock reservado. Requiere rol `BODEGUERO`
 o `ADMIN`.
 
+### `POST /reservations/:id/extend`
+Extiende el plazo de una reserva pendiente. Solo el cliente propietario (`CLIENTE`). Cuerpo opcional:
+`{ "minutosAdicionales": 30 }` (5 a 180). **Una reserva no puede durar más de 4 horas en total** desde que se creó; pasarse
+responde `400`. Con portal y tienda separados el vencimiento lo fija la tienda: el portal le encarga un comando
+`RESERVATION_EXTEND` y espera su respuesta unos segundos (`503` si no hay latido o la tienda no responde; no queda nada
+pendiente). Pedir otra extensión mientras hay una en curso responde `409`. Al crear la reserva, `ttlMinutos` (15 a 240,
+30 por defecto) permite elegir cuánto se guardan los productos.
+
 ### `POST /reservations/:id/cancel`
 Libera el stock de una reserva pendiente. Solo puede ejecutarlo el cliente propietario o
 un `ADMIN`.
