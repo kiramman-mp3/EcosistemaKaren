@@ -22,7 +22,26 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, inCart, onAdd }
   const disabled = soldOut || maxed;
   return (
     <View style={styles.card}>
-      <ProductImage uri={product.image} tone={categoryTone(product.category)} style={[styles.image, soldOut && styles.faded]} />
+      <View>
+        <ProductImage uri={product.image} tone={categoryTone(product.category)} style={[styles.image, soldOut && styles.faded]} />
+        {/* Insignias con datos reales: ventas de 30 días y fecha de alta (config/catalogRules). */}
+        {(product.isBestSeller || product.isNew) && (
+          <View style={styles.badges} pointerEvents="none">
+            {product.isBestSeller && (
+              <View style={[styles.badge, styles.badgeBest]}>
+                <Ionicons name="flame" size={12} color={colors.karen} />
+                <Text style={styles.badgeText}>Más vendido</Text>
+              </View>
+            )}
+            {product.isNew && (
+              <View style={[styles.badge, styles.badgeNew]}>
+                <Ionicons name="sparkles" size={12} color={colors.sticker} />
+                <Text style={[styles.badgeText, styles.badgeTextNew]}>Nuevo</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
       <View style={styles.label}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         {product.description ? <Text style={styles.desc} numberOfLines={1}>{product.description}</Text> : <View style={styles.descSpacer} />}
@@ -93,6 +112,15 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve, busy = fal
 const styles = themed(() => StyleSheet.create({
   card: { flex: 1, backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, padding: 8 },
   image: { aspectRatio: 1 },
+  badges: { position: 'absolute', top: 6, right: 6, alignItems: 'flex-end', gap: 4 },
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: radius.tag, borderWidth: 1, borderColor: colors.mora,
+  },
+  badgeBest: { backgroundColor: colors.naranja },
+  badgeNew: { backgroundColor: colors.fresh },
+  badgeText: { fontFamily: fonts.bold, fontSize: 11, color: colors.mora },
+  badgeTextNew: { color: '#FFFFFF' },
   faded: { opacity: 0.4 },
   label: { padding: 6, paddingTop: 10, flex: 1 },
   name: { fontFamily: fonts.tag, fontSize: 15, lineHeight: 19, color: colors.ink, minHeight: 38 },

@@ -25,6 +25,7 @@ import { isAwaitingStore, waitForStoreResolution } from './reservations/awaitSto
 import { daysUntil, formatDate } from './utils/dates';
 import { getErrorMessage } from './utils/errors';
 import { STORE_INFO } from './config/storeInfo';
+import { bestSellerIds, isNewProduct } from './config/catalogRules';
 
 // Foto neutra si un producto aún no tiene imagen propia.
 const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -157,8 +158,13 @@ export const App: React.FC = () => {
           unit: 'Unidad',
           description: describe(bp.descripcion),
           barcode: bp.codigoBarras,
+          createdAt: bp.created_at,
+          soldLast30d: bp.vendidos30d ?? 0,
+          isNew: isNewProduct(bp.created_at),
         };
       });
+      const bestSellers = bestSellerIds(mappedProducts);
+      for (const product of mappedProducts) product.isBestSeller = bestSellers.has(product.id);
       setProducts(mappedProducts);
 
       const productById = new Map(backendProducts.map(product => [product.id, product]));

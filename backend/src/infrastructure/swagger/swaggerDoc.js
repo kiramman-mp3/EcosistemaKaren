@@ -139,7 +139,7 @@ const swaggerDocument = {
           { name: 'offset', in: 'query', schema: { type: 'integer', default: 0, minimum: 0 } }
         ],
         responses: {
-          '200': { description: 'Lista de productos' }
+          '200': { description: 'Lista de productos. Cada uno incluye created_at (alta real en la tienda) y vendidos30d (unidades vendidas en los últimos 30 días).' }
         }
       },
       post: {

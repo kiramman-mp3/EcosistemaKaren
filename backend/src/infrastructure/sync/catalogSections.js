@@ -5,6 +5,8 @@
 //
 // `key` es el nombre en el payload JSON, `column` la columna de la tabla y `sql` su tipo.
 // Una sección se completa con `fixed`: columnas del espejo que el portal fija por sí mismo.
+// Un campo `optional` puede faltar (lo envía una tienda con una versión anterior): el espejo
+// conserva el valor que ya tenía o, si la fila es nueva, usa `fallback` (una expresión SQL).
 
 const field = (key, column, sql, extra = {}) => ({ key, column, sql, ...extra });
 
@@ -28,7 +30,12 @@ const SECTIONS = {
       field('descripcion', 'descripcion', 'text', { max: 2000, nullable: true }),
       field('precioVenta', 'precio_venta', 'numeric', { min: 0.01, max: 1000000 }),
       field('impuestoPorcentaje', 'impuesto_porcentaje', 'numeric', { min: 0, max: 100 }),
-      field('imagenUrl', 'imagen_url', 'text', { max: 500, nullable: true })
+      field('imagenUrl', 'imagen_url', 'text', { max: 500, nullable: true }),
+      // Alta real del producto en la tienda (filtro "Nuevos") y unidades vendidas en los últimos
+      // 30 días (filtro "Más vendidos"). Esta cifra cambia con cada venta, así que la sección se
+      // reenvía más a menudo; con unos cientos de productos sigue pesando poco.
+      field('createdAt', 'created_at', 'timestamptz', { optional: true, fallback: 'CURRENT_TIMESTAMP' }),
+      field('vendidos30d', 'vendidos_30d', 'int', { min: 0, max: 100000000, optional: true, fallback: '0' })
     ]
   },
   lotes: {

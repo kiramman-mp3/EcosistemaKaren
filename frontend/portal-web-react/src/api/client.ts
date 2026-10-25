@@ -49,6 +49,8 @@ export interface BackendProduct {
   minStockAlerta: number;
   imagenUrl?: string | null;
   aliasId?: string;
+  /** Unidades vendidas en los últimos 30 días (lo calcula la tienda). */
+  vendidos30d?: number;
   created_at?: string;
   updated_at?: string;
 }

@@ -1,10 +1,18 @@
 const { SECTIONS } = require('./catalogSections');
+const { RECENT_SALES_JOIN, RECENT_SALES_COLUMN } = require('../db/productSales');
 
 // Qué filas de la tienda se publican en cada sección. Solo lo que un cliente puede ver:
-// lotes vigentes con existencias y promociones aprobadas sobre esos lotes.
+// lotes vigentes con existencias y promociones aprobadas sobre esos lotes. `computed` da la
+// expresión SQL de los campos que no son una columna de la tabla.
 const SOURCES = {
   categorias: { from: 'categorias c', alias: 'c', where: 'TRUE', order: 'c.id' },
-  productos: { from: 'productos p', alias: 'p', where: 'TRUE', order: 'p.id' },
+  productos: {
+    from: `productos p ${RECENT_SALES_JOIN}`,
+    alias: 'p',
+    where: 'TRUE',
+    order: 'p.id',
+    computed: { vendidos30d: RECENT_SALES_COLUMN }
+  },
   lotes: {
     from: 'lotes l',
     alias: 'l',
@@ -31,8 +39,10 @@ class PostgresCatalogSnapshotReader {
     const spec = SECTIONS[section];
     const source = SOURCES[section];
     if (!spec || !source) throw new Error(`Sección de catálogo desconocida: ${section}.`);
-    const select = spec.fields.map(({ column, key, sql }) =>
-      `${source.alias}.${column}${sql === 'numeric' ? '::float8' : ''} AS "${key}"`).join(', ');
+    const select = spec.fields.map(({ column, key, sql }) => {
+      const expression = source.computed?.[key] || `${source.alias}.${column}`;
+      return `${expression}${sql === 'numeric' ? '::float8' : ''} AS "${key}"`;
+    }).join(', ');
     return `SELECT ${select} FROM ${source.from} WHERE ${source.where} ORDER BY ${source.order}`;
   }
 

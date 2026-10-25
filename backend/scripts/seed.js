@@ -245,12 +245,17 @@ function ingressQuantity(pvp) {
   return randInt(2, 6) * 6;
 }
 
+// Días que un producto se considera "Nuevo" en el portal (debe coincidir con la regla de los frontends).
+const NEW_PRODUCT_DAYS = 14;
+
 function buildLots(products) {
   const lots = [];
   for (const product of products) {
     const info = CATEGORY_INFO[product.categoria];
     const perishable = Boolean(info.perishable);
-    const count = perishable ? randInt(5, 8) : randInt(2, 4);
+    // Alrededor del 5 % del catálogo se dio de alta hace menos de dos semanas: solo tiene su primer lote.
+    product.recentlyAdded = chance(0.05);
+    const count = product.recentlyAdded ? 1 : perishable ? randInt(5, 8) : randInt(2, 4);
     const window = perishable ? 75 : HISTORY_DAYS + 30;
     for (let i = 0; i < count; i++) {
       // El último lote siempre es reciente para que todo producto tenga stock vigente.
@@ -277,6 +282,12 @@ function buildLots(products) {
         expired: false
       });
     }
+    // El alta del producto es anterior a su primer lote: la de un producto nuevo, unas horas antes
+    // (siempre dentro de la ventana de "Nuevos"); la de los demás, entre 3 días y 10 meses antes.
+    const firstIngreso = Math.min(...lots.filter(lot => lot.product === product).map(lot => lot.ingreso));
+    product.createdAt = product.recentlyAdded
+      ? Math.max(NOW - (NEW_PRODUCT_DAYS - 1) * DAY_MS, firstIngreso - randInt(2, 20) * 3600000)
+      : firstIngreso - randInt(3, 300) * DAY_MS;
   }
   return lots;
 }
@@ -659,16 +670,16 @@ async function upsertCatalog(client, catalog) {
     const descripcion = [product.marca, product.contenido].filter(Boolean).join(' · ') || null;
     const res = await client.query(`
       INSERT INTO productos (categoria_id, codigo_barras, nombre, descripcion, precio_venta,
-                             impuesto_porcentaje, min_stock_alerta, imagen_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                             impuesto_porcentaje, min_stock_alerta, imagen_url, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (codigo_barras) DO UPDATE SET
         categoria_id = EXCLUDED.categoria_id, nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion,
         precio_venta = EXCLUDED.precio_venta, impuesto_porcentaje = EXCLUDED.impuesto_porcentaje,
         min_stock_alerta = EXCLUDED.min_stock_alerta, imagen_url = EXCLUDED.imagen_url,
-        updated_at = CURRENT_TIMESTAMP
+        created_at = EXCLUDED.created_at, updated_at = CURRENT_TIMESTAMP
       RETURNING id`,
     [categoryIds.get(product.categoria), product.codigoBarras, product.nombre, descripcion, product.pvp,
-      product.iva, product.pvp < 2 ? randInt(20, 40) : randInt(8, 20), product.imagenUrl]);
+      product.iva, product.pvp < 2 ? randInt(20, 40) : randInt(8, 20), product.imagenUrl, iso(product.createdAt)]);
     product.id = res.rows[0].id;
   }
 }
@@ -773,7 +784,8 @@ async function main() {
       mermas: sim.wastes.length,
       alertas: alerts.length,
       promociones: promotions.length,
-      cambios_pvp: priceChanges.length
+      cambios_pvp: priceChanges.length,
+      productos_nuevos: products.filter(p => p.createdAt > NOW - NEW_PRODUCT_DAYS * DAY_MS).length
     });
     console.log('Lotes por estado:', byState(lots, 'estado'));
     console.log('Reservas por estado:', byState(sim.reservations, 'estado'));

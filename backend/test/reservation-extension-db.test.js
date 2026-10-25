@@ -22,9 +22,23 @@ test.before(async () => {
 
 test.after(async () => {
   if (ready) {
-    await pool.query('DELETE FROM inventario_movimientos WHERE lote_id = ANY($1::uuid[]) OR reserva_id = ANY($2::uuid[])', [created.lots, created.reservations]);
-    await pool.query('DELETE FROM reserva_detalles WHERE reserva_id = ANY($1::uuid[])', [created.reservations]);
-    await pool.query('DELETE FROM reservas WHERE id = ANY($1::uuid[])', [created.reservations]);
+    // Una de estas reservas queda vencida y PENDIENTE: el barrido de expiración de otra prueba en
+    // paralelo podría registrarle un movimiento entre los DELETE. Bloquearlas primero lo impide (el
+    // barrido usa SKIP LOCKED) o espera a que termine, y el movimiento se borra con el resto.
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT id FROM reservas WHERE id = ANY($1::uuid[]) FOR UPDATE', [created.reservations]);
+      await client.query('DELETE FROM inventario_movimientos WHERE lote_id = ANY($1::uuid[]) OR reserva_id = ANY($2::uuid[])', [created.lots, created.reservations]);
+      await client.query('DELETE FROM reserva_detalles WHERE reserva_id = ANY($1::uuid[])', [created.reservations]);
+      await client.query('DELETE FROM reservas WHERE id = ANY($1::uuid[])', [created.reservations]);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
     await pool.query('DELETE FROM lotes WHERE id = ANY($1::uuid[])', [created.lots]);
     await pool.query('DELETE FROM productos WHERE id = ANY($1::uuid[])', [created.products]);
     await pool.query('DELETE FROM categorias WHERE id = ANY($1::uuid[])', [created.categories]);

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const CatalogSyncWorker = require('../src/infrastructure/workers/CatalogSyncWorker');
 const HttpCatalogSyncTransport = require('../src/infrastructure/sync/HttpCatalogSyncTransport');
 const PostgresCatalogSnapshotReader = require('../src/infrastructure/sync/PostgresCatalogSnapshotReader');
-const { SECTION_ORDER } = require('../src/infrastructure/sync/catalogSections');
+const { SECTIONS, SECTION_ORDER } = require('../src/infrastructure/sync/catalogSections');
 
 function setup({ data, response = { applied: true } } = {}) {
   const state = {
@@ -164,6 +164,24 @@ test('el lector solo selecciona campos públicos y filtra lotes y promociones vi
   const promos = queries.find(sql => sql.includes('FROM promociones_ia'));
   assert.match(promos, /estado = 'APROBADA'/);
   assert.match(promos, /activa = TRUE/);
+});
+
+test('el lector calcula las ventas de 30 días desde los movimientos VENTA', async () => {
+  const queries = [];
+  const pool = { query: async (sql) => { queries.push(sql); return { rows: [] }; } };
+  await new PostgresCatalogSnapshotReader(pool).read('productos');
+  assert.match(queries[0], /m\.tipo = 'VENTA'/);
+  assert.match(queries[0], /INTERVAL '30 days'/);
+  assert.match(queries[0], /COALESCE\(ventas\.total, 0\)::int AS "vendidos30d"/);
+  assert.match(queries[0], /p\.created_at AS "createdAt"/);
+});
+
+test('el espejo conserva la fecha de alta y las ventas si una tienda anterior no las envía', () => {
+  const PostgresCatalogMirrorRepository = require('../src/adapters/repositories/PostgresCatalogMirrorRepository');
+  const sql = new PostgresCatalogMirrorRepository(null)._upsertSql(SECTIONS.productos);
+  assert.match(sql, /COALESCE\(x\.created_at, prev\.created_at, CURRENT_TIMESTAMP\) AS created_at/);
+  assert.match(sql, /COALESCE\(x\.vendidos_30d, prev\.vendidos_30d, 0\) AS vendidos_30d/);
+  assert.match(sql, /LEFT JOIN productos prev ON prev\.id = x\.id/);
 });
 
 test('el lector convierte marcas de tiempo a ISO 8601', async () => {

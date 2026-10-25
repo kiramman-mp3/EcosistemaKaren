@@ -42,7 +42,7 @@ const MAX_SYNC_ITEMS = 50000;
 // repositorio espejo, de modo que el contrato vive en un solo lugar.
 function catalogItemSchema(spec) {
   const shape = {};
-  for (const { key, sql, max, min, nullable } of spec.fields) {
+  for (const { key, sql, max, min, nullable, optional } of spec.fields) {
     let schema;
     if (sql === 'uuid') schema = postgresUuid;
     else if (sql === 'text') schema = z.string().min(nullable ? 0 : 1).max(max);
@@ -51,7 +51,8 @@ function catalogItemSchema(spec) {
     else if (sql === 'date') schema = isoDate;
     else if (sql === 'timestamptz') schema = z.iso.datetime({ offset: true });
     else throw new Error(`Tipo de sincronización no soportado: ${sql}`);
-    shape[key] = nullable ? schema.nullable() : schema;
+    if (nullable) schema = schema.nullable();
+    shape[key] = optional ? schema.optional() : schema;
   }
   return z.strictObject(shape);
 }

@@ -25,7 +25,8 @@ const MIGRATION_SETS = {
     { version: 'portal_002_catalog_mirror', file: path.join(INIT_DB, 'portal/02-catalog-mirror.sql') },
     { version: 'portal_003_reservations', file: path.join(INIT_DB, 'portal/03-reservations.sql') },
     { version: 'portal_004_media_mirror', file: path.join(INIT_DB, 'portal/04-media-mirror.sql') },
-    { version: 'portal_005_reservation_extend', file: path.join(INIT_DB, 'portal/05-reservation-extend.sql') }
+    { version: 'portal_005_reservation_extend', file: path.join(INIT_DB, 'portal/05-reservation-extend.sql') },
+    { version: 'portal_006_product_sales', file: path.join(INIT_DB, 'portal/06-product-sales.sql') }
   ]
 };
 

@@ -28,10 +28,10 @@ interface ProductCatalogProps {
 }
 
 import { categoryTone, Tone } from '../lib/categoryTone';
-import { Tag as TagIcon } from 'lucide-react';
+import { Flame, Sparkles, Tag as TagIcon } from 'lucide-react';
 
-type SortKey = 'nombre' | 'precio-asc' | 'precio-desc';
-type QuickFilter = 'todos' | 'ofertas';
+type SortKey = 'nombre' | 'precio-asc' | 'precio-desc' | 'mas-vendidos' | 'nuevos';
+type QuickFilter = 'todos' | 'mas-vendidos' | 'nuevos' | 'ofertas';
 
 const TONE_DOT: Record<Tone, string> = {
   limon: 'bg-limon-deep',
@@ -82,6 +82,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         || (product.barcode || '').includes(query));
       const matchQuick =
         quickFilter === 'todos' ? true
+        : quickFilter === 'mas-vendidos' ? Boolean(product.isBestSeller)
+        : quickFilter === 'nuevos' ? Boolean(product.isNew)
         : quickFilter === 'ofertas' ? offersByProduct.has(product.id)
         : true;
       return matchCat && matchStock && matchSearch && matchQuick;
@@ -90,6 +92,14 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const priceOf = (product: Product) => offersByProduct.get(product.id)?.price ?? product.price;
 
     return list.sort((a, b) => {
+      // Más vendidos: por unidades vendidas en 30 días. Nuevos: por fecha de alta, la más reciente primero.
+      if (sort === 'mas-vendidos') {
+        return (b.soldLast30d ?? 0) - (a.soldLast30d ?? 0) || a.name.localeCompare(b.name, 'es');
+      }
+      if (sort === 'nuevos') {
+        const created = (product: Product) => (product.createdAt ? new Date(product.createdAt).getTime() : 0);
+        return created(b) - created(a) || a.name.localeCompare(b.name, 'es');
+      }
       if (sort === 'precio-asc') return priceOf(a) - priceOf(b);
       if (sort === 'precio-desc') return priceOf(b) - priceOf(a);
       return a.name.localeCompare(b.name, 'es');
@@ -169,7 +179,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           })}
         </div>
 
-        {/* Barra de Filtros Rápidos: Todos / En oferta */}
+        {/* Barra de Filtros Rápidos: Todos / Más vendidos / Nuevos / En oferta */}
         <div className="flex items-center gap-2 mb-5 overflow-x-auto no-scrollbar pb-1">
           <button
             onClick={() => { setQuickFilter('todos'); resetPage(); }}
@@ -180,6 +190,28 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             }`}
           >
             Todos
+          </button>
+          <button
+            onClick={() => { setQuickFilter('mas-vendidos'); resetPage(); }}
+            className={`press inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border-2 text-xs font-extrabold transition-colors shrink-0 ${
+              quickFilter === 'mas-vendidos'
+                ? 'bg-naranja text-mora border-mora shadow-pop-xs'
+                : 'bg-surface text-ink-soft border-aisle-rule hover:bg-page'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-karen-text fill-karen-text" />
+            Más vendidos
+          </button>
+          <button
+            onClick={() => { setQuickFilter('nuevos'); resetPage(); }}
+            className={`press inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border-2 text-xs font-extrabold transition-colors shrink-0 ${
+              quickFilter === 'nuevos'
+                ? 'bg-aguacate-solid text-white border-mora shadow-pop-xs'
+                : 'bg-surface text-ink-soft border-aisle-rule hover:bg-page'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-limon" />
+            Nuevos
           </button>
           <button
             onClick={() => { setQuickFilter('ofertas'); resetPage(); }}
@@ -219,6 +251,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               className="h-11 min-w-0 flex-1 sm:flex-none rounded-full border-2 border-mora bg-surface px-4 text-base sm:text-sm font-semibold text-ink"
             >
               <option value="nombre">Nombre (A–Z)</option>
+              <option value="mas-vendidos">Más vendidos primero</option>
+              <option value="nuevos">Nuevos primero</option>
               <option value="precio-asc">Precio: menor a mayor</option>
               <option value="precio-desc">Precio: mayor a menor</option>
             </select>
