@@ -159,18 +159,16 @@ export const api = {
   },
 
   // Products
-  async getProducts(params?: {
-    q?: string;
-    categoriaId?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<BackendProduct[]> {
-    if (params && (params.q !== undefined || params.categoriaId !== undefined || params.limit !== undefined || params.offset !== undefined)) {
-      const page = await this.getProductsPage(params);
-      return page.items;
+  // El catálogo completo (unos cientos de productos) se recorre en páginas de 100, el máximo del
+  // backend: así los pasillos, los filtros y las ofertas del portal cuentan todos los productos.
+  async getAllProducts(): Promise<BackendProduct[]> {
+    const pageSize = 100;
+    const all: BackendProduct[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const page = await this.getProductsPage({ limit: pageSize, offset });
+      all.push(...page.items);
+      if (page.items.length < pageSize || all.length >= page.total) return all;
     }
-    const page = await this.getProductsPage({ limit: 100, offset: 0 });
-    return page.items;
   },
 
   async getProductsPage(params?: {

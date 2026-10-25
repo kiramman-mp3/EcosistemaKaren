@@ -9,6 +9,12 @@ export const MOVEMENT_LABEL: Record<string, string> = {
 
 export const money = (value?: number | null) => value == null ? 'No registrado' : `$${Number(value).toFixed(2)}`;
 
+// Cifras de los indicadores con separador de miles: "$14,480.77", "36,488".
+const thousands = (value: number, decimals: number) =>
+  value.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+export const formatAmount = (value: number) => `$${thousands(Number(value) || 0, 2)}`;
+export const formatCount = (value: number) => thousands(Number(value) || 0, 0);
+
 export interface ReportTotals { ingresos: number; ventas: number; mermas: number; costoMerma: number }
 
 export interface ReportData {

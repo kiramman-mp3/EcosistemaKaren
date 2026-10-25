@@ -7,7 +7,7 @@ import { InventoryMovement, InventoryWaste } from '../types';
 import { Button, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage, getServerMessage } from '../utils/errors';
-import { buildCsv, buildReportHtml, money, MOVEMENT_LABEL } from '../utils/reportExport';
+import { buildCsv, buildReportHtml, formatAmount, formatCount, money, MOVEMENT_LABEL } from '../utils/reportExport';
 import { exportCsvFile, exportPdfFile } from '../utils/exportReport';
 import { notify } from '../utils/dialogs';
 
@@ -92,10 +92,10 @@ export const ReportesScreen: React.FC = () => {
         <Button label="Intentar de nuevo" variant="outline" onPress={() => void load()} />
       </> : <>
         <View style={styles.grid}>
-          <Metric label="Unidades recibidas" value={String(totals.ingresos)} />
-          <Metric label="Unidades vendidas" value={String(totals.ventas)} />
-          <Metric label="Unidades de merma" value={String(totals.mermas)} />
-          <Metric label="Costo de la merma" value={`$${totals.costoMerma.toFixed(2)}`} alert />
+          <Metric label="Unidades recibidas" value={formatCount(totals.ingresos)} />
+          <Metric label="Unidades vendidas" value={formatCount(totals.ventas)} />
+          <Metric label="Unidades de merma" value={formatCount(totals.mermas)} />
+          <Metric label="Costo de la merma" value={formatAmount(totals.costoMerma)} alert />
         </View>
 
         <Text style={styles.section}>Bajas recientes</Text>
@@ -177,7 +177,8 @@ export const ReportesScreen: React.FC = () => {
 
 const Metric = ({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) => (
   <View style={styles.metric}>
-    <Text style={[styles.metricValue, alert && { color: colors.karenText }]}>{value}</Text>
+    {/* Una sola línea: en un teléfono de 375 px el costo de la merma se partía en dos. */}
+    <Text style={[styles.metricValue, alert && { color: colors.karenText }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{value}</Text>
     <Text style={styles.metricLabel}>{label}</Text>
   </View>
 );
@@ -206,7 +207,7 @@ const styles = themed(() => StyleSheet.create({
   loading: { margin: 40 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metric: { flexGrow: 1, flexBasis: '45%', backgroundColor: colors.card, padding: 14, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule },
-  metricValue: { fontFamily: fonts.tag, fontSize: 30, lineHeight: 32, color: colors.ink },
+  metricValue: { fontFamily: fonts.tag, fontSize: 26, lineHeight: 30, color: colors.ink },
   metricLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted },
   section: { fontFamily: fonts.tag, fontSize: 22, color: colors.ink, marginTop: 24, marginBottom: 10 },
   row: {

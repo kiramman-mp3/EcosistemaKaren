@@ -148,3 +148,23 @@ test('HttpHeartbeatTransport envía la clave de servicio y falla si el portal re
   status = 401;
   await assert.rejects(() => transport.send({}), /HTTP 401/);
 });
+
+test('HttpHeartbeatTransport avisa solo de los latidos que el portal aceptó', async () => {
+  const HttpHeartbeatTransport = require('../src/infrastructure/heartbeat/HttpHeartbeatTransport');
+  let status = 200;
+  const monitor = new HeartbeatMonitor(30);
+  const transport = new HttpHeartbeatTransport({
+    baseUrl: 'https://portal.karen.example',
+    apiKey: 'clave-de-servicio',
+    fetchImpl: async () => ({ ok: status < 400, status }),
+    onDelivered: () => monitor.recordHeartbeat()
+  });
+
+  status = 503;
+  await assert.rejects(() => transport.send({}), /HTTP 503/);
+  assert.equal((await monitor.getStatus()).status, 'OFFLINE');
+
+  status = 200;
+  await transport.send({});
+  assert.equal((await monitor.getStatus()).status, 'ONLINE');
+});

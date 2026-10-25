@@ -1,4 +1,4 @@
-import { buildCsv, buildReportHtml, csvCell, escapeHtml, ReportData } from './reportExport';
+import { buildCsv, buildReportHtml, csvCell, escapeHtml, formatAmount, formatCount, ReportData } from './reportExport';
 import { InventoryMovement, InventoryWaste } from '../types';
 
 const waste = (overrides: Partial<InventoryWaste> = {}): InventoryWaste => ({
@@ -82,5 +82,13 @@ describe('buildReportHtml', () => {
     const html = buildReportHtml(data({ wastes: [], movements: [] }));
     expect(html).toContain('Sin bajas registradas');
     expect(html).toContain('Sin movimientos');
+  });
+});
+
+describe('cifras de los indicadores', () => {
+  it('usa separador de miles y dos decimales en los montos', () => {
+    expect(formatAmount(14480.77)).toBe('$14,480.77');
+    expect(formatAmount(0)).toBe('$0.00');
+    expect(formatCount(36488)).toBe('36,488');
   });
 });

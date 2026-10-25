@@ -2,7 +2,7 @@ const API_PATH = '/api/v1';
 const URL_PATTERN = /^(https?):\/\/([A-Za-z0-9.-]+)(?::(\d{1,5}))?(\/[^?#\s]*)?$/i;
 
 /**
- * Convierte lo que escribe la persona ("192.168.1.20", "192.168.1.20:4001", "http://tienda.local",
+ * Convierte lo que escribe la persona ("192.168.1.20", "192.168.1.20:4000", "http://tienda.local",
  * "https://api.karen.com/api/v1") en la URL base de la API, o null si no es una dirección válida.
  * Sin esquema se asume http (red local); sin puerto, en http se usa `defaultPort`.
  */

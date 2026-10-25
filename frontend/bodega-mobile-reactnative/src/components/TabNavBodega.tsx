@@ -72,7 +72,9 @@ const styles = themed(() => StyleSheet.create({
   pill: { minWidth: 52, height: 34, borderRadius: radius.pill, borderWidth: 2, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
   pillActive: { backgroundColor: colors.sticker, borderColor: colors.mora },
   label: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted, paddingHorizontal: 2 },
-  labelActive: { fontFamily: fonts.bold, color: colors.ink },
+  // Mismo peso que las demás: en negrita "Por vencer" no cabe en un teléfono de 375 px y la
+  // pastilla amarilla ya marca la pestaña activa.
+  labelActive: { color: colors.ink },
   badgeWrap: { position: 'absolute', top: -6, right: -8 },
   badge: {
     minWidth: 22, height: 18, borderRadius: 9, paddingHorizontal: 4,

@@ -1,12 +1,15 @@
 const { SERVICE_KEY_HEADER } = require('../http/middlewares/serviceAuth');
 
 // Envía el latido de store-api a portal-api por el canal interno (ADR-003).
+// `onDelivered` se llama cuando el portal lo acepta: store-api lo usa para registrar en su propio
+// monitor que el enlace con el portal está vivo, que es lo que muestra la app de bodega.
 class HttpHeartbeatTransport {
-  constructor({ baseUrl, apiKey, timeoutMs = 5000, fetchImpl = fetch }) {
+  constructor({ baseUrl, apiKey, timeoutMs = 5000, fetchImpl = fetch, onDelivered = null }) {
     this.url = `${baseUrl}/internal/v1/store/heartbeat`;
     this.apiKey = apiKey;
     this.timeoutMs = timeoutMs;
     this.fetchImpl = fetchImpl;
+    this.onDelivered = onDelivered;
   }
 
   async send(payload) {
@@ -19,6 +22,7 @@ class HttpHeartbeatTransport {
     if (!response.ok) {
       throw new Error(`El portal respondió HTTP ${response.status} al recibir el heartbeat.`);
     }
+    if (this.onDelivered) await this.onDelivered();
   }
 }
 

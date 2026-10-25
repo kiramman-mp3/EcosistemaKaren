@@ -5,6 +5,7 @@ import { formatDateTime } from '../utils/dates';
 import { Button } from './ui/Button';
 import { Illustration } from './ui/Illustration';
 import { getErrorMessage } from '../utils/errors';
+import { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES } from '../config/reservationRules';
 
 interface Props {
   authenticated: boolean;
@@ -27,8 +28,8 @@ const FILTERS: { id: ReservationFilter; label: string }[] = [
 ];
 
 // Cuánto se extiende cada vez y el máximo que puede durar una reserva desde que se creó (lo valida la tienda).
-const EXTENSION_MINUTES = 30;
-const MAX_TOTAL_MINUTES = 240;
+const EXTENSION_MINUTES = RESERVATION_EXTENSION_MINUTES;
+const MAX_TOTAL_MINUTES = RESERVATION_MAX_TOTAL_MINUTES;
 
 /** ¿Cabe otra extensión sin pasar de 4 h en total? Sin fecha de creación se deja intentar: la tienda decide. */
 function canExtend(reservation: BackendReservation): boolean {
