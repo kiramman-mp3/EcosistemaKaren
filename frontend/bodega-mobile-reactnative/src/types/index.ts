@@ -119,6 +119,20 @@ export interface InventoryMovement {
   created_at: string;
 }
 
+/** Período de los indicadores del reporte: hoy, los últimos 7 o los últimos 30 días (incluido hoy). */
+export type SummaryPeriod = 'hoy' | '7d' | '30d';
+
+/** GET /inventory/summary: todas las cifras corresponden al mismo período. */
+export interface InventorySummary {
+  periodo: SummaryPeriod;
+  desde: string;
+  hasta: string;
+  ingresos: number;
+  ventas: number;
+  mermas: number;
+  costoMerma: number;
+}
+
 export interface InventoryWaste {
   id: string;
   loteId: string;
