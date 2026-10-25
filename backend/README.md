@@ -7,13 +7,37 @@
 3. Esperar a que `docker compose ps` muestre PostgreSQL como `healthy`.
 4. Ejecutar `npm start`. La conexión desde el host usa `localhost:5433` por defecto.
 
-Las cuentas iniciales usan la contraseña local `demo123`. Los scripts de `init-db/store` solo se
-ejecutan cuando el volumen de PostgreSQL se crea por primera vez. Para recrear datos desde
-cero debe eliminarse deliberadamente el volumen; no se hace automáticamente para evitar
-pérdida accidental de información.
+Los scripts de `init-db/store` solo se ejecutan cuando el volumen de PostgreSQL se crea por primera
+vez. Para recrear datos desde cero debe eliminarse deliberadamente el volumen; no se hace
+automáticamente para evitar pérdida accidental de información.
 
-Los puertos pueden cambiarse con `DB_EXPOSED_PORT` y `PGADMIN_PORT`. Las credenciales de
-PostgreSQL y pgAdmin se leen desde `.env`; los valores incluidos son únicamente para desarrollo.
+El esquema inicial **no crea cuentas ni datos de ejemplo**. Los datos de demostración
+(`cliente@karen.com`, `bodega@karen.com` y `admin@karen.com` con la contraseña `demo123`, más tres
+productos y lotes) están en `init-db/dev/01-demo-data.sql`, que solo monta el `docker-compose.yml` de
+desarrollo. `npm run db:seed` genera un conjunto más grande con cuentas `@demo.karen.ec`.
+
+PostgreSQL y pgAdmin se publican solo en `127.0.0.1` (puertos `DB_EXPOSED_PORT` y `PGADMIN_PORT`).
+Las credenciales de `.env.example` son únicamente para desarrollo.
+
+### Cuentas del personal y producción
+
+El personal de la tienda (`BODEGUERO`, `PERCHERO`, `ADMIN`) no puede registrarse por la API; se da de alta con:
+
+```powershell
+npm run user:create -- --rol=ADMIN --email=ana@tienda.com --nombre="Ana Pérez"
+npm run user:create -- --rol=BODEGUERO --email=luis@tienda.com --nombre="Luis Mora" --reset   # cambia la contraseña
+```
+
+La contraseña se pide sin mostrarla, o se toma de `KAREN_NEW_PASSWORD`. Las cuentas de clientes se
+crean en la base del portal (`--rol=CLIENTE`).
+
+Con `NODE_ENV=production` el servicio **se niega a arrancar** si:
+- existe alguna cuenta de demostración (`@karen.com` o `@demo.karen.ec`) que todavía acepta su contraseña conocida;
+- `DB_PASSWORD` falta o es una contraseña de ejemplo (`karen_pass`, `change_me...`);
+- `STORE_SERVICE_KEY` es igual a `JWT_SECRET`.
+
+Además avisa si `TRUST_PROXY_HOPS` es 0. Use secretos distintos en store-api y portal-api: así un token de
+un servicio no es válido en el otro.
 
 ## Servicios: store-api y portal-api
 
