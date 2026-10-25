@@ -29,6 +29,11 @@ async function createApp({ name, store = false, portal = false }) {
   wiring.start();
 
   app.locals.appName = name;
+  // portal-api con base propia sirve las fotos de los productos desde ella (ver createBaseApp).
+  if (wiring.controllers.mediaSyncController) {
+    const mediaController = wiring.controllers.mediaSyncController;
+    app.locals.serveMedia = (req, res, next) => mediaController.serve(req, res, next);
+  }
   app.locals.shutdown = async () => {
     wiring.stop();
     await closePool();
@@ -53,7 +58,8 @@ async function createApp({ name, store = false, portal = false }) {
       createInternalRouter(wiring.controllers, createServiceAuth(serviceConfig.storeServiceKey), [
         // Los snapshots de catálogo superan el límite de la API pública.
         express.json({ limit: process.env.INTERNAL_BODY_LIMIT || '10mb', strict: true }),
-        httpSecurity.normalizeJsonBody,
+        // La subida de fotos (PUT binario) no es JSON: la valida su propia ruta.
+        (req, res, next) => (req.method === 'PUT' && req.path === '/store/sync/media' ? next() : httpSecurity.normalizeJsonBody(req, res, next)),
         httpSecurity.rejectDangerousKeys
       ])
     );

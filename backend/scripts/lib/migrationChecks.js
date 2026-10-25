@@ -8,11 +8,11 @@ const STORE_TABLES = [
 
 const PORTAL_TABLES = [
   'usuarios', 'tokens_revocados', 'rate_limit_hits', 'tienda_heartbeat', 'categorias', 'productos', 'lotes',
-  'promociones_ia', 'sync_estado', 'reservas_portal', 'comandos_tienda', 'schema_migrations'
+  'promociones_ia', 'sync_estado', 'reservas_portal', 'comandos_tienda', 'media_archivos', 'schema_migrations'
 ];
 
 // Lo que cada base no debe tener: la tienda no conoce la cola del portal ni al revés.
-const STORE_FORBIDDEN = ['reservas_portal', 'comandos_tienda', 'sync_estado'];
+const STORE_FORBIDDEN = ['reservas_portal', 'comandos_tienda', 'sync_estado', 'media_archivos'];
 const PORTAL_FORBIDDEN = ['reservas', 'reserva_detalles', 'inventario_movimientos', 'mermas', 'alertas_caducidad', 'outbox_portal'];
 
 async function tablesOf(db) {

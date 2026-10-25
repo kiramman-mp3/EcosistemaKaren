@@ -61,10 +61,14 @@ async function createBaseApp({ database = 'store', migrations = ['store'] } = {}
     }
   }));
   // Imágenes de productos; antes del rate limit porque un catálogo carga decenas por vista.
-  app.use('/api/v1/media', express.static(path.resolve(__dirname, '../../../public/media'), {
-    maxAge: '7d',
-    fallthrough: false
-  }));
+  // La tienda (y el monolito) las sirve desde disco; portal-api con base propia, desde ella: la tienda
+  // se las sincroniza y el manejador `serveMedia` lo registra createApp al componer.
+  if (database === 'portal') {
+    app.use('/api/v1/media', (req, res, next) => (app.locals.serveMedia ? app.locals.serveMedia(req, res, next) : next()));
+  } else {
+    const mediaDir = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.resolve(__dirname, '../../../public/media');
+    app.use('/api/v1/media', express.static(mediaDir, { maxAge: '7d', fallthrough: false }));
+  }
   app.use('/api/v1', httpSecurity.general);
   app.use('/api/v1/auth', httpSecurity.auth);
   app.use('/api/v1/reservations', httpSecurity.reservations);
@@ -72,7 +76,8 @@ async function createBaseApp({ database = 'store', migrations = ['store'] } = {}
   // El canal interno /internal/v1 lee su propio cuerpo, con otro límite y después de autenticar.
   const publicJson = express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb', strict: true });
   app.use((req, res, next) => (req.path.startsWith('/internal/') ? next() : publicJson(req, res, next)));
-  app.use(httpSecurity.normalizeJsonBody);
+  // El canal interno aplica su propia normalización después de autenticar (ver createApp).
+  app.use((req, res, next) => (req.path.startsWith('/internal/') ? next() : httpSecurity.normalizeJsonBody(req, res, next)));
   app.use(cookieParser());
   app.use(cookieCsrfProtection(allowedOrigins, process.env.NODE_ENV === 'production'));
   app.use('/api/v1/auth', (req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });

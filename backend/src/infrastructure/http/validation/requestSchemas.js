@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const { SECTIONS } = require('../../sync/catalogSections');
+const { MAX_MEDIA_BYTES, isMediaPath } = require('../../media/mediaPaths');
 
 const text = (min, max, label) => z.string()
   .trim()
@@ -201,6 +202,17 @@ const schemas = {
     pendingEvents: z.number().int().min(0).max(1000000).optional()
   }),
   catalogSyncBody: catalogSyncBody(),
+  // Fotos de productos que la tienda sincroniza al portal: primero el manifiesto, luego cada archivo.
+  mediaManifestBody: z.strictObject({
+    files: z.array(z.strictObject({
+      ruta: z.string().max(200).refine(isMediaPath, 'La ruta de la foto no es válida.'),
+      sha256: z.string().regex(/^[0-9a-f]{64}$/i, 'El hash debe ser SHA-256 hexadecimal.'),
+      size: z.number().int().min(1).max(MAX_MEDIA_BYTES)
+    })).max(5000),
+    // false cuando la tienda no encontró alguna de sus fotos: el portal no debe borrar las que ya tiene.
+    prune: z.boolean().default(true)
+  }),
+  mediaUploadQuery: z.strictObject({ ruta: z.string().max(200) }),
   // Canal de comandos de reserva store-api <-> portal-api (ADR-003)
   storeCommandsQuery: z.strictObject({
     wait: z.coerce.number().int().min(0).max(30).default(0),
