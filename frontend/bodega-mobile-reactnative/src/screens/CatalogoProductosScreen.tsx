@@ -16,6 +16,7 @@ import { compressPhoto } from '../utils/photoUpload';
 import { Button, Chip, EmptyState, Field, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, getAisleColor, radius, themed } from '../theme/tokens';
 import { getErrorStatus, getServerMessage } from '../utils/errors';
+import { sheetFrame, useLayout } from '../theme/layout';
 
 const PAGE_SIZE = 30;
 const EMPTY_FORM = { categoriaId: '', nombre: '', descripcion: '', precioVenta: '', impuestoPorcentaje: '15', minStockAlerta: '10' };
@@ -47,6 +48,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
   const [editing, setEditing] = useState<BackendProduct | null>(null);
   // Foto elegida en el formulario (ya reducida): se sube después de guardar el producto.
   const [formPhoto, setFormPhoto] = useState<string | null>(null);
+  const { listColumns: columns, gutter } = useLayout();
   const requestId = useRef(0);
   const canCreate = role === 'ADMIN';
   const canEditPhoto = role === 'ADMIN' || role === 'BODEGUERO';
@@ -249,9 +251,12 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
 
   return <View style={styles.screen}>
     <FlatList
+      key={columns}
       data={products}
       keyExtractor={item => item.id}
-      contentContainerStyle={styles.list}
+      numColumns={columns}
+      columnWrapperStyle={columns > 1 ? styles.columns : undefined}
+      contentContainerStyle={[styles.list, { padding: gutter }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(false); }} tintColor={colors.ink} colors={[colors.ink]} />}
       onEndReached={() => { if (!loading && !loadingMore && products.length < total) void load(true); }}
@@ -291,7 +296,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
         const catName = categoryName(item.categoriaId);
         const aisle = getAisleColor(catName);
         return (
-          <View style={styles.row}>
+          <View style={[styles.row, columns > 1 && styles.rowColumn]}>
             <TouchableOpacity
               style={styles.thumb}
               disabled={!canEditPhoto || uploadingId !== null}
@@ -340,7 +345,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
 
     <Modal visible={formOpen} transparent animationType="slide" onRequestClose={() => setFormOpen(false)}>
       <KeyboardAvoidingView style={styles.sheetBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, sheetFrame]}>
           <ScrollView keyboardShouldPersistTaps="handled">
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{editing ? 'Editar producto' : 'Nuevo producto'}</Text>
@@ -461,6 +466,8 @@ const styles = themed(() => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card,
     borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule, padding: 10, marginBottom: 8,
   },
+  columns: { gap: 8 },
+  rowColumn: { flex: 1, minWidth: 0, maxWidth: '50%' },
   thumb: { width: 60, height: 60, borderRadius: radius.tag, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   thumbImage: { width: 60, height: 60 },
   cameraBadge: { position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },

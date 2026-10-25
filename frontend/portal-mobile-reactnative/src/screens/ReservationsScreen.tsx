@@ -8,6 +8,7 @@ import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage } from '../utils/errors';
 import { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, formatMinutes } from '../config/reservationRules';
 import { canExtendReservation } from '../reservations/extension';
+import { useLayout } from '../theme/layout';
 
 interface ReservationsScreenProps {
   authenticated: boolean;
@@ -44,6 +45,7 @@ const statusOf = (estado: BackendReservation['estado']): { label: string; bg: st
 export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
   authenticated, reservations, syncing, onRefresh, onCancel, onExtend, onOpenPass, onLogin, onExplore,
 }) => {
+  const { reservationColumns: columns, gutter, isTablet } = useLayout();
   const [filter, setFilter] = useState<Filter>('TODAS');
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [extending, setExtending] = useState<string | null>(null);
@@ -98,9 +100,13 @@ export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
 
   return (
     <FlatList
+      key={columns}
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      // En tableta vertical la lista es una sola columna centrada: una tarjeta de reserva no gana nada estirándose.
+      contentContainerStyle={[styles.content, { padding: gutter }, isTablet && columns === 1 && styles.contentNarrow]}
       data={visible}
+      numColumns={columns}
+      columnWrapperStyle={columns > 1 ? styles.columns : undefined}
       keyExtractor={item => item.reservation.id}
       refreshControl={<RefreshControl refreshing={syncing} onRefresh={() => void onRefresh()} tintColor={colors.ink} colors={[colors.ink]} />}
       ListHeaderComponent={
@@ -122,7 +128,7 @@ export const ReservationsScreen: React.FC<ReservationsScreenProps> = ({
         const names = reservation.detalles.map(d => d.productoNombre).filter(Boolean).join(', ');
         const badge = statusOf(status);
         return (
-          <View style={[styles.card, (pending || awaitingStore) && styles.cardPending]}>
+          <View style={[styles.card, columns > 1 && styles.cardColumn, (pending || awaitingStore) && styles.cardPending]}>
             <View style={styles.cardHead}>
               <View style={styles.flex}>
                 <Text style={styles.code}>{reservation.codigoRetiro || (rejected ? 'Sin código' : 'Confirmando…')}</Text>
@@ -174,6 +180,9 @@ const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 24 },
+  contentNarrow: { width: '100%', maxWidth: 760, alignSelf: 'center' },
+  columns: { gap: 12 },
+  cardColumn: { flex: 1, maxWidth: '50%' },
   chips: { gap: 8, paddingBottom: 14 },
   card: { backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.rule, padding: 16, marginBottom: 12 },
   cardPending: { borderColor: colors.mora },

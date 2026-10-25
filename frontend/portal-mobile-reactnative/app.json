@@ -3,6 +3,7 @@
   "icon": "./assets/icon.png",
   "slug": "portal-mobile-karen",
   "version": "1.0.0",
+  "orientation": "default",
   "android": {
     "package": "com.ecosistemakaren.portal",
     "adaptiveIcon": {
@@ -11,6 +12,7 @@
     }
   },
   "ios": {
+    "supportsTablet": true,
     "bundleIdentifier": "com.ecosistemakaren.portal",
     "infoPlist": {
       "ITSAppUsesNonExemptEncryption": false

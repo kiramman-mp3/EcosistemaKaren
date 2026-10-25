@@ -52,4 +52,18 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-33 | Pase de retiro → Guardar como imagen | Se abre la hoja de compartir con un PNG del pase (QR y código) sin los botones; se puede guardar en la galería o enviar por WhatsApp. |
 | TEL-34 | Con el portal-api encendido y la tienda apagada más de unos minutos | Aparece la franja "El stock que ves puede no estar al día"; desaparece al volver a sincronizar la tienda y refrescar el catálogo. |
 
+## Tabletas
+
+Se pasan en una tableta (o emulador) de 8 a 11 pulgadas, en vertical y en horizontal, con los APK de la bodega y del portal.
+
+| Caso | Qué hacer | Resultado esperado |
+|---|---|---|
+| TAB-01 | Portal → Productos, en vertical y luego girar la tableta | La cuadrícula pasa de 4 a 5 columnas sin que se corten las tarjetas; el filtro y la búsqueda siguen funcionando tras girar. |
+| TAB-02 | Portal → Por vencer y Mis reservas | Ofertas en 2 o 3 columnas; las reservas en una columna centrada en vertical y en dos en horizontal. |
+| TAB-03 | Portal → Inicio | El texto de bienvenida queda a la izquierda y las ofertas a la derecha; los pasillos en 3 o 4 columnas y los 3 pasos en fila. |
+| TAB-04 | Portal → carrito, pase de retiro, KarenBot y Servidor | La hoja del carrito y el chat quedan centrados y acotados, sin estirarse de borde a borde. |
+| TAB-05 | Bodega → Por vencer, Lotes, Ofertas y Catálogo en horizontal | Las tarjetas van en dos columnas; en vertical, en una. Los botones de cada tarjeta no se montan. |
+| TAB-06 | Bodega → Recibir y Caja | El formulario queda centrado con un ancho cómodo; las pestañas de abajo se agrupan en el centro. |
+| TAB-07 | Bodega → Catálogo con el ADMIN → registrar o editar un producto | El formulario aparece como hoja centrada, no a todo lo ancho. |
+
 Registrar por cada caso: fecha, modelo del teléfono y versión de Android, versión del APK, resultado (Aprobado/Fallido) y captura cuando falle.

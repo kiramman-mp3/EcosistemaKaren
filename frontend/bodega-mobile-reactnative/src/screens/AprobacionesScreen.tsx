@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { BackendPromotion } from '../types';
 import { confirmAction, notify } from '../utils/dialogs';
+import { contentFrame, sheetFrame, useLayout } from '../theme/layout';
 import { Button, Chip, EmptyState, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage, getServerMessage } from '../utils/errors';
@@ -33,6 +34,7 @@ function statusOf(item: BackendPromotion) {
 }
 
 export const AprobacionesScreen: React.FC = () => {
+  const { listColumns: columns, gutter } = useLayout();
   const [items, setItems] = useState<BackendPromotion[]>([]);
   const [filter, setFilter] = useState<Filter>('PENDIENTES');
   const [loading, setLoading] = useState(true);
@@ -126,9 +128,12 @@ export const AprobacionesScreen: React.FC = () => {
 
   return <View style={styles.container}>
     <FlatList
+      key={columns}
       data={items}
       keyExtractor={item => item.id}
-      contentContainerStyle={styles.content}
+      numColumns={columns}
+      columnWrapperStyle={columns > 1 ? styles.columns : undefined}
+      contentContainerStyle={[styles.content, contentFrame, { padding: gutter }]}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.karen} colors={[colors.karen]} />}
       ListHeaderComponent={<>
         <ScreenTitle title="Ofertas" subtitle="Revisa los descuentos sugeridos antes de que los vean los clientes." />
@@ -143,7 +148,7 @@ export const AprobacionesScreen: React.FC = () => {
         const status = statusOf(item);
         const limits = describeOfferTerms(item);
         return (
-          <TouchableOpacity style={styles.card} onPress={() => open(item)} accessibilityRole="button" accessibilityLabel={`${item.productoNombre || 'Oferta'}, ${status.label}`}>
+          <TouchableOpacity style={[styles.card, columns > 1 && styles.cardColumn]} onPress={() => open(item)} accessibilityRole="button" accessibilityLabel={`${item.productoNombre || 'Oferta'}, ${status.label}`}>
             <View style={styles.discount}>
               <Text style={styles.discountText}>-{item.descuentoPorcentaje}%</Text>
             </View>
@@ -165,7 +170,7 @@ export const AprobacionesScreen: React.FC = () => {
 
     <Modal visible={Boolean(selected)} transparent animationType="slide" onRequestClose={() => setSelected(null)}>
       <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, sheetFrame]}>
           <ScrollView keyboardShouldPersistTaps="handled">
             <View style={styles.sheetHead}>
               <View style={styles.flex}>
@@ -262,6 +267,8 @@ export const AprobacionesScreen: React.FC = () => {
 const styles = themed(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 32 },
+  columns: { gap: 12 },
+  cardColumn: { flex: 1, minWidth: 0, maxWidth: '50%' },
   flex: { flex: 1 },
   filters: { gap: 8, paddingBottom: 14 },
   loader: { margin: 30 },

@@ -8,6 +8,7 @@ import { classifyExpiryDays } from '../config/businessRules';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { Button, DaysCounter, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
+import { formFrame } from '../theme/layout';
 import { colors, fonts, levelColors, radius, themed } from '../theme/tokens';
 import { getErrorMessage, getErrorStatus } from '../utils/errors';
 import { confirmAction } from '../utils/dialogs';
@@ -197,7 +198,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, formFrame]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} colors={[colors.ink]} />}
     >

@@ -24,7 +24,8 @@ const TABS: { id: BodegaTab; icon: IconName; label: string; roles: string[] }[] 
 ];
 
 export const TabNavBodega: React.FC<TabNavBodegaProps> = ({ activeTab, onTabChange, role, criticalAlertsCount }) => (
-  <View style={styles.container} accessibilityRole="tablist">
+  <View style={styles.container}>
+   <View style={styles.row} accessibilityRole="tablist">
     {TABS.filter(tab => tab.roles.includes(role)).map(tab => {
       const active = activeTab === tab.id;
       const badge = tab.id === 'alertas' && criticalAlertsCount > 0;
@@ -60,14 +61,16 @@ export const TabNavBodega: React.FC<TabNavBodegaProps> = ({ activeTab, onTabChan
         </TouchableOpacity>
       );
     })}
+   </View>
   </View>
 );
 
 const styles = themed(() => StyleSheet.create({
   container: {
-    flexDirection: 'row', backgroundColor: colors.card, borderTopWidth: 2, borderTopColor: colors.mora,
-    paddingBottom: 6,
+    backgroundColor: colors.card, borderTopWidth: 2, borderTopColor: colors.mora, paddingBottom: 6,
   },
+  // En tabletas las pestañas quedan juntas en el centro en vez de separarse por todo el ancho.
+  row: { flexDirection: 'row', width: '100%', maxWidth: 760, alignSelf: 'center' },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 64, gap: 2, paddingTop: 6 },
   pill: { minWidth: 52, height: 34, borderRadius: radius.pill, borderWidth: 2, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
   pillActive: { backgroundColor: colors.sticker, borderColor: colors.mora },

@@ -125,7 +125,7 @@ const styles = themed(() => StyleSheet.create({
   title: { fontFamily: fonts.tag, fontSize: 24, color: colors.mora },
   subtitle: { fontFamily: fonts.medium, fontSize: 12, color: colors.mora, marginTop: 2 },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: -6, marginRight: -8 },
-  content: { padding: 16, gap: 12 },
+  content: { padding: 16, gap: 12, width: '100%', maxWidth: 560, alignSelf: 'center' },
   preview: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkSoft },
   footer: { padding: 16, gap: 10, borderTopWidth: 2, borderTopColor: colors.rule, backgroundColor: colors.card },
 }));

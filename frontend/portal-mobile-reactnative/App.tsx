@@ -35,6 +35,7 @@ import { bestSellerIds, isNewProduct } from './src/config/catalogRules';
 import { offerEnded, offerUnitsAvailable } from './src/config/offerRules';
 import { STORE_INFO } from './src/config/storeInfo';
 import { DEFAULT_RESERVATION_MINUTES, RESERVATION_EXTENSION_MINUTES } from './src/config/reservationRules';
+import { CONTENT_MAX_WIDTH } from './src/theme/layout';
 
 const APPROVED_RESERVATION_TTL_SECONDS = 30 * 60;
 
@@ -440,6 +441,7 @@ function PortalAppContent() {
       )}
 
       <View style={styles.body}>
+        <View style={styles.bodyInner}>
           {activeTab === 'inicio' && (
             <HomeScreen
               products={products}
@@ -517,6 +519,7 @@ function PortalAppContent() {
             </PopPressable>
           </View>
         </View>
+        </View>
 
         <SafeAreaView edges={['bottom']} style={styles.tabs}>
           <TabBar activeTab={activeTab} onChange={goTo} offersCount={offers.length} hasActivePass={Boolean(activeCode)} />
@@ -575,6 +578,8 @@ const styles = themed(() => StyleSheet.create({
   splash: { flex: 1, backgroundColor: colors.mora, alignItems: 'center', justifyContent: 'center' },
   safeArea: { flex: 1, backgroundColor: colors.card },
   body: { flex: 1, backgroundColor: colors.aisle },
+  // En tabletas anchas el contenido queda centrado en vez de estirarse de borde a borde.
+  bodyInner: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
   tabs: { backgroundColor: colors.card },
   serverBar: { backgroundColor: colors.mora, paddingVertical: 5, paddingHorizontal: 12, alignItems: 'center' },
   staleBar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.sticker, paddingVertical: 6, paddingHorizontal: 14, borderBottomWidth: 2, borderBottomColor: colors.mora },

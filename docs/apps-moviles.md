@@ -38,6 +38,14 @@ elegida se reduce igual que arriba y se sube al guardar; si la subida falla el p
 desde la miniatura. El **código EAN no se puede cambiar** al editar. Si el PVP cambia, queda en la bitácora de precios
 (`PUT /products/:id`). No agrega módulos nativos, pero el APK lleva el código de la app: **hay que recompilarlo** para tener el formulario.
 
+## Tabletas
+
+Las dos apps se adaptan al ancho de la pantalla y no al modelo del aparato: desde 600 px se consideran tableta, así que también
+responden al girar la tableta o a la ventana dividida. En el portal la cuadrícula de productos sube hasta 5 columnas, las ofertas
+a 2 o 3, y Inicio pone el texto junto a las ofertas. En la bodega las listas de tarjetas pasan a 2 columnas desde 840 px, y los
+formularios, las hojas y las pestañas quedan centrados con un ancho máximo. En iPad la app ya no corre en modo de compatibilidad
+con iPhone (`supportsTablet`) y ninguna app bloquea la orientación. Es un cambio de configuración nativa: hay que recompilar el APK o IPA.
+
 ## Reportes de bodega (PDF y Excel)
 
 En **Reportes**, los botones **PDF** y **Excel** exportan los movimientos y mermas. En el navegador el PDF abre el diálogo de
