@@ -1,4 +1,6 @@
+
 // Respuestas de KarenBot, el mismo asistente de preguntas frecuentes del portal web.
+import { STORE_INFO, whatsappLink } from '../config/storeInfo';
 
 export interface BotReply {
   text: string;
@@ -11,15 +13,13 @@ export interface FaqChip extends BotReply {
   query: string;
 }
 
-export const WELCOME_TEXT = '¡Hola! Soy KarenBot, tu asistente virtual de Supermercados Karen. ¿En qué te puedo ayudar hoy con tus reservas u ofertas?';
-
-const WHATSAPP = 'https://wa.me/593983553724';
+export const WELCOME_TEXT = `¡Hola! Soy KarenBot, tu asistente virtual de ${STORE_INFO.tradeName}. ¿En qué te puedo ayudar hoy con tus reservas u ofertas?`;
 
 export const FAQ_CHIPS: FaqChip[] = [
   {
     label: '¿Cómo retiro con mi código KR?',
     query: 'como retiro con el codigo',
-    text: '¡Es muy fácil! Cuando confirmas tu reserva generas un Pase de Retiro con un código como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en la Sucursal Matriz, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 30 minutos.',
+    text: `¡Es muy fácil! Cuando confirmas tu reserva generas un Pase de Retiro con un código como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en ${STORE_INFO.tradeName}, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 30 minutos.`,
   },
   {
     label: '¿Qué pasa si pasan los 30 minutos?',
@@ -34,14 +34,14 @@ export const FAQ_CHIPS: FaqChip[] = [
   {
     label: 'Horarios y ubicación de la tienda',
     query: 'horarios y ubicacion',
-    text: 'Nuestra Sucursal Matriz está ubicada en Av. Principal y Calle 4ta, Guayaquil. Atendemos de Lunes a Sábado de 07:00 a 21:00 y Domingos o Feriados de 08:00 a 19:00.',
+    text: `${STORE_INFO.tradeName} está en ${STORE_INFO.address}, ${STORE_INFO.city}. Atendemos de ${STORE_INFO.hoursSentence}.`,
   },
   {
     label: 'Hablar con un asesor en WhatsApp',
     query: 'whatsapp asesor humano',
     text: 'Si necesitas asistencia personalizada, puedes escribir directamente a nuestra línea oficial de WhatsApp:',
-    actionUrl: `${WHATSAPP}?text=${encodeURIComponent('Hola Supermercado Karen, necesito ayuda con una reserva')}`,
-    actionLabel: 'Abrir WhatsApp (+593 98 355 3724)',
+    actionUrl: whatsappLink(`Hola ${STORE_INFO.tradeName}, necesito ayuda con una reserva`),
+    actionLabel: `Abrir WhatsApp (${STORE_INFO.whatsapp.label})`,
   },
 ];
 
@@ -64,12 +64,12 @@ export function replyTo(message: string): BotReply {
     return { text: 'El pago se realiza en caja física al momento de retirar tu pedido. Aceptamos efectivo, tarjetas y transferencias.' };
   }
   if (['hola', 'buenas', 'buenos dias'].some(word => lower.includes(word))) {
-    return { text: '¡Hola! Un gusto saludarte. ¿En qué podemos orientarte sobre tu compra o reserva en Supermercados Karen?' };
+    return { text: `¡Hola! Un gusto saludarte. ¿En qué podemos orientarte sobre tu compra o reserva en ${STORE_INFO.tradeName}?` };
   }
   if (['humano', 'asesor', 'whatsapp', 'telefono'].some(word => lower.includes(word))) {
     return {
       text: 'Con gusto te comunicamos con nuestro equipo de atención humana en WhatsApp:',
-      actionUrl: `${WHATSAPP}?text=${encodeURIComponent('Hola Supermercado Karen, necesito asistencia personalizada')}`,
+      actionUrl: whatsappLink(`Hola ${STORE_INFO.tradeName}, necesito asistencia personalizada`),
       actionLabel: 'Contactar a Asesor por WhatsApp',
     };
   }

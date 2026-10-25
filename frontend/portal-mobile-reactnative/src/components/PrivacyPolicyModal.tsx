@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { STORE_INFO } from '../config/storeInfo';
 
 interface PrivacyPolicyModalProps {
   visible: boolean;
@@ -21,7 +22,7 @@ const SECTIONS: { title: string; text: string }[] = [
   },
   {
     title: 'No los vendemos ni los compartimos',
-    text: 'Supermercados Karen no comercializa, no alquila ni comparte tus datos personales con terceros ni con empresas de marketing.',
+    text: `${STORE_INFO.tradeName} no comercializa, no alquila ni comparte tus datos personales con terceros ni con empresas de marketing.`,
   },
   {
     title: 'Almacenamiento en tu teléfono',
@@ -29,7 +30,7 @@ const SECTIONS: { title: string; text: string }[] = [
   },
   {
     title: 'Tus derechos (LOPDP)',
-    text: 'Conforme a la Ley Orgánica de Protección de Datos Personales del Ecuador, puedes ejercer tus derechos de acceso, rectificación, cancelación u oposición escribiendo a privacidad@karen.com.ec o acudiendo a Atención al Cliente.',
+    text: `Conforme a la Ley Orgánica de Protección de Datos Personales del Ecuador, puedes ejercer tus derechos de acceso, rectificación, cancelación u oposición escribiendo a ${STORE_INFO.privacyEmail} o acudiendo a Atención al Cliente.`,
   },
 ];
 
@@ -42,7 +43,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ visible,
           <View style={styles.head}>
             <View style={styles.flex}>
               <Text style={styles.title} accessibilityRole="header">Política de privacidad</Text>
-              <Text style={styles.subtitle}>Supermercados Karen S.A. · Guayaquil, Ecuador · LOPDP 2026</Text>
+              <Text style={styles.subtitle}>{STORE_INFO.tradeName} · {STORE_INFO.legalName} · RUC {STORE_INFO.ruc} · {STORE_INFO.city} · LOPDP 2026</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel="Cerrar política de privacidad">
               <Ionicons name="close" size={26} color={colors.mora} />

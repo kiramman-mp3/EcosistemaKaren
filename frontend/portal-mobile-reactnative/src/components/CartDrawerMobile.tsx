@@ -89,7 +89,7 @@ export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
                 </View>
                 <Text style={styles.note}>
                   {isOnline
-                    ? 'Al apartar, te guardamos estas unidades 30 minutos. Pagas al retirar en la Sucursal Matriz.'
+                    ? 'Al apartar, te guardamos estas unidades 30 minutos. Pagas al retirar en caja.'
                     : 'Por ahora no podemos apartar productos porque la tienda no responde.'}
                 </Text>
                 <Button
