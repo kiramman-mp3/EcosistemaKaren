@@ -63,6 +63,12 @@ más antigua supera `staleAfterSeconds`. En el monolito de transición `mode` es
 `stale` siempre es `false`. Este endpoint solo lo expone portal-api, no store-api.
 
 ### Canal interno de sincronización (store-api → portal-api)
+Fotos de productos (misma cabecera `x-store-key`): `POST /internal/v1/store/sync/media/manifest` con
+`{ "files": [{ "ruta", "sha256", "size" }], "prune": true }` responde `{ "missing": [rutas], "removed": n }`;
+`PUT /internal/v1/store/sync/media?ruta=<ruta>` sube el binario (`Content-Type: application/octet-stream`, cabecera
+`x-content-sha256`, máx. 2 MB; 400 si el hash, la firma de imagen o la ruta no son válidos). El portal las sirve
+públicamente en `GET /api/v1/media/productos/<archivo>` (`ETag`, `Cache-Control: public, max-age=86400`).
+
 `POST /internal/v1/store/sync/catalog`, autenticado con la cabecera `x-store-key` y fuera de la
 API pública. Cuerpo: `{ "section": "categorias|productos|lotes|promociones", "version": <entero creciente>, "items": [...] }`.
 Es un snapshot completo de la sección: el portal reemplaza su copia. Responde

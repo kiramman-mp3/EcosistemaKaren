@@ -88,6 +88,17 @@ separada, el portal sirve auth, heartbeat, rate limit, la lectura del catálogo 
 productos, disponibilidad y promociones) desde la copia que le publica la tienda, y las
 reservas, que encarga a la tienda.
 
+### Fotos de productos
+
+Las fotos locales (`/api/v1/media/productos/<archivo>`) viajan con el catálogo: store-api manda al portal el
+manifiesto (ruta y SHA-256) en `POST /internal/v1/store/sync/media/manifest`, el portal responde cuáles le faltan
+y la tienda las sube una a una con `PUT /internal/v1/store/sync/media?ruta=…`. El portal las guarda en su base
+(`media_archivos`) y las sirve con `ETag` y caché de un día. Solo se aceptan JPEG, PNG y WebP de hasta 2 MB cuyo
+contenido coincida con su extensión y su hash. Variables: `MEDIA_SYNC_ENABLED` (por defecto activa si lo está la
+sincronización de catálogo), `MEDIA_SYNC_INTERVAL_SECONDS` (60, mín. 10) y `MEDIA_DIR` (carpeta de la tienda; por
+defecto `backend/public/media`). Una foto que desaparece de los productos se borra del portal; si a la tienda le falta
+algún archivo, no se borra nada. URLs externas (https) no se sincronizan: el cliente las carga directamente.
+
 ### Sincronización del catálogo
 
 store-api publica al portal `POST /internal/v1/store/sync/catalog` (ver
