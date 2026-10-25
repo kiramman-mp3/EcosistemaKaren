@@ -18,6 +18,24 @@ const {
   ForbiddenException
 } = require('../../domain/exceptions/DomainExceptions');
 
+// Cambia el PVP de un producto y lo anota en la bitácora, dentro de la transacción de quien llama:
+// así el ingreso de un lote y su nuevo precio se guardan juntos o no se guarda ninguno. Devuelve
+// { anterior, nuevo }, o null si el precio no cambia (no se anota nada).
+async function applyPriceChange(client, productId, nuevoPrecio, { origen, loteId = null, actorId = null }) {
+  const current = await client.query('SELECT precio_venta FROM productos WHERE id = $1 FOR UPDATE', [productId]);
+  if (!current.rowCount) throw new NotFoundException(`Producto con ID '${productId}' no fue encontrado.`);
+  const anterior = Number(current.rows[0].precio_venta);
+  const nuevo = Math.round(Number(nuevoPrecio) * 100) / 100;
+  if (anterior === nuevo) return null;
+  await client.query('UPDATE productos SET precio_venta = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [productId, nuevo]);
+  await client.query(
+    `INSERT INTO productos_precio_historial (producto_id, precio_anterior, precio_nuevo, origen, lote_id, actor_id)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [productId, anterior, nuevo, origen, loteId, actorId]
+  );
+  return { anterior, nuevo };
+}
+
 class PostgresCategoryRepository {
   constructor(pool) {
     this.pool = pool;
@@ -124,6 +142,32 @@ class PostgresProductRepository {
       [id, imagenUrl]
     );
     return res.rows.length ? new Product(res.rows[0]) : null;
+  }
+
+  /** Cambio explícito del PVP por el ADMIN desde el catálogo, con su registro en la bitácora. */
+  async updatePriceWithAudit(id, precioVenta, { actorId }) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const cambio = await applyPriceChange(client, id, precioVenta, { origen: 'MANUAL', actorId });
+      await client.query('COMMIT');
+      return { producto: await this.findById(id), cambio };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release(); }
+  }
+
+  /** Últimos cambios de PVP del producto, del más reciente al más antiguo. */
+  async findPriceHistory(id, limit = 20) {
+    const res = await this.pool.query(`
+      SELECT h.id, h.precio_anterior::float8 AS "precioAnterior", h.precio_nuevo::float8 AS "precioNuevo",
+             h.origen, h.lote_id AS "loteId", h.actor_id AS "actorId", u.nombre AS "actorNombre", h.created_at
+      FROM productos_precio_historial h LEFT JOIN usuarios u ON u.id = h.actor_id
+      WHERE h.producto_id = $1
+      ORDER BY h.created_at DESC, h.id DESC LIMIT $2
+    `, [id, limit]);
+    return res.rows;
   }
 
   /** Cuántos productos usan esa foto: una foto compartida no se borra del disco. */
@@ -247,7 +291,9 @@ class PostgresLotRepository {
    * así un fallo no deja un lote sin su alerta, y reintentar no duplica el lote. La alerta queda en
    * `saved.alertaGenerada` (propiedad no enumerable, no se publica por la API).
    */
-  async save(lot, actorId, buildAlert = null) {
+  // `nuevoPrecioVenta` (solo ADMIN, lo valida el caso de uso) actualiza el PVP del producto en la
+  // misma transacción que el lote.
+  async save(lot, actorId, buildAlert = null, { nuevoPrecioVenta = null } = {}) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -274,6 +320,10 @@ class PostgresLotRepository {
       const saved = new Lot(row);
       saved.productoNombre = lot.productoNombre;
       saved.codigoBarras = lot.codigoBarras;
+      if (nuevoPrecioVenta !== null && nuevoPrecioVenta !== undefined) {
+        const cambio = await applyPriceChange(client, row.productoId, nuevoPrecioVenta, { origen: 'INGRESO_LOTE', loteId: row.id, actorId });
+        Object.defineProperty(saved, 'cambioPrecio', { value: cambio, enumerable: false });
+      }
       if (typeof buildAlert === 'function') {
         const alert = buildAlert(saved);
         let storedAlert = null;

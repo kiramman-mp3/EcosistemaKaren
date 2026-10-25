@@ -28,6 +28,7 @@ class InMemoryRepositories {
     this.promotions = [];
     this.movements = [];
     this.wastes = [];
+    this.priceHistory = [];
     this.revokedTokens = new Map();
 
     this.seed();
@@ -236,7 +237,13 @@ class InMemoryRepositories {
         prod.updated_at = new Date();
         return prod;
       },
-      countByImageUrl: async (imagenUrl) => this.products.filter(p => p.imagenUrl === imagenUrl).length
+      countByImageUrl: async (imagenUrl) => this.products.filter(p => p.imagenUrl === imagenUrl).length,
+      updatePriceWithAudit: async (id, precioVenta, { actorId }) => {
+        const cambio = this._applyPriceChange(id, precioVenta, { origen: 'MANUAL', actorId });
+        return { producto: this.products.find(p => p.id === id), cambio };
+      },
+      findPriceHistory: async (id, limit = 20) => this.priceHistory
+        .filter(entry => entry.productoId === id).slice(-limit).reverse()
     };
   }
 
@@ -277,8 +284,12 @@ class InMemoryRepositories {
         }
         return { countExpired };
       },
-      save: async (lotInstance, actorId) => {
+      save: async (lotInstance, actorId, _buildAlert = null, { nuevoPrecioVenta = null } = {}) => {
         if (!lotInstance.id) lotInstance.id = randomUUID();
+        if (nuevoPrecioVenta !== null && nuevoPrecioVenta !== undefined) {
+          const cambio = this._applyPriceChange(lotInstance.productoId, nuevoPrecioVenta, { origen: 'INGRESO_LOTE', loteId: lotInstance.id, actorId });
+          Object.defineProperty(lotInstance, 'cambioPrecio', { value: cambio, enumerable: false, configurable: true });
+        }
         this.lots.push(lotInstance);
         this.movements.push(this._newMovement({
           loteId: lotInstance.id, tipo: 'INGRESO', cantidad: lotInstance.cantidadIngresada,
@@ -366,6 +377,18 @@ class InMemoryRepositories {
             registradaPorNombre: actor?.nombre };
         })
     };
+  }
+
+  _applyPriceChange(productId, nuevoPrecio, { origen, loteId = null, actorId = null }) {
+    const product = this.products.find(p => p.id === productId);
+    if (!product) throw new NotFoundException(`Producto con ID '${productId}' no fue encontrado.`);
+    const anterior = Number(product.precioVenta);
+    const nuevo = Math.round(Number(nuevoPrecio) * 100) / 100;
+    if (anterior === nuevo) return null;
+    product.precioVenta = nuevo;
+    product.updated_at = new Date();
+    this.priceHistory.push({ id: randomUUID(), productoId: productId, precioAnterior: anterior, precioNuevo: nuevo, origen, loteId, actorId, created_at: new Date() });
+    return { anterior, nuevo };
   }
 
   _newMovement(data) {

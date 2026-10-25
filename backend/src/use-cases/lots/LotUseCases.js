@@ -3,6 +3,7 @@ const Lot = require('../../domain/entities/Lot');
 const Alert = require('../../domain/entities/Alert');
 const { classifyExpiryDays, isExpiryAlertLevel } = require('../../domain/policies/BusinessRules');
 const { toDateOnly } = require('../../domain/policies/BusinessDates');
+const { assertCanChangePrice, assertValidPrice } = require('../products/ProductUseCases');
 
 class GetLots {
   constructor(lotRepository) {
@@ -53,12 +54,18 @@ class IngresarLote {
     if (lotData.costoUnitario === undefined || lotData.costoUnitario === null || lotData.costoUnitario === '') {
       throw new ValidationException('El costoUnitario es obligatorio para registrar un lote.');
     }
-    const product = await this.productRepository.findById(lotData.productoId);
+    // Nuevo PVP opcional junto con el lote: solo el ADMIN, y se guarda en la misma transacción.
+    const { nuevoPrecioVenta, ...lotFields } = lotData;
+    const hasNewPrice = nuevoPrecioVenta !== undefined && nuevoPrecioVenta !== null && nuevoPrecioVenta !== '';
+    if (hasNewPrice) assertCanChangePrice(actor);
+    const newPrice = hasNewPrice ? assertValidPrice(nuevoPrecioVenta) : null;
+
+    const product = await this.productRepository.findById(lotFields.productoId);
     if (!product) {
-      throw new NotFoundException(`El producto con ID '${lotData.productoId}' no fue encontrado.`);
+      throw new NotFoundException(`El producto con ID '${lotFields.productoId}' no fue encontrado.`);
     }
 
-    const newLot = new Lot(lotData);
+    const newLot = new Lot(lotFields);
     newLot.productoNombre = product.nombre;
     newLot.codigoBarras = product.codigoBarras;
 
@@ -79,7 +86,7 @@ class IngresarLote {
 
     // El repositorio de PostgreSQL guarda lote y alerta en una sola transacción; los demás
     // (en memoria) la guardan después por separado.
-    const savedLot = await this.lotRepository.save(newLot, actor.id, buildAlert);
+    const savedLot = await this.lotRepository.save(newLot, actor.id, buildAlert, { nuevoPrecioVenta: newPrice });
     const alert = 'alertaGenerada' in savedLot ? savedLot.alertaGenerada : buildAlert(savedLot);
     if (alert) {
       if (!('alertaGenerada' in savedLot) && this.alertRepository) {

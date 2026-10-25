@@ -1,9 +1,11 @@
 class ProductController {
-  constructor(getProductsUC, getProductByBarcodeUC, createProductUC, setProductImageUC) {
+  constructor(getProductsUC, getProductByBarcodeUC, createProductUC, setProductImageUC, updateProductPriceUC, getProductPriceHistoryUC) {
     this.getProductsUC = getProductsUC;
     this.getProductByBarcodeUC = getProductByBarcodeUC;
     this.createProductUC = createProductUC;
     this.setProductImageUC = setProductImageUC;
+    this.updateProductPriceUC = updateProductPriceUC;
+    this.getProductPriceHistoryUC = getProductPriceHistoryUC;
   }
 
   async getProducts(req, res, next) {
@@ -58,6 +60,30 @@ class ProductController {
         data: product,
         image
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // PATCH /products/:id: cambio explícito del PVP (solo ADMIN), con su registro en la bitácora.
+  async updatePrice(req, res, next) {
+    try {
+      const { producto, cambio } = await this.updateProductPriceUC.execute(req.params.id, req.body, req.user);
+      res.json({
+        success: true,
+        message: cambio ? `PVP actualizado de $${cambio.anterior.toFixed(2)} a $${cambio.nuevo.toFixed(2)}.` : 'El PVP no cambió.',
+        data: producto,
+        cambioPrecio: cambio
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getPriceHistory(req, res, next) {
+    try {
+      const data = await this.getProductPriceHistoryUC.execute(req.params.id, req.user);
+      res.json({ success: true, count: data.length, data });
     } catch (err) {
       next(err);
     }

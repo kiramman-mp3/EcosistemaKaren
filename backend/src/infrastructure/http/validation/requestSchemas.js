@@ -118,6 +118,9 @@ const schemas = {
     impuestoPorcentaje: z.coerce.number().finite().min(0).max(100).optional(),
     minStockAlerta: z.coerce.number().int().min(0).max(10_000_000).optional()
   }),
+  productPriceBody: z.strictObject({
+    precioVenta: money
+  }),
   productQuery: z.strictObject({
     q: emptyToUndefined(z.string().trim().max(120).optional()),
     categoriaId: emptyToUndefined(entityId.optional()),
@@ -134,7 +137,9 @@ const schemas = {
     fechaCaducidad: isoDate,
     costoUnitario: money,
     cantidadIngresada: positiveInteger(),
-    ubicacion: location.optional()
+    ubicacion: location.optional(),
+    // Solo ADMIN (lo comprueba el caso de uso): nuevo PVP del producto, guardado junto con el lote.
+    nuevoPrecioVenta: money.optional()
   }).superRefine((data, ctx) => {
     if (data.fechaElaboracion >= data.fechaCaducidad) {
       ctx.addIssue({ code: 'custom', path: ['fechaElaboracion'], message: 'La fecha de elaboración debe ser anterior a la fecha de caducidad.' });

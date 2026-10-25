@@ -38,10 +38,14 @@ class LotController {
   async ingresarLote(req, res, next) {
     try {
       const lot = await this.ingresarLoteUC.execute(req.body, req.user);
+      const cambio = lot.cambioPrecio || null;
       res.status(201).json({
         success: true,
-        message: 'Lote de inventario ingresado correctamente en bodega.',
-        data: lot
+        message: cambio
+          ? `Lote ingresado. PVP actualizado de $${cambio.anterior.toFixed(2)} a $${cambio.nuevo.toFixed(2)}.`
+          : 'Lote de inventario ingresado correctamente en bodega.',
+        data: lot,
+        cambioPrecio: cambio
       });
     } catch (err) {
       next(err);
