@@ -773,16 +773,62 @@ async function cleanPreviousSeed(client) {
 
 // La base del portal solo guarda clientes: se copian con los mismos ids para que el cliente
 // autenticado en el portal sea el mismo que figura en las reservas de la tienda.
-async function seedPortalClients(portalPool, clients) {
+// Copia en el portal de las reservas de los clientes demo, tal como las vería si las hubieran hecho
+// desde las apps: mismo id, código y plazo que en la tienda, las líneas que pidió el cliente (`items`)
+// y lo que asignó la tienda (`detalles`, en el formato de su respuesta). Así "Mis reservas" muestra el
+// historial también con la tienda y el portal en bases separadas.
+function buildPortalReservations(sim, lots) {
+  const lotById = new Map(lots.map(l => [l.id, l]));
+  const linesByReservation = new Map();
+  for (const detail of sim.details) {
+    if (!linesByReservation.has(detail.reserva_id)) linesByReservation.set(detail.reserva_id, []);
+    linesByReservation.get(detail.reserva_id).push(detail);
+  }
+  return sim.reservations.map(reservation => {
+    const lines = linesByReservation.get(reservation.id) || [];
+    const items = new Map();
+    for (const line of lines) {
+      const lot = lotById.get(line.lote_id);
+      const key = `${lot.product.id}:${line.promocion_id || ''}`;
+      const item = items.get(key) || { productoId: lot.product.id, cantidad: 0, ...(line.promocion_id ? { promocionId: line.promocion_id } : {}) };
+      item.cantidad += line.cantidad;
+      items.set(key, item);
+    }
+    return {
+      id: reservation.id, cliente_id: reservation.usuario_id, estado: reservation.estado,
+      codigo_retiro: reservation.codigo_retiro, fecha_expiracion: reservation.fecha_expiracion,
+      items: [...items.values()],
+      detalles: lines.map(line => {
+        const lot = lotById.get(line.lote_id);
+        return {
+          loteId: lot.id, cantidad: line.cantidad, precioUnitario: Number(line.precio_unitario),
+          numeroLote: lot.numero_lote, productoId: lot.product.id, productoNombre: lot.product.nombre,
+          codigoBarras: lot.product.codigoBarras, imagenUrl: lot.product.imagenUrl || null
+        };
+      }),
+      created_at: reservation.created_at, updated_at: reservation.updated_at
+    };
+  });
+}
+
+async function seedPortal(portalPool, clients, portalReservations) {
   await runMigrations(portalPool, { targets: ['portal'] });
   const client = await portalPool.connect();
   try {
     await client.query('BEGIN');
+    // Primero las reservas (y sus comandos, en cascada): impiden borrar a sus clientes.
+    await client.query(`DELETE FROM reservas_portal WHERE cliente_id IN
+      (SELECT id FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}')`);
     await client.query(`DELETE FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}'`);
     await bulkInsert(client, 'usuarios', [
       ['id', 'uuid'], ['nombre', 'text'], ['email', 'text'], ['rol', 'text', 'rol_usuario'],
       ['password_hash', 'text'], ['created_at', 'timestamptz']
     ], clients);
+    await bulkInsert(client, 'reservas_portal', [
+      ['id', 'uuid'], ['cliente_id', 'uuid'], ['estado', 'text'], ['codigo_retiro', 'text'],
+      ['fecha_expiracion', 'timestamptz'], ['items', 'jsonb'], ['detalles', 'jsonb'],
+      ['created_at', 'timestamptz'], ['updated_at', 'timestamptz']
+    ], portalReservations);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -905,8 +951,9 @@ async function main() {
     const separatePortalDb = JSON.stringify(connectionSettings('portal')) !== JSON.stringify(connectionSettings('store'));
     if (separatePortalDb) {
       const portalPool = getPool('portal');
-      await seedPortalClients(portalPool, users.filter(u => u.rol === 'CLIENTE'));
-      console.log(`👥 ${users.filter(u => u.rol === 'CLIENTE').length} clientes demo copiados a la base del portal`);
+      const portalReservations = buildPortalReservations(sim, lots);
+      await seedPortal(portalPool, users.filter(u => u.rol === 'CLIENTE'), portalReservations);
+      console.log(`👥 ${users.filter(u => u.rol === 'CLIENTE').length} clientes demo y ${portalReservations.length} reservas copiados a la base del portal`);
     }
 
     const byState =(list, key) => list.reduce((acc, x) => { acc[x[key]] = (acc[x[key]] || 0) + 1; return acc; }, {});
