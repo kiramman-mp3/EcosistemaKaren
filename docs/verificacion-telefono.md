@@ -23,7 +23,7 @@ Comprobaciones que el navegador no puede cubrir: cámara, archivos, compartir y 
 | TEL-09 | Caja → escanear el QR de un pase del portal | Se carga la reserva y se puede confirmar una sola vez. |
 | TEL-10 | Reportes → PDF | Se genera el PDF y se abre el menú de compartir; el encabezado dice Supermercado Karen, Patricia Rodríguez, RUC 1850410612001 y la dirección de Quero. |
 | TEL-11 | Reportes → Excel | Se comparte un CSV que abre en Excel o Sheets con tildes correctas y los mismos datos del encabezado. |
-| TEL-12 | Reportes en pantalla | Las cifras caben en una línea y usan separador de miles (por ejemplo `$14,136.66`). |
+| TEL-12 | Reportes en pantalla → Hoy, Últimos 7 días, Últimos 30 días | Las cuatro cifras cambian juntas con el período, caben en una línea y usan separador de miles (por ejemplo `$8,580.67`). El PDF y el Excel indican el período elegido. |
 
 ## Portal (app del cliente)
 
