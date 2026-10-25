@@ -2,6 +2,7 @@ const {
   NotFoundException,
   ValidationException,
   OverbookingException,
+  OfferLimitException,
   ServiceUnavailableException
 } = require('../../domain/exceptions/DomainExceptions');
 const Reservation = require('../../domain/entities/Reservation');
@@ -15,6 +16,7 @@ function rejectionToException(reservation) {
   const message = reservation.mensajeRechazo || 'La tienda no pudo reservar los productos solicitados.';
   switch (reservation.motivoRechazo) {
     case 'OVERBOOKING': return new OverbookingException(message);
+    case 'OFFER_LIMIT': return new OfferLimitException(message);
     case 'NOT_FOUND': return new NotFoundException(message);
     case 'STORE_ERROR': return new ServiceUnavailableException(message);
     default: return new ValidationException(message);

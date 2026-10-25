@@ -8,12 +8,15 @@ const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
 const {
   buildPromotionCacheKey,
-  assertPromotableLot
+  assertPromotableLot,
+  assertOfferTerms,
+  offerLimitViolation
 } = require('../../domain/policies/PromotionPolicy');
 const {
   NotFoundException,
   ValidationException,
   OverbookingException,
+  OfferLimitException,
   ForbiddenException
 } = require('../../domain/exceptions/DomainExceptions');
 
@@ -425,6 +428,8 @@ class InMemoryRepositories {
             if (!promotion || !promotionLot || promotionLot.productoId !== product.id) {
               throw new ValidationException('La oferta seleccionada ya no está disponible para este producto.');
             }
+            const violation = offerLimitViolation(promotion, item.cantidad, this._offerCommitted(promotion.id));
+            if (violation) throw new OfferLimitException(violation);
             promotedLotId = promotion.loteId;
             unitPrice = Number((unitPrice * (1 - Number(promotion.descuentoPorcentaje) / 100)).toFixed(2));
           }
@@ -472,7 +477,8 @@ class InMemoryRepositories {
             reservaId: reservationInstance.id,
             loteId: allocation.lot.id,
             cantidad: allocation.quantity,
-            precioUnitario: allocation.price
+            precioUnitario: allocation.price,
+            promocionId: allocation.promocionId
           };
         });
         this.reservations.push(reservationInstance);
@@ -704,9 +710,27 @@ class InMemoryRepositories {
     };
   }
 
+  // Unidades de una oferta tomadas por reservas pendientes o confirmadas (como en PostgreSQL).
+  _offerCommitted(promotionId) {
+    return this.reservations
+      .filter(r => r.estado === 'PENDIENTE' || r.estado === 'CONFIRMADA')
+      .flatMap(r => r.detalles || [])
+      .filter(d => d.promocionId === promotionId)
+      .reduce((sum, d) => sum + Number(d.cantidad), 0);
+  }
+
+  _withRemaining(promotion) {
+    if (promotion.stockOferta) {
+      promotion.unidadesRestantes = Math.max(0, promotion.stockOferta - this._offerCommitted(promotion.id));
+    }
+    return promotion;
+  }
+
   get promotionRepository() {
     const isPubliclyValid = (promotion) => {
       if (promotion.estado !== 'APROBADA' || !promotion.activa) return false;
+      if (promotion.vigenteHasta && new Date(promotion.vigenteHasta) <= new Date()) return false;
+      if (promotion.unidadesRestantes === 0) return false;
       const lot = this.lots.find(item => item.id === promotion.loteId);
       if (!lot) return false;
       try {
@@ -718,8 +742,8 @@ class InMemoryRepositories {
     };
 
     return {
-      findAllApproved: async () => this.promotions.filter(isPubliclyValid),
-      findAllActive: async () => this.promotions.filter(isPubliclyValid),
+      findAllApproved: async () => this.promotions.map(p => this._withRemaining(p)).filter(isPubliclyValid),
+      findAllActive: async () => this.promotions.map(p => this._withRemaining(p)).filter(isPubliclyValid),
       findAllPending: async () => this.promotions.filter(p => p.estado === 'PENDIENTE_APROBACION'),
       findAllOperational: async ({ estado, activa } = {}) => this.promotions.filter(p =>
         (!estado || p.estado === estado) && (activa === undefined || p.activa === activa)
@@ -730,6 +754,9 @@ class InMemoryRepositories {
         if (!promo) return null;
         promo.descuentoPorcentaje = Number(data.descuentoPorcentaje);
         promo.frasePromocional = data.frasePromocional.trim();
+        promo.limitePorPedido = data.limitePorPedido ?? null;
+        promo.stockOferta = data.stockOferta ?? null;
+        promo.vigenteHasta = data.vigenteHasta ?? null;
         return promo;
       },
       deactivate: async (id) => {
@@ -779,6 +806,7 @@ class InMemoryRepositories {
         }
         const lot = this.lots.find(item => item.id === promo.loteId);
         assertPromotableLot(lot);
+        assertOfferTerms(promo, lot);
         const product = this.products.find(item => item.id === lot.productoId);
         if (!product) {
           throw new ValidationException('El producto asociado a la promoción ya no existe.');
