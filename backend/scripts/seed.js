@@ -4,7 +4,7 @@
  *
  * - Catálogo real de productos comercializados en Ecuador (seed/catalogo-ecuador.json)
  *   con PVP referencial e IVA (15% o 0%), e imágenes descargadas de Open Food Facts.
- * - Usuarios, lotes, reservas, movimientos, mermas, alertas y promociones generados
+ * - Usuarios, lotes, reservas, movimientos, mermas, alertas, promociones y cambios de PVP generados
  *   mediante una simulación cronológica que respeta las reglas del dominio (FEFO,
  *   saldos antes/después, estados de lote y de reserva).
  *
@@ -281,6 +281,39 @@ function buildLots(products) {
   return lots;
 }
 
+// ---------------------------------------------------------------------------
+// Cambios de PVP
+// ---------------------------------------------------------------------------
+// Alrededor del 12 % de los productos subió de precio en el período simulado: la mitad al recibir un
+// lote (el ADMIN fija el nuevo PVP en el ingreso) y la otra mitad desde el catálogo. El precio del
+// catálogo es el nuevo; las reservas anteriores al cambio se hicieron con el precio de entonces.
+function buildPriceChanges(products, lots, users) {
+  const admins = users.filter(u => u.rol === 'ADMIN');
+  const lotsByProduct = new Map();
+  for (const lot of lots) {
+    if (!lotsByProduct.has(lot.product.codigoBarras)) lotsByProduct.set(lot.product.codigoBarras, []);
+    lotsByProduct.get(lot.product.codigoBarras).push(lot);
+  }
+  const changes = [];
+  for (const product of products) {
+    if (!chance(0.12)) continue;
+    const anterior = round2(product.pvp * (0.86 + rand() * 0.1));
+    if (anterior <= 0 || anterior >= product.pvp) continue;
+    const candidates = (lotsByProduct.get(product.codigoBarras) || [])
+      .filter(lot => lot.ingreso > NOW - HISTORY_DAYS * DAY_MS && lot.ingreso < NOW - DAY_MS);
+    const withLot = candidates.length > 0 && chance(0.5);
+    const lot = withLot ? pick(candidates) : null;
+    const t = lot ? lot.ingreso : NOW - randInt(2, HISTORY_DAYS - 5) * DAY_MS - randInt(8, 18) * 3600000;
+    const change = { t, anterior, nuevo: product.pvp, origen: lot ? 'INGRESO_LOTE' : 'MANUAL', lot, actor: pick(admins) };
+    product.priceChange = change;
+    changes.push({ product, ...change });
+  }
+  return changes;
+}
+
+/** PVP vigente del producto en el instante t (antes de su cambio, el precio anterior). */
+const priceAt = (product, t) => (product.priceChange && t < product.priceChange.t ? product.priceChange.anterior : product.pvp);
+
 function simulate({ products, lots, users }) {
   const clients = users.filter(u => u.rol === 'CLIENTE');
   const warehouse = users.filter(u => u.rol === 'BODEGUERO' || u.rol === 'PERCHERO');
@@ -391,7 +424,7 @@ function simulate({ products, lots, users }) {
         lot.res += q;
         move(lot, 'RESERVA', q, before, { disp: lot.disp, res: lot.res },
           { motivo: 'Stock asignado a reserva', actor: user.id, reserva: reservaId, at: t });
-        lines.push({ lot, q, price: product.pvp });
+        lines.push({ lot, q, price: priceAt(product, t) });
       }
     }
     if (!lines.length) return;
@@ -577,6 +610,9 @@ async function cleanPreviousSeed(client) {
     SELECT id FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}'`);
   await client.query(`CREATE TEMP TABLE seed_lots ON COMMIT DROP AS
     SELECT id FROM lotes WHERE numero_lote LIKE '${LOT_PREFIX}%'`);
+  // Antes de borrar usuarios y lotes: sus claves foráneas dejarían el historial sin actor ni lote.
+  await client.query(`DELETE FROM productos_precio_historial WHERE actor_id IN (SELECT id FROM seed_users)
+    OR lote_id IN (SELECT id FROM seed_lots)`);
   await client.query(`CREATE TEMP TABLE seed_reservations ON COMMIT DROP AS
     SELECT id FROM reservas WHERE usuario_id IN (SELECT id FROM seed_users)
     UNION SELECT reserva_id FROM reserva_detalles WHERE lote_id IN (SELECT id FROM seed_lots)`);
@@ -654,6 +690,7 @@ async function main() {
     const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
     const users = buildUsers(passwordHash);
     const lots = buildLots(products);
+    const priceChanges = buildPriceChanges(products, lots, users);
     const sim = simulate({ products, lots, users });
     finalizeLots(lots);
     const { alerts, promotions } = buildAlertsAndPromotions(lots, users);
@@ -698,6 +735,13 @@ async function main() {
       ['id', 'uuid'], ['lote_id', 'uuid'], ['dias_para_vencer', 'int'], ['nivel', 'text', 'nivel_alerta'],
       ['atendida', 'boolean'], ['created_at', 'timestamptz']
     ], alerts);
+    await bulkInsert(client, 'productos_precio_historial', [
+      ['producto_id', 'uuid'], ['precio_anterior', 'numeric'], ['precio_nuevo', 'numeric'], ['origen', 'text'],
+      ['lote_id', 'uuid'], ['actor_id', 'uuid'], ['created_at', 'timestamptz']
+    ], priceChanges.map(change => ({
+      producto_id: change.product.id, precio_anterior: change.anterior, precio_nuevo: change.nuevo, origen: change.origen,
+      lote_id: change.lot ? change.lot.id : null, actor_id: change.actor.id, created_at: iso(change.t)
+    })));
     await bulkInsert(client, 'promociones_ia', [
       ['id', 'uuid'], ['lote_id', 'uuid'], ['descuento_porcentaje', 'numeric'], ['frase_promocional', 'text'],
       ['razon_ia', 'text'], ['activa', 'boolean'], ['estado', 'text', 'estado_promocion'], ['modelo_ia', 'text'],
@@ -728,7 +772,8 @@ async function main() {
       movimientos: sim.movements.length,
       mermas: sim.wastes.length,
       alertas: alerts.length,
-      promociones: promotions.length
+      promociones: promotions.length,
+      cambios_pvp: priceChanges.length
     });
     console.log('Lotes por estado:', byState(lots, 'estado'));
     console.log('Reservas por estado:', byState(sim.reservations, 'estado'));
