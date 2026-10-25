@@ -195,11 +195,16 @@ function BodegaAppContent() {
   }
 
   if (!currentUser) {
+    // En el navegador el ingreso va dentro del mismo marco de escritorio que el resto de la app.
     return (
-      <BodegaLoginScreen onLogin={({ user }) => {
-        setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
-        setCurrentUser(user);
-      }} />
+      <View style={[styles.appShell, Platform.OS === 'web' && styles.desktopRoot]}>
+        <View style={[styles.appShell, Platform.OS === 'web' && styles.desktopShell]}>
+          <BodegaLoginScreen onLogin={({ user }) => {
+            setActiveTab(user.rol === 'PERCHERO' ? 'alertas' : 'ingreso');
+            setCurrentUser(user);
+          }} />
+        </View>
+      </View>
     );
   }
 
