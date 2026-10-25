@@ -73,13 +73,18 @@ test('PostgresRateLimitStore y PostgresHeartbeatStore sincronizan en PostgreSQL'
   await rateLimitStore.resetKey(testKey);
 });
 
-test('HeartbeatSenderWorker emite latidos periódicos por su transporte', async () => {
+test('HeartbeatSenderWorker emite latidos periódicos por su transporte', async (t) => {
   let recorded = 0;
   const mockTransport = {
     send: async () => {
       recorded++;
     }
   };
+  // El aviso de arranque del worker, mezclado con la salida del ejecutor de pruebas de Node 22,
+  // a veces lo hace fallar ("Unable to deserialize cloned data"): se silencia durante la prueba.
+  const originalLog = console.log;
+  console.log = () => {};
+  t.after(() => { console.log = originalLog; });
 
   const worker = new HeartbeatSenderWorker(mockTransport, 50);
   worker.start();
