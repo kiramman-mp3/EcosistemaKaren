@@ -55,5 +55,8 @@
         "jest-expo"
       ]
     }
+  },
+  "overrides": {
+    "zod": "^4.6.7"
   }
 }
