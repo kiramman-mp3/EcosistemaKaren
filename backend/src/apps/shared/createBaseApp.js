@@ -8,6 +8,8 @@ const { testConnection, getPool } = require('../../infrastructure/db/postgres');
 const { runMigrations } = require('../../infrastructure/db/migrations');
 const { createSecurityMiddlewares, validateProductionSecurity, cookieCsrfProtection } = require('../../infrastructure/http/middlewares/security');
 const { assertNoDefaultAccounts } = require('../../infrastructure/security/defaultAccounts');
+const { createHealthRouter } = require('../../infrastructure/http/health');
+const { createAccessLog, isEnabled: accessLogEnabled } = require('../../infrastructure/http/middlewares/accessLog');
 
 // Pila HTTP común a store-api y portal-api: base de datos, cabeceras de seguridad, CORS,
 // límites de tasa, parseo de cuerpo y protección CSRF.
@@ -41,7 +43,10 @@ async function createBaseApp({ database = 'store', migrations = ['store'] } = {}
   // Seguridad HTTP común
   app.disable('x-powered-by');
   app.use(httpSecurity.requestId);
+  if (accessLogEnabled(process.env)) app.use(createAccessLog({ service: database }));
   app.use(httpSecurity.headers);
+  // Sondas de liveness/readiness: antes de los límites de tasa, que no deben tumbar al orquestador.
+  app.use(createHealthRouter({ pool, service: database, migrations }));
   const allowedOrigins = (process.env.CORS_ORIGINS || '')
     .split(',').map(value => value.trim()).filter(Boolean);
   app.use(cors({
