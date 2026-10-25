@@ -276,7 +276,13 @@ export const api = {
     return res.data.data || [];
   },
 
-  async updatePromotion(id: string, payload: { descuentoPorcentaje: number; frasePromocional: string }): Promise<BackendPromotion> {
+  async updatePromotion(id: string, payload: {
+    descuentoPorcentaje: number;
+    frasePromocional: string;
+    limitePorPedido?: number | null;
+    stockOferta?: number | null;
+    vigenteHasta?: string | null;
+  }): Promise<BackendPromotion> {
     const res = await axios.patch<{ success: boolean; data: BackendPromotion }>(
       `${getServerUrl()}/promotions/${id}`, payload, authorizedConfig(7000)
     );
