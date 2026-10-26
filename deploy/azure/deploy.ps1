@@ -103,6 +103,10 @@ if (-not $UpdateOnly) {
       --tier Burstable --sku-name Standard_B1ms --storage-size 32 --version 14 `
       --public-access 0.0.0.0 --yes | Out-Null
   }
+  # Azure exige autorizar las extensiones antes de CREATE EXTENSION; las migraciones usan estas dos.
+  Invoke-Az postgres flexible-server parameter set `
+    --resource-group $ResourceGroup --server-name $dbServer `
+    --name azure.extensions --value 'UUID-OSSP,UNACCENT' | Out-Null
   if (-not (Test-Az postgres flexible-server db show --server-name $dbServer --resource-group $ResourceGroup --database-name $dbName)) {
     Invoke-Az postgres flexible-server db create `
       --resource-group $ResourceGroup --server-name $dbServer --name $dbName | Out-Null
