@@ -68,6 +68,40 @@ Reconstruye la imagen con una etiqueta nueva y crea otra revisión de la aplicac
 Las apps de bodega usan `http://<STORE_BIND>:4000` como URL del servidor y deben estar en el Wi-Fi
 de la tienda.
 
+## Variante: base de datos en Supabase
+
+Para no pagar PostgreSQL de Azure (unos 15–20 USD al mes) la base del portal puede vivir en Supabase.
+La Container App sigue igual; solo cambia la conexión.
+
+1. En Supabase, copia los datos del **session pooler** (puerto 5432). Evita el transaction pooler (6543):
+   el backend usa `pg_advisory_lock`. La conexión directa (`db.<ref>.supabase.co`) es solo IPv6 y Container
+   Apps puede no alcanzarla.
+2. Supabase firma con su propia CA, que Node no trae. La imagen incluye la raíz pública
+   `deploy/azure/certs/supabase-prod-ca-2021.crt` (SHA-256 `80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA`,
+   vence en 2031). Verifica la huella contra la que muestra tu panel antes de confiar en ella.
+3. Configura la app con TLS verificado:
+
+```powershell
+az containerapp secret set -n karen-portal -g rg-karen --secrets "db-password=<contraseña>"
+az containerapp update -n karen-portal -g rg-karen --set-env-vars `
+  "DB_HOST=<host del pooler>" "DB_PORT=5432" "DB_NAME=postgres" "DB_USER=postgres.<ref>" `
+  "DB_SSL=true" "DB_SSL_CA=/app/certs/supabase-prod-ca-2021.crt"
+```
+
+   Si la contraseña lleva `& ^ ! $`, `az.cmd` de Windows la rompe: invoca la CLI sin pasar por `cmd` con
+   `& "C:\Program Files\Microsoft SDKs\Azure\CLI2\python.exe" -IBm azure.cli containerapp ...` y la contraseña
+   entre comillas simples.
+4. Las migraciones se aplican solas al arrancar (`uuid-ossp` y `unaccent` están disponibles en Supabase).
+5. **Seguridad:** las tablas quedan en el schema `public`, que Supabase expone por su Data API con la clave
+   `anon`. Desactiva la Data API (Settings → API) o activa RLS en todas las tablas; el backend conecta como
+   `postgres`, que ignora RLS, y no se ve afectado.
+
+El pooler descarta el parámetro `options` del arranque, así que el backend fija la zona horaria del negocio
+(`America/Guayaquil`) al abrir cada conexión. Sin eso, `CURRENT_DATE` sería el día UTC.
+
+Una vez que Supabase funcione, borra el servidor de Azure para dejar de pagar su almacenamiento
+(irreversible): `az postgres flexible-server delete -g rg-karen -n <servidor> --yes`.
+
 ## Costos aproximados (verifícalos en la calculadora de Azure)
 
 | Recurso | Mensual aprox. |

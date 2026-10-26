@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const { connectionSettings, sslSettings } = require('../src/infrastructure/db/postgres');
 
 const storeEnv = {
@@ -60,4 +63,24 @@ test('el portal prefiere PORTAL_DB_SSL y cae en DB_SSL; la tienda ignora PORTAL_
   assert.deepEqual(sslSettings('portal', { DB_SSL: 'true', PORTAL_DB_SSL: 'no-verify' }), { rejectUnauthorized: false });
   assert.deepEqual(sslSettings('portal', { DB_SSL: 'true', PORTAL_DB_SSL: '' }), { rejectUnauthorized: true });
   assert.equal(sslSettings('store', { PORTAL_DB_SSL: 'true' }), undefined);
+});
+
+test('DB_SSL_CA acepta el PEM en la variable o la ruta a un archivo y mantiene la verificación', () => {
+  const pem = '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----';
+  assert.deepEqual(sslSettings('store', { DB_SSL: 'true', DB_SSL_CA: pem }), { rejectUnauthorized: true, ca: pem });
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'karen-ca-')), 'ca.crt');
+  fs.writeFileSync(file, pem);
+  assert.deepEqual(sslSettings('store', { DB_SSL: 'true', DB_SSL_CA: file }), { rejectUnauthorized: true, ca: pem });
+});
+
+test('el portal prefiere PORTAL_DB_SSL_CA y DB_SSL_CA se ignora sin DB_SSL=true', () => {
+  const pem = '-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----';
+  const other = '-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----';
+  assert.equal(sslSettings('portal', { DB_SSL: 'true', DB_SSL_CA: other, PORTAL_DB_SSL_CA: pem }).ca, pem);
+  assert.equal(sslSettings('store', { DB_SSL_CA: pem }), undefined);
+  assert.deepEqual(sslSettings('store', { DB_SSL: 'no-verify', DB_SSL_CA: pem }), { rejectUnauthorized: false });
+});
+
+test('una ruta de DB_SSL_CA inexistente falla de forma explícita', () => {
+  assert.throws(() => sslSettings('store', { DB_SSL: 'true', DB_SSL_CA: path.join(os.tmpdir(), 'no-existe.crt') }), /ENOENT/);
 });

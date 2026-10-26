@@ -1,4 +1,5 @@
-const { Pool, types } = require('pg');
+const fs = require('fs');
+const { Client, Pool, types } = require('pg');
 const { businessTimezone } = require('../../domain/policies/BusinessDates');
 
 // DATE (OID 1082) llega como 'AAAA-MM-DD': es un día calendario y no debe convertirse
@@ -25,18 +26,38 @@ function connectionSettings(role = 'store', env = process.env) {
 }
 
 // DB_SSL (o PORTAL_DB_SSL en el portal): 'true' cifra la conexión y verifica el certificado del
-// servidor (Azure Database for PostgreSQL, Supabase); 'no-verify' solo cifra. Sin definir, no hay TLS.
+// servidor; 'no-verify' solo cifra. Sin definir, no hay TLS.
+// DB_SSL_CA (o PORTAL_DB_SSL_CA) añade una autoridad certificadora propia para verificar: es el
+// texto PEM o la ruta a un archivo. Hace falta con Supabase, que firma con su propia CA.
 function sslSettings(role = 'store', env = process.env) {
-  const own = role === 'portal' ? env.PORTAL_DB_SSL : undefined;
-  const value = (own !== undefined && own !== '' ? own : env.DB_SSL || '').trim().toLowerCase();
-  if (value === 'true') return { rejectUnauthorized: true };
+  const pick = (name) => {
+    const own = role === 'portal' ? env[`PORTAL_${name}`] : undefined;
+    return own !== undefined && own !== '' ? own : env[name];
+  };
+  const value = (pick('DB_SSL') || '').trim().toLowerCase();
   if (value === 'no-verify') return { rejectUnauthorized: false };
-  return undefined;
+  if (value !== 'true') return undefined;
+  const ca = (pick('DB_SSL_CA') || '').trim();
+  if (!ca) return { rejectUnauthorized: true };
+  return { rejectUnauthorized: true, ca: ca.includes('-----BEGIN') ? ca : fs.readFileSync(ca, 'utf8') };
 }
 
 // Dos roles con la misma conexión (monolito, desarrollo con una sola base) comparten pool.
 function poolKey(settings) {
   return `${settings.host}:${settings.port}/${settings.database}@${settings.user}`;
+}
+
+// Los poolers (Supabase) descartan el parámetro `options` del arranque, así que la zona horaria del
+// negocio se fija también al abrir cada conexión, antes de que el pool la entregue.
+class BusinessTimezoneClient extends Client {
+  connect(callback) {
+    const applyTimezone = () => this.query('SELECT set_config($1, $2, false)', ['TimeZone', businessTimezone()]);
+    if (!callback) return super.connect().then(applyTimezone);
+    return super.connect((err) => {
+      if (err) return callback(err);
+      return applyTimezone().then(() => callback(), callback);
+    });
+  }
 }
 
 function getPool(role = 'store') {
@@ -46,6 +67,7 @@ function getPool(role = 'store') {
     const pool = new Pool({
       ...settings,
       ssl: sslSettings(role),
+      Client: BusinessTimezoneClient,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 3000,

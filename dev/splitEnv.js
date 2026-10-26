@@ -66,6 +66,32 @@ function mobileApiUrls({ args, lanHost, storePort, portalPort }) {
   };
 }
 
+/**
+ * Entorno de `node start.js --backend-tienda`: solo store-api y su base, para la PC de la tienda.
+ * Sin `portalUrl` la tienda funciona sola (latido, sincronización de catálogo y cola de reservas
+ * apagados, así que no escribe nada en ningún portal); con `portalUrl` se conecta a ese portal con
+ * la clave de servicio.
+ */
+function storeOnlyEnv({ env, portalUrl, serviceKey }) {
+  const { storePort } = servicePorts(env);
+  const base = { STORE_PORT: String(storePort) };
+  const url = typeof portalUrl === 'string' ? portalUrl.trim().replace(/\/+$/, '') : '';
+  if (url) {
+    return { storePort, connected: true, store: { ...base, PORTAL_URL: url, STORE_SERVICE_KEY: serviceKey } };
+  }
+  return {
+    storePort,
+    connected: false,
+    store: { ...base, HEARTBEAT_ENABLED: 'false', CATALOG_SYNC_ENABLED: 'false', RESERVATION_QUEUE_ENABLED: 'false' }
+  };
+}
+
+/** URL de store-api para la app de bodega: `--store-api-url` o la IP de la red local. */
+function storeApiUrl({ args, lanHost, storePort }) {
+  if (typeof args['store-api-url'] === 'string') return args['store-api-url'].replace(/\/$/, '');
+  return lanHost ? `http://${lanHost}:${storePort}/api/v1` : null;
+}
+
 // Variables que ya no hacen nada y siguen en algunos .env: se avisa para que se retiren.
 const DEPRECATED_ENV = {
   HEARTBEAT_AUTO_PING: 'ya no existe: el latido lo emite store-api (ver HEARTBEAT_ENABLED)'
@@ -78,4 +104,6 @@ function deprecatedEnvVars(env) {
     .map(([name, reason]) => ({ name, reason }));
 }
 
-module.exports = { isWeakKey, withServiceKey, portalDbEnv, servicePorts, buildSplitEnv, mobileApiUrls, deprecatedEnvVars };
+module.exports = {
+  isWeakKey, withServiceKey, portalDbEnv, servicePorts, buildSplitEnv, storeOnlyEnv, storeApiUrl, mobileApiUrls, deprecatedEnvVars
+};
