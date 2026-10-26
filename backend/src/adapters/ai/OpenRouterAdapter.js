@@ -40,6 +40,8 @@ class OpenRouterAdapter extends GeminiAdapter {
     const body = {
       model: modelName,
       temperature: 0.2,
+      // Los modelos con razonamiento tardan 30 s o más en esta tarea; sin él responden en ~2 s.
+      reasoning: { enabled: false },
       messages: [
         {
           role: 'system',
@@ -85,7 +87,10 @@ class OpenRouterAdapter extends GeminiAdapter {
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(this._timeoutMs),
       });
-      payload = await response.json().catch(() => null);
+      // A timeout while reading the body must surface as TIMEOUT, not as an empty response.
+      payload = await response.json().catch(err => (
+        err && (err.name === 'TimeoutError' || err.name === 'AbortError') ? Promise.reject(err) : null
+      ));
     } catch (err) {
       if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
         throw new GeminiError(
