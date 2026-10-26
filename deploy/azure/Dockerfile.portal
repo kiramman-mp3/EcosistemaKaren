@@ -1,0 +1,36 @@
+# portal-api + portal web en una sola imagen para Azure Container Apps. Se construye desde la raíz:
+#   az acr build --registry <acr> --image karen-portal:latest --file deploy/azure/Dockerfile.portal .
+# El web se sirve desde el mismo origen que la API (PORTAL_STATIC_DIR): la cookie de sesión es
+# SameSite=Strict, así que web y API deben compartir sitio y no hace falta dominio propio.
+FROM node:22-alpine AS web
+WORKDIR /web
+COPY frontend/portal-web-react/package.json frontend/portal-web-react/package-lock.json ./
+RUN npm ci
+COPY frontend/portal-web-react ./
+# Sin VITE_API_URL: el web llama a /api/v1 en su propio origen.
+RUN npm run build
+
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+FROM node:22-alpine
+ENV NODE_ENV=production \
+    PORTAL_PORT=4001 \
+    HEALTHCHECK_PORT=4001 \
+    PORTAL_STATIC_DIR=/app/web
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY backend/package.json ./
+COPY backend/index.js backend/index.store.js backend/index.portal.js ./
+COPY backend/src ./src
+COPY backend/init-db ./init-db
+COPY backend/scripts ./scripts
+COPY --from=web /web/dist ./web
+RUN mkdir -p public/media/productos && chown -R node:node public
+USER node
+EXPOSE 4001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node scripts/healthcheck.js
+CMD ["node", "index.portal.js"]
