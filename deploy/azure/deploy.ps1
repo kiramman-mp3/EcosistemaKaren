@@ -5,7 +5,7 @@
 .DESCRIPTION
   Primera vez:      .\deploy\azure\deploy.ps1
   Nueva versión:    .\deploy\azure\deploy.ps1 -UpdateOnly
-  Requiere Azure CLI (az) con sesión iniciada (`az login`). Ver docs/azure.md.
+  Requiere Azure CLI (az) con sesión iniciada (`az login`) y Docker Desktop abierto. Ver docs/azure.md.
 
   Los secretos se generan una vez y se guardan en deploy/azure/.secrets.<Name>.json (ignorado por
   git). Esa misma clave STORE_SERVICE_KEY va en el .env de la tienda.
@@ -114,13 +114,27 @@ if (-not $UpdateOnly) {
   }
 }
 
-Write-Host "==> Construyendo la imagen en Azure ($tag)"
+# `az acr build` (ACR Tasks) está bloqueado en Azure for Students: la imagen se construye con
+# Docker local y se sube al registro.
+if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+  throw 'Falta Docker. Instala Docker Desktop y ábrelo antes de desplegar.'
+}
+$acrPassword = (Invoke-Az acr credential show --name $acrName --query 'passwords[0].value' -o tsv).Trim()
+
+Write-Host "==> Construyendo la imagen ($tag)"
 Push-Location $root
 try {
-  Invoke-Az acr build --registry $acrName --image "karen-portal:$tag" --file deploy/azure/Dockerfile.portal . | Out-Null
+  & docker build --file deploy/azure/Dockerfile.portal --tag "${image}:$tag" .
+  if ($LASTEXITCODE -ne 0) { throw 'docker build falló.' }
 } finally {
   Pop-Location
 }
+
+Write-Host '==> Subiendo la imagen al registro'
+$acrPassword | & docker login "$acrName.azurecr.io" --username $acrName --password-stdin
+if ($LASTEXITCODE -ne 0) { throw 'docker login falló.' }
+& docker push "${image}:$tag"
+if ($LASTEXITCODE -ne 0) { throw 'docker push falló.' }
 
 $domain = (Invoke-Az containerapp env show --name $envName --resource-group $ResourceGroup --query properties.defaultDomain -o tsv).Trim()
 $fqdn = "$appName.$domain"
@@ -130,7 +144,6 @@ if ($UpdateOnly -or (Test-Az containerapp show --name $appName --resource-group 
   Invoke-Az containerapp update --name $appName --resource-group $ResourceGroup --image "${image}:$tag" | Out-Null
 } else {
   Write-Host "==> Creando la aplicación $appName"
-  $acrPassword = (Invoke-Az acr credential show --name $acrName --query 'passwords[0].value' -o tsv).Trim()
   # DB_* (no PORTAL_DB_*): en un despliegue solo del portal los DB_* bastan y producción exige DB_PASSWORD.
   # max-replicas 1: el límite de tasa general se lleva en memoria de cada instancia.
   Invoke-Az containerapp create `
