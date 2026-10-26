@@ -48,7 +48,7 @@ Invoke-Az account show --query id -o tsv | Out-Null
 if (Test-Path $secretsFile) {
   $cfg = Get-Content $secretsFile -Raw | ConvertFrom-Json
 } else {
-  if ($UpdateOnly) { throw "No existe $secretsFile: ejecuta primero el despliegue completo." }
+  if ($UpdateOnly) { throw "No existe ${secretsFile}: ejecuta primero el despliegue completo." }
   $suffix = -join ((1..5) | ForEach-Object { Get-Random -Maximum 10 })
   $cfg = [pscustomobject]@{
     suffix         = $suffix
