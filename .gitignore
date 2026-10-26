@@ -44,3 +44,9 @@ dist-mobile/
 
 # Docker crea este archivo vacío en el host al montar init-db/dev/01-demo-data.sql dentro de init-db/store (solo desarrollo).
 backend/init-db/store/90-demo-data.sql
+
+# Secretos generados por deploy/azure/deploy.ps1
+deploy/azure/.secrets.*.json
+respaldos/
+.env.store
+.env.portal
