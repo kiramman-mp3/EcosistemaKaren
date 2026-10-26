@@ -71,6 +71,11 @@ class GeminiAdapter {
     }
   }
 
+  /** True when the adapter can make requests. Overridden by other providers. */
+  _isConfigured() {
+    return Boolean(this._apiKey && this._client);
+  }
+
   get promptVersion() {
     return this._promptVersion;
   }
@@ -102,7 +107,7 @@ class GeminiAdapter {
     cantidadDisponible, ubicacion, nivelAlerta,
   }) {
     // ── Guard: API key not configured ──────────────────────────────────────
-    if (!this._apiKey || !this._client) {
+    if (!this._isConfigured()) {
       throw new GeminiError(
         'La API de Gemini no está configurada. Defina GEMINI_API_KEY en las variables de entorno.',
         GeminiErrorType.CONFIG,
