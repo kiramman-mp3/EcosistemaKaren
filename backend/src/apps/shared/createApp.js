@@ -9,6 +9,7 @@ const setupSwagger = require('../../infrastructure/swagger/swaggerDoc');
 const errorHandler = require('../../infrastructure/http/middlewares/errorHandler');
 const createApiRouter = require('../../infrastructure/http/routes/router');
 const { closePool } = require('../../infrastructure/db/postgres');
+const { createStaticSite } = require('../../infrastructure/http/staticSite');
 
 const { createStoreRouter, createPortalRouter } = createApiRouter;
 
@@ -63,6 +64,12 @@ async function createApp({ name, store = false, portal = false }) {
         httpSecurity.rejectDangerousKeys
       ])
     );
+  }
+
+  // El portal en la nube puede servir el frontend compilado desde el mismo origen (la cookie de
+  // sesión es SameSite=Strict, así que web y API deben compartir sitio). Va antes de la raíz.
+  if (portal && !store && process.env.PORTAL_STATIC_DIR) {
+    app.use(createStaticSite(process.env.PORTAL_STATIC_DIR));
   }
 
   // Root redirect & info
