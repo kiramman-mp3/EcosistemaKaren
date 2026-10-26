@@ -266,7 +266,7 @@ export const api = {
     const res = await axios.post<{ success: boolean; data: BackendPromotion }>(
       `${getServerUrl()}/promotions/generate`,
       { loteId },
-      authorizedConfig(45000)
+      authorizedConfig(60000)
     );
     return res.data.data;
   },
