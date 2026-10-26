@@ -32,6 +32,11 @@ class OpenRouterAdapter extends GeminiAdapter {
     this._url = url || OPENROUTER_URL;
   }
 
+  /** Free models share upstream limits, so a 429 is worth retrying on the fallback model. */
+  static _isTransient(err) {
+    return (err instanceof GeminiError && err.type === GeminiErrorType.RATE_LIMIT) || super._isTransient(err);
+  }
+
   _isConfigured() {
     return Boolean(this._apiKey);
   }

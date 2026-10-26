@@ -138,7 +138,7 @@ class GeminiAdapter {
         rawText = await this._requestOnce(useFallback ? this._fallbackModel : this._modelName, prompt, minDesc, maxDesc);
         break;
       } catch (err) {
-        if (attempt >= this._maxAttempts || !GeminiAdapter._isTransient(err)) throw err;
+        if (attempt >= this._maxAttempts || !this.constructor._isTransient(err)) throw err;
         await new Promise(resolve => setTimeout(resolve, this._retryDelayMs * 2 ** (attempt - 1)));
       }
     }

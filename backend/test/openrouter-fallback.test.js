@@ -102,3 +102,18 @@ test('Fallback: errores que no son del proveedor no activan el respaldo', async 
   await assert.rejects(() => adapter.generarEstrategiaPromocional(PARAMS), err => err === bug);
   assert.equal(secondaryCalls, 0);
 });
+
+test('OpenRouter: un 429 del modelo principal se reintenta con el modelo de respaldo', async () => {
+  const models = [];
+  const adapter = new OpenRouterAdapter('k', {
+    model: 'primario', fallbackModel: 'respaldo', maxAttempts: 2, retryDelayMs: 1,
+    fetchImpl: (_url, init) => {
+      const { model } = JSON.parse(init.body);
+      models.push(model);
+      return model === 'respaldo' ? completion(GOOD_JSON) : reply(429, { error: { message: 'rate limited' } });
+    },
+  });
+
+  await adapter.generarEstrategiaPromocional(PARAMS);
+  assert.deepEqual(models, ['primario', 'respaldo']);
+});
