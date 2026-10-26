@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  isWeakKey, withServiceKey, portalDbEnv, servicePorts, buildSplitEnv, mobileApiUrls, deprecatedEnvVars
+  isWeakKey, withServiceKey, portalDbEnv, servicePorts, buildSplitEnv, storeOnlyEnv, storeApiUrl, mobileApiUrls, deprecatedEnvVars
 } = require('./splitEnv');
 
 const KEY = 'k'.repeat(48);
@@ -86,4 +86,34 @@ test('avisa de las variables obsoletas que siguen en el .env', () => {
   assert.equal(found.length, 1);
   assert.equal(found[0].name, 'HEARTBEAT_AUTO_PING');
   assert.match(found[0].reason, /HEARTBEAT_ENABLED/);
+});
+
+test('--backend-tienda sin portal deja la tienda sola: nada se envía a ningún portal', () => {
+  const result = storeOnlyEnv({ env: {}, portalUrl: undefined, serviceKey: KEY });
+  assert.equal(result.connected, false);
+  assert.equal(result.storePort, 4000);
+  assert.deepEqual(result.store, {
+    STORE_PORT: '4000',
+    HEARTBEAT_ENABLED: 'false',
+    CATALOG_SYNC_ENABLED: 'false',
+    RESERVATION_QUEUE_ENABLED: 'false'
+  });
+});
+
+test('--backend-tienda con --portal-url conecta la tienda a ese portal con la clave de servicio', () => {
+  const result = storeOnlyEnv({ env: { STORE_PORT: '4100' }, portalUrl: 'https://karen.example/', serviceKey: KEY });
+  assert.equal(result.connected, true);
+  assert.equal(result.storePort, 4100);
+  assert.deepEqual(result.store, { STORE_PORT: '4100', PORTAL_URL: 'https://karen.example', STORE_SERVICE_KEY: KEY });
+});
+
+test('--portal-url sin valor (flag a secas) no conecta con nada', () => {
+  assert.equal(storeOnlyEnv({ env: {}, portalUrl: true, serviceKey: KEY }).connected, false);
+  assert.equal(storeOnlyEnv({ env: {}, portalUrl: '  ', serviceKey: KEY }).connected, false);
+});
+
+test('la URL de la bodega usa la IP de la red local, o la que se indique', () => {
+  assert.equal(storeApiUrl({ args: {}, lanHost: '192.168.1.50', storePort: 4000 }), 'http://192.168.1.50:4000/api/v1');
+  assert.equal(storeApiUrl({ args: { 'store-api-url': 'http://tienda.local:4000/api/v1/' }, lanHost: '1.2.3.4', storePort: 4000 }), 'http://tienda.local:4000/api/v1');
+  assert.equal(storeApiUrl({ args: {}, lanHost: null, storePort: 4000 }), null);
 });
