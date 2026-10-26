@@ -201,6 +201,70 @@ test('4. GeminiAdapter: mapea error 429 o quota a RATE_LIMIT', async () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 4b. Reintentos ante fallos transitorios (503) y modelo de respaldo
+// ─────────────────────────────────────────────────────────────────────────────
+const LOTE_PARAMS = {
+  loteId: 'lote-1', numeroLote: 'LOT-01', productoNombre: 'Yogurt',
+  diasParaVencer: 3, cantidadDisponible: 10, ubicacion: 'PERCHA', nivelAlerta: 'ROJO',
+};
+const GOOD_JSON = '{"descuentoPorcentaje":30,"frasePromocional":"Yogurt fresco","razonIa":"Vence pronto."}';
+
+function unavailable() {
+  const err = new Error('This model is currently experiencing high demand.');
+  err.status = 503;
+  return err;
+}
+
+test('4b. GeminiAdapter: reintenta un 503 transitorio y devuelve la promoción', async () => {
+  let calls = 0;
+  const adapter = new GeminiAdapter('mock-api-key', { maxAttempts: 3, retryDelayMs: 1, client: { models: {
+    generateContent: () => (++calls < 3 ? Promise.reject(unavailable()) : Promise.resolve({ text: GOOD_JSON })),
+  } } });
+
+  const result = await adapter.generarEstrategiaPromocional(LOTE_PARAMS);
+  assert.equal(result.descuentoPorcentaje, 30);
+  assert.equal(calls, 3);
+});
+
+test('4c. GeminiAdapter: usa el modelo de respaldo en el último intento', async () => {
+  const models = [];
+  const adapter = new GeminiAdapter('mock-api-key', {
+    model: 'primario', fallbackModel: 'respaldo', maxAttempts: 3, retryDelayMs: 1,
+    client: { models: {
+      generateContent: ({ model }) => {
+        models.push(model);
+        return model === 'respaldo' ? Promise.resolve({ text: GOOD_JSON }) : Promise.reject(unavailable());
+      },
+    } },
+  });
+
+  await adapter.generarEstrategiaPromocional(LOTE_PARAMS);
+  assert.deepEqual(models, ['primario', 'primario', 'respaldo']);
+});
+
+test('4d. GeminiAdapter: agota los intentos con EXTERNAL y no reintenta errores no transitorios', async () => {
+  let calls = 0;
+  const failing = new GeminiAdapter('mock-api-key', { maxAttempts: 3, retryDelayMs: 1, client: { models: {
+    generateContent: () => { calls++; return Promise.reject(unavailable()); },
+  } } });
+  await assert.rejects(
+    () => failing.generarEstrategiaPromocional(LOTE_PARAMS),
+    err => err instanceof GeminiError && err.type === GeminiErrorType.EXTERNAL
+  );
+  assert.equal(calls, 3);
+
+  let rateCalls = 0;
+  const limited = new GeminiAdapter('mock-api-key', { maxAttempts: 3, retryDelayMs: 1, client: { models: {
+    generateContent: () => { rateCalls++; return Promise.reject(new Error('429 quota')); },
+  } } });
+  await assert.rejects(
+    () => limited.generarEstrategiaPromocional(LOTE_PARAMS),
+    err => err.type === GeminiErrorType.RATE_LIMIT
+  );
+  assert.equal(rateCalls, 1);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 5. Ausencia de GEMINI_API_KEY lanza CONFIG sin devolver datos falsos
 // ─────────────────────────────────────────────────────────────────────────────
 test('5. GeminiAdapter: lanza CONFIG controlado si GEMINI_API_KEY no existe y no genera mock', async () => {
