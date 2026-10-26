@@ -165,8 +165,14 @@ Requisitos: Node.js ≥ 20 y Docker.
 ```bash
 node start.js            # dependencias, .env, PostgreSQL, datos de demostración, backend, web y Expo
 node start.js --split    # igual, pero con store-api y portal-api separados, cada uno con su base
+node start.js --backend-tienda   # solo la base y store-api (puerto 4000), para probar las apps de bodega
+node start.js --backend-tienda --portal-url=https://<portal>   # además la conecta a ese portal
 node start.js --down     # detiene PostgreSQL y pgAdmin
 ```
+
+`--backend-tienda` imprime la URL que deben usar las apps de bodega (`http://<IP de la PC>:4000/api/v1`).
+Sin `--portal-url` la tienda funciona sola y no envía nada a ningún portal. Usa la base de desarrollo, con
+cuentas demo de contraseña conocida: **no es el despliegue de la tienda real** (ese es `deploy/tienda/`).
 
 Cuentas de demostración (solo desarrollo): `cliente@karen.com`, `bodega@karen.com` y
 `admin@karen.com`, todas con la contraseña `demo123`.
