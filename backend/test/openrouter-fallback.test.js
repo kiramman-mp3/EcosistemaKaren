@@ -78,17 +78,29 @@ test('Fallback: usa el secundario si el primario falla y registra el modelo real
   assert.deepEqual(await adapter.generarEstrategiaPromocional(PARAMS), { descuentoPorcentaje: 25, modelo: 'or-model' });
 });
 
-test('Fallback: no toca al secundario si el primario responde y relanza el error del primario si ambos fallan', async () => {
+test('Fallback: no toca al secundario si el primario responde y relanza el error del secundario si ambos fallan', async () => {
   let secondaryCalls = 0;
   const secondary = { modelName: 'or', generarEstrategiaPromocional: async () => { secondaryCalls++; throw new GeminiError('also down', GeminiErrorType.TIMEOUT); } };
   const ok = new FallbackAiAdapter({ modelName: 'g', generarEstrategiaPromocional: async () => ({ descuentoPorcentaje: 20 }) }, secondary, { logger: silent });
   assert.deepEqual(await ok.generarEstrategiaPromocional(PARAMS), { descuentoPorcentaje: 20 });
   assert.equal(secondaryCalls, 0);
 
+  const secondaryError = new GeminiError('also down', GeminiErrorType.TIMEOUT);
+  const failingSecondary = { modelName: 'or', generarEstrategiaPromocional: async () => { secondaryCalls++; throw secondaryError; } };
   const primaryError = new GeminiError('primary down', GeminiErrorType.RATE_LIMIT);
-  const both = new FallbackAiAdapter({ modelName: 'g', generarEstrategiaPromocional: async () => { throw primaryError; } }, secondary, { logger: silent });
-  await assert.rejects(() => both.generarEstrategiaPromocional(PARAMS), err => err === primaryError);
+  const both = new FallbackAiAdapter({ modelName: 'g', generarEstrategiaPromocional: async () => { throw primaryError; } }, failingSecondary, { logger: silent });
+  await assert.rejects(() => both.generarEstrategiaPromocional(PARAMS), err => err === secondaryError);
   assert.equal(secondaryCalls, 1);
+});
+
+test('Fallback: si el secundario no está configurado se informa el error del primario', async () => {
+  const primaryError = new GeminiError('primary down', GeminiErrorType.EXTERNAL);
+  const adapter = new FallbackAiAdapter(
+    { modelName: 'or', generarEstrategiaPromocional: async () => { throw primaryError; } },
+    new GeminiAdapter(''),
+    { logger: silent },
+  );
+  await assert.rejects(() => adapter.generarEstrategiaPromocional(PARAMS), err => err === primaryError);
 });
 
 test('Fallback: errores que no son del proveedor no activan el respaldo', async () => {

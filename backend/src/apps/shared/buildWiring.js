@@ -153,9 +153,9 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     // Los streams de alertas se cierran cuando su token expira o se revoca.
     alertStreamManager = new AlertStreamManager({ isRevoked: (jti) => tokenBlacklistRepo.isRevoked(jti) });
     const gemini = new GeminiAdapter(process.env.GEMINI_API_KEY);
-    // OpenRouter es opcional: si hay clave, respalda a Gemini cuando este falla.
+    // OpenRouter es opcional: si hay clave, se usa primero y Gemini queda de respaldo.
     const geminiAdapter = process.env.OPENROUTER_API_KEY
-      ? new FallbackAiAdapter(gemini, new OpenRouterAdapter(process.env.OPENROUTER_API_KEY))
+      ? new FallbackAiAdapter(new OpenRouterAdapter(process.env.OPENROUTER_API_KEY), gemini)
       : gemini;
     const cacheTtlSeconds = process.env.GEMINI_CACHE_TTL_SECONDS === undefined
       ? 900

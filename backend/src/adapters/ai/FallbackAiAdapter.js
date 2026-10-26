@@ -1,10 +1,11 @@
-const { GeminiError } = require('./GeminiAdapter');
+const { GeminiError, GeminiErrorType } = require('./GeminiAdapter');
 
 /**
  * Tries the primary AI adapter and, if it fails with a provider error, the secondary one.
  * Exposes the primary's promptVersion/modelName (used for the cache key); the result
  * carries `modelo` when the secondary produced it, so the promotion records the real model.
- * When both fail, the primary's error is thrown (it is the one the operator configured).
+ * When both fail, the secondary's error is thrown, unless the secondary is not configured
+ * (CONFIG): then the primary's error is the meaningful one.
  */
 class FallbackAiAdapter {
   constructor(primary, secondary, { logger = console } = {}) {
@@ -33,7 +34,9 @@ class FallbackAiAdapter {
         return { ...data, modelo: this._secondary.modelName };
       } catch (secondaryError) {
         this._logger.warn(`[ai] El respaldo ${this._secondary.modelName} también falló (${secondaryError.type || secondaryError.name}).`);
-        throw primaryError;
+        throw secondaryError instanceof GeminiError && secondaryError.type === GeminiErrorType.CONFIG
+          ? primaryError
+          : secondaryError;
       }
     }
   }

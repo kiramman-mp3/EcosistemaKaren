@@ -7,7 +7,7 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
  * OpenRouterAdapter
  * Same contract as GeminiAdapter (prompt, schema validation, retries, error types)
  * but the request goes to OpenRouter's OpenAI-compatible chat completions API.
- * Meant as a backup when Gemini is down; see FallbackAiAdapter.
+ * Used as the primary provider, with Gemini as backup; see FallbackAiAdapter.
  */
 class OpenRouterAdapter extends GeminiAdapter {
   /**
@@ -15,14 +15,14 @@ class OpenRouterAdapter extends GeminiAdapter {
    * @param {object} [opts]
    * @param {string} [opts.model]         - default OPENROUTER_MODEL
    * @param {string} [opts.fallbackModel] - default OPENROUTER_FALLBACK_MODEL; last retry attempt
-   * @param {number} [opts.timeoutMs]     - default OPENROUTER_TIMEOUT_MS or 20000
+   * @param {number} [opts.timeoutMs]     - default OPENROUTER_TIMEOUT_MS or 10000
    * @param {Function} [opts.fetchImpl]   - injectable for tests
    */
   constructor(apiKey, { model, fallbackModel, timeoutMs, maxAttempts, retryDelayMs, fetchImpl, url } = {}) {
     super(apiKey !== undefined ? apiKey : (process.env.OPENROUTER_API_KEY || ''), {
       model: model || process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3.5-super-vl:free',
       fallbackModel: fallbackModel ?? (process.env.OPENROUTER_FALLBACK_MODEL || ''),
-      timeoutMs: timeoutMs ?? (parseInt(process.env.OPENROUTER_TIMEOUT_MS, 10) || 20000),
+      timeoutMs: timeoutMs ?? (parseInt(process.env.OPENROUTER_TIMEOUT_MS, 10) || 10000),
       maxAttempts: maxAttempts ?? (parseInt(process.env.OPENROUTER_MAX_ATTEMPTS, 10) || 2),
       retryDelayMs,
     });
