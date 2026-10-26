@@ -14,9 +14,9 @@
 param(
   [string]$Name = 'karen',
   # Azure for Students limita las regiones (westus3, eastus2, canadacentral, brazilsouth,
-  # southcentralus) y PostgreSQL Flexible Server solo está habilitado en westus3, canadacentral y
-  # brazilsouth. Para otra suscripción: az postgres flexible-server list-skus --location <región>.
-  [string]$Location = 'westus3',
+  # southcentralus). PostgreSQL Flexible Server falló en eastus2 y southcentralus (región restringida)
+  # y en westus3 (SkuNotAvailable); en canadacentral funcionó. El script se puede relanzar: omite lo ya creado.
+  [string]$Location = 'canadacentral',
   [string]$ResourceGroup = '',
   [switch]$UpdateOnly
 )
@@ -32,6 +32,12 @@ function Invoke-Az {
   # Solo el comando, sin argumentos: algunos llevan contraseñas.
   if ($LASTEXITCODE -ne 0) { throw "az $($args | Select-Object -First 3 | ForEach-Object { $_ }) falló (código $LASTEXITCODE)." }
   return $output
+}
+
+function Test-Az {
+  # ¿Existe el recurso? Se consulta por cmd para que el stderr de az no dispare $ErrorActionPreference.
+  & cmd /c "az $($args -join ' ') >nul 2>nul"
+  return ($LASTEXITCODE -eq 0)
 }
 
 function New-Secret([int]$Length = 48) {
@@ -83,21 +89,29 @@ if (-not $UpdateOnly) {
   Invoke-Az group create --name $ResourceGroup --location $Location | Out-Null
 
   Write-Host "==> Registro de contenedores $acrName"
-  Invoke-Az acr create --name $acrName --resource-group $ResourceGroup --sku Basic --admin-enabled true | Out-Null
+  if (-not (Test-Az acr show --name $acrName --resource-group $ResourceGroup)) {
+    Invoke-Az acr create --name $acrName --resource-group $ResourceGroup --sku Basic --admin-enabled true | Out-Null
+  }
 
   Write-Host "==> PostgreSQL $dbServer (tarda varios minutos)"
   # 0.0.0.0 = "servicios de Azure": Container Apps no tiene IP de salida fija en el plan Consumption.
   # La base exige TLS y contraseña; ver docs/azure.md sobre cómo restringirla más.
-  Invoke-Az postgres flexible-server create `
-    --name $dbServer --resource-group $ResourceGroup --location $Location `
-    --admin-user $dbUser --admin-password $cfg.dbPassword `
-    --tier Burstable --sku-name Standard_B1ms --storage-size 32 --version 14 `
-    --public-access 0.0.0.0 --yes | Out-Null
-  Invoke-Az postgres flexible-server db create `
-    --resource-group $ResourceGroup --server-name $dbServer --database-name $dbName | Out-Null
+  if (-not (Test-Az postgres flexible-server show --name $dbServer --resource-group $ResourceGroup)) {
+    Invoke-Az postgres flexible-server create `
+      --name $dbServer --resource-group $ResourceGroup --location $Location `
+      --admin-user $dbUser --admin-password $cfg.dbPassword `
+      --tier Burstable --sku-name Standard_B1ms --storage-size 32 --version 14 `
+      --public-access 0.0.0.0 --yes | Out-Null
+  }
+  if (-not (Test-Az postgres flexible-server db show --server-name $dbServer --resource-group $ResourceGroup --database-name $dbName)) {
+    Invoke-Az postgres flexible-server db create `
+      --resource-group $ResourceGroup --server-name $dbServer --name $dbName | Out-Null
+  }
 
   Write-Host "==> Entorno de Container Apps $envName"
-  Invoke-Az containerapp env create --name $envName --resource-group $ResourceGroup --location $Location | Out-Null
+  if (-not (Test-Az containerapp env show --name $envName --resource-group $ResourceGroup)) {
+    Invoke-Az containerapp env create --name $envName --resource-group $ResourceGroup --location $Location | Out-Null
+  }
 }
 
 Write-Host "==> Construyendo la imagen en Azure ($tag)"
@@ -111,7 +125,7 @@ try {
 $domain = (Invoke-Az containerapp env show --name $envName --resource-group $ResourceGroup --query properties.defaultDomain -o tsv).Trim()
 $fqdn = "$appName.$domain"
 
-if ($UpdateOnly) {
+if ($UpdateOnly -or (Test-Az containerapp show --name $appName --resource-group $ResourceGroup)) {
   Write-Host '==> Publicando nueva revisión'
   Invoke-Az containerapp update --name $appName --resource-group $ResourceGroup --image "${image}:$tag" | Out-Null
 } else {

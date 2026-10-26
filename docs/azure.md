@@ -27,7 +27,7 @@ Guía para publicar el portal (API + web) en Azure y conectar la PC de la tienda
 
 ```powershell
 .\deploy\azure\deploy.ps1
-# región por defecto: westus3. Otra: -Location canadacentral | brazilsouth
+# región por defecto: canadacentral. Es seguro relanzarlo: omite lo que ya existe.
 ```
 
 El script crea el grupo de recursos `rg-karen`, el registro de contenedores (Basic), PostgreSQL
@@ -98,7 +98,7 @@ pararse (`az postgres flexible-server stop`) cuando no se usa, y la Container Ap
 
 | Síntoma | Causa y solución |
 |---|---|
-| `The location is restricted from performing this operation` | Azure for Students limita las regiones y PostgreSQL no está habilitado en todas las permitidas (en `eastus2` y `southcentralus` falla). Borra el grupo (`az group delete --name rg-karen`) y repite con `-Location westus3`, `canadacentral` o `brazilsouth`. |
+| `The location is restricted from performing this operation` | Azure for Students limita las regiones y PostgreSQL no está habilitado en todas las permitidas (en `eastus2` y `southcentralus` falla, y en `westus3` da `SkuNotAvailable`). Borra el grupo (`az group delete --name rg-karen`) y repite con `-Location canadacentral` o `brazilsouth`. |
 | `self-signed certificate in certificate chain` en los logs | El almacén de CA de Node no incluye la raíz del servidor. Como paso temporal, `az containerapp update -n karen-portal -g rg-karen --set-env-vars DB_SSL=no-verify` cifra sin verificar el certificado. |
 | La aplicación reinicia en bucle | `az containerapp logs show -n karen-portal -g rg-karen --follow`. Suele ser una variable obligatoria mal escrita. |
 | El login no mantiene la sesión | Se está abriendo el web desde otra URL que no es la de la Container App; `CORS_ORIGINS` solo acepta esa. |
