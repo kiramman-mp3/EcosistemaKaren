@@ -27,6 +27,8 @@ COPY backend/index.js backend/index.store.js backend/index.portal.js ./
 COPY backend/src ./src
 COPY backend/init-db ./init-db
 COPY backend/scripts ./scripts
+# CA raíz pública de Supabase (huella SHA-256 80:70:25:AD...CA:FA): permite verificar el TLS del pooler.
+COPY deploy/azure/certs ./certs
 COPY --from=web /web/dist ./web
 RUN mkdir -p public/media/productos && chown -R node:node public
 USER node
