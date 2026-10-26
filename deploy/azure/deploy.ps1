@@ -131,8 +131,8 @@ try {
 }
 
 Write-Host '==> Subiendo la imagen al registro'
-$acrPassword | & docker login "$acrName.azurecr.io" --username $acrName --password-stdin
-if ($LASTEXITCODE -ne 0) { throw 'docker login falló.' }
+# `docker login --password-stdin` falla desde PowerShell 5.1 (codificación de la tubería): se usa az.
+Invoke-Az acr login --name $acrName | Out-Null
 & docker push "${image}:$tag"
 if ($LASTEXITCODE -ne 0) { throw 'docker push falló.' }
 
