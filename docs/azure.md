@@ -21,20 +21,21 @@ Guía para publicar el portal (API + web) en Azure y conectar la PC de la tienda
 
 - Suscripción de Azure (Azure for Students sirve) y Azure CLI: `winget install -e --id Microsoft.AzureCLI`.
 - `az login` hecho en la terminal donde se ejecuta el script.
+- Docker Desktop abierto (construye la imagen del portal).
 - PowerShell 5.1 o superior (el de Windows).
 
 ## 1. Desplegar el portal
 
 ```powershell
 .\deploy\azure\deploy.ps1
-# otra región si la suscripción restringe la elegida: -Location westus3
+# región por defecto: canadacentral. Es seguro relanzarlo: omite lo que ya existe.
 ```
 
 El script crea el grupo de recursos `rg-karen`, el registro de contenedores (Basic), PostgreSQL
 Flexible Server (Burstable B1ms, 32 GB), el entorno de Container Apps y la aplicación
-(`min-replicas 1`, 0,5 vCPU, 1 GiB). Construye la imagen en Azure con
-`deploy/azure/Dockerfile.portal`; no hace falta Docker local. Las migraciones las aplica
-portal-api al arrancar.
+(`min-replicas 1`, 0,5 vCPU, 1 GiB). Construye la imagen con Docker local
+(`deploy/azure/Dockerfile.portal`) y la sube al registro, porque `az acr build` está bloqueado en
+Azure for Students. Las migraciones las aplica portal-api al arrancar.
 
 Los secretos se generan una vez y se guardan en `deploy/azure/.secrets.karen.json` (ignorado por
 git). **Guarda una copia fuera del equipo**: sin ella no puedes volver a iniciar sesión en la base
@@ -98,7 +99,10 @@ pararse (`az postgres flexible-server stop`) cuando no se usa, y la Container Ap
 
 | Síntoma | Causa y solución |
 |---|---|
-| `RequestDisallowedByAzure` / región no permitida | Azure for Students limita las regiones. Repite con `-Location` distinto. El script no borra lo ya creado; para empezar de cero: `az group delete --name rg-karen`. |
+| `The location is restricted from performing this operation` | Azure for Students limita las regiones y PostgreSQL no está habilitado en todas las permitidas (en `eastus2` y `southcentralus` falla, y en `westus3` da `SkuNotAvailable`). Borra el grupo (`az group delete --name rg-karen`) y repite con `-Location canadacentral` o `brazilsouth`. |
+| `TasksOperationsNotAllowed` en `az acr build` | ACR Tasks está bloqueado en Azure for Students. El script ya construye con Docker local; si lo ves, usa la versión actual de `deploy.ps1`. |
+| `extension "uuid-ossp" is not allow-listed` en los logs | Falta autorizar las extensiones en el servidor: `az postgres flexible-server parameter set -g rg-karen --server-name <servidor> --name azure.extensions --value "UUID-OSSP,UNACCENT"`. El script ya lo hace. El contenedor reintenta solo cada ~5 minutos. |
+| La CLI no muestra logs (`eventStreamEndpoint`) | Usa Log Analytics: `az extension add -n log-analytics --yes` y `az monitor log-analytics query -w <workspace-id> --analytics-query "ContainerAppConsoleLogs_CL | order by TimeGenerated desc | take 30 | project Log_s"`. |
 | `self-signed certificate in certificate chain` en los logs | El almacén de CA de Node no incluye la raíz del servidor. Como paso temporal, `az containerapp update -n karen-portal -g rg-karen --set-env-vars DB_SSL=no-verify` cifra sin verificar el certificado. |
 | La aplicación reinicia en bucle | `az containerapp logs show -n karen-portal -g rg-karen --follow`. Suele ser una variable obligatoria mal escrita. |
 | El login no mantiene la sesión | Se está abriendo el web desde otra URL que no es la de la Container App; `CORS_ORIGINS` solo acepta esa. |
