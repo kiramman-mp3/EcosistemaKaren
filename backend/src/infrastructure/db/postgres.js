@@ -1,3 +1,4 @@
+const fs = require('fs');
 const { Pool, types } = require('pg');
 const { businessTimezone } = require('../../domain/policies/BusinessDates');
 
@@ -25,13 +26,20 @@ function connectionSettings(role = 'store', env = process.env) {
 }
 
 // DB_SSL (o PORTAL_DB_SSL en el portal): 'true' cifra la conexión y verifica el certificado del
-// servidor (Azure Database for PostgreSQL, Supabase); 'no-verify' solo cifra. Sin definir, no hay TLS.
+// servidor; 'no-verify' solo cifra. Sin definir, no hay TLS.
+// DB_SSL_CA (o PORTAL_DB_SSL_CA) añade una autoridad certificadora propia para verificar: es el
+// texto PEM o la ruta a un archivo. Hace falta con Supabase, que firma con su propia CA.
 function sslSettings(role = 'store', env = process.env) {
-  const own = role === 'portal' ? env.PORTAL_DB_SSL : undefined;
-  const value = (own !== undefined && own !== '' ? own : env.DB_SSL || '').trim().toLowerCase();
-  if (value === 'true') return { rejectUnauthorized: true };
+  const pick = (name) => {
+    const own = role === 'portal' ? env[`PORTAL_${name}`] : undefined;
+    return own !== undefined && own !== '' ? own : env[name];
+  };
+  const value = (pick('DB_SSL') || '').trim().toLowerCase();
   if (value === 'no-verify') return { rejectUnauthorized: false };
-  return undefined;
+  if (value !== 'true') return undefined;
+  const ca = (pick('DB_SSL_CA') || '').trim();
+  if (!ca) return { rejectUnauthorized: true };
+  return { rejectUnauthorized: true, ca: ca.includes('-----BEGIN') ? ca : fs.readFileSync(ca, 'utf8') };
 }
 
 // Dos roles con la misma conexión (monolito, desarrollo con una sola base) comparten pool.
