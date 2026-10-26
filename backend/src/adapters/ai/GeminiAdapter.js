@@ -35,8 +35,11 @@ class GeminiAdapter {
    * @param {object} [opts]
    * @param {number} [opts.timeoutMs]   - default GEMINI_TIMEOUT_MS or 10000
    * @param {string} [opts.model]       - default GEMINI_MODEL or 'gemini-3.8-flash'
+   * @param {number} [opts.maxAttempts] - default GEMINI_MAX_ATTEMPTS or 3 (transient failures only)
+   * @param {string} [opts.fallbackModel] - default GEMINI_FALLBACK_MODEL; used on the last attempt
+   * @param {number} [opts.retryDelayMs]  - base backoff, default GEMINI_RETRY_DELAY_MS or 500
    */
-  constructor(apiKey, { timeoutMs, model, client } = {}) {
+  constructor(apiKey, { timeoutMs, model, client, maxAttempts, fallbackModel, retryDelayMs } = {}) {
     // An explicitly injected empty value is intentional (for example, when
     // verifying the controlled CONFIG error) and must not fall back to env.
     this._apiKey = apiKey !== undefined ? apiKey : (process.env.GEMINI_API_KEY || '');
@@ -48,6 +51,10 @@ class GeminiAdapter {
     this._modelName = model
       || process.env.GEMINI_MODEL
       || 'gemini-3.8-flash';
+
+    this._maxAttempts = maxAttempts ?? (parseInt(process.env.GEMINI_MAX_ATTEMPTS, 10) || 3);
+    this._fallbackModel = fallbackModel ?? (process.env.GEMINI_FALLBACK_MODEL || '');
+    this._retryDelayMs = retryDelayMs ?? (parseInt(process.env.GEMINI_RETRY_DELAY_MS, 10) || 500);
 
     this._promptVersion = 'v4';
 
@@ -62,6 +69,11 @@ class GeminiAdapter {
     } else {
       this._client = null;
     }
+  }
+
+  /** True when the adapter can make requests. Overridden by other providers. */
+  _isConfigured() {
+    return Boolean(this._apiKey && this._client);
   }
 
   get promptVersion() {
@@ -95,7 +107,7 @@ class GeminiAdapter {
     cantidadDisponible, ubicacion, nivelAlerta,
   }) {
     // ── Guard: API key not configured ──────────────────────────────────────
-    if (!this._apiKey || !this._client) {
+    if (!this._isConfigured()) {
       throw new GeminiError(
         'La API de Gemini no está configurada. Defina GEMINI_API_KEY en las variables de entorno.',
         GeminiErrorType.CONFIG,
@@ -118,7 +130,41 @@ class GeminiAdapter {
       descuentoMaximo: maxDesc,
     });
 
-    // ── Call Gemini with AbortController timeout & SDK signal ──────────────
+    // ── Call Gemini, retrying transient failures (503/504/timeouts/network) ─
+    let rawText;
+    for (let attempt = 1; ; attempt++) {
+      const useFallback = this._fallbackModel && attempt === this._maxAttempts && attempt > 1;
+      try {
+        rawText = await this._requestOnce(useFallback ? this._fallbackModel : this._modelName, prompt, minDesc, maxDesc);
+        break;
+      } catch (err) {
+        if (attempt >= this._maxAttempts || !this.constructor._isTransient(err)) throw err;
+        await new Promise(resolve => setTimeout(resolve, this._retryDelayMs * 2 ** (attempt - 1)));
+      }
+    }
+
+    // ── Parse and validate structured output ───────────────────────────────
+    return this._parseAndValidate(rawText, minDesc, maxDesc);
+  }
+
+  /**
+   * True for failures worth retrying: timeouts, network drops and 5xx from Gemini.
+   * @private
+   */
+  static _isTransient(err) {
+    if (!(err instanceof GeminiError)) return false;
+    if (err.type === GeminiErrorType.TIMEOUT) return true;
+    if (err.type !== GeminiErrorType.EXTERNAL) return false;
+    const status = err.cause && err.cause.status;
+    if (typeof status === 'number') return status >= 500;
+    return /fetch failed|network|econnreset|etimedout|enotfound/i.test(String(err.cause && err.cause.message));
+  }
+
+  /**
+   * One Gemini request with AbortController timeout & SDK signal. Returns raw text.
+   * @private
+   */
+  async _requestOnce(modelName, prompt, minDesc, maxDesc) {
     const controller = new AbortController();
     let timeoutTriggered = false;
     const timer = setTimeout(() => {
@@ -140,7 +186,7 @@ class GeminiAdapter {
       });
 
       const requestPromise = this._client.models.generateContent({
-        model: this._modelName,
+        model: modelName,
         contents: prompt,
         config: {
           systemInstruction: [
@@ -227,8 +273,7 @@ class GeminiAdapter {
       if (onAbort) controller.signal.removeEventListener('abort', onAbort);
     }
 
-    // ── Parse and validate structured output ───────────────────────────────
-    return this._parseAndValidate(rawText, minDesc, maxDesc);
+    return rawText;
   }
 
   /**

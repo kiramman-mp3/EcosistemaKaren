@@ -153,7 +153,7 @@ class GenerarPromocionesIA {
       descuentoPorcentaje: pct,
       frasePromocional: generatedData.frasePromocional,
       razonIa: generatedData.razonIa,
-      modeloIa: this.geminiAdapter.modelName,
+      modeloIa: generatedData.modelo || this.geminiAdapter.modelName,
       promptVersion: this.geminiAdapter.promptVersion,
       cacheKey,
       cacheHit,
