@@ -217,7 +217,7 @@ function unavailable() {
 
 test('4b. GeminiAdapter: reintenta un 503 transitorio y devuelve la promoción', async () => {
   let calls = 0;
-  const adapter = new GeminiAdapter('mock-api-key', { retryDelayMs: 1, client: { models: {
+  const adapter = new GeminiAdapter('mock-api-key', { maxAttempts: 3, retryDelayMs: 1, client: { models: {
     generateContent: () => (++calls < 3 ? Promise.reject(unavailable()) : Promise.resolve({ text: GOOD_JSON })),
   } } });
 
@@ -229,7 +229,7 @@ test('4b. GeminiAdapter: reintenta un 503 transitorio y devuelve la promoción',
 test('4c. GeminiAdapter: usa el modelo de respaldo en el último intento', async () => {
   const models = [];
   const adapter = new GeminiAdapter('mock-api-key', {
-    model: 'primario', fallbackModel: 'respaldo', retryDelayMs: 1,
+    model: 'primario', fallbackModel: 'respaldo', maxAttempts: 3, retryDelayMs: 1,
     client: { models: {
       generateContent: ({ model }) => {
         models.push(model);
@@ -244,7 +244,7 @@ test('4c. GeminiAdapter: usa el modelo de respaldo en el último intento', async
 
 test('4d. GeminiAdapter: agota los intentos con EXTERNAL y no reintenta errores no transitorios', async () => {
   let calls = 0;
-  const failing = new GeminiAdapter('mock-api-key', { retryDelayMs: 1, client: { models: {
+  const failing = new GeminiAdapter('mock-api-key', { maxAttempts: 3, retryDelayMs: 1, client: { models: {
     generateContent: () => { calls++; return Promise.reject(unavailable()); },
   } } });
   await assert.rejects(
@@ -254,7 +254,7 @@ test('4d. GeminiAdapter: agota los intentos con EXTERNAL y no reintenta errores 
   assert.equal(calls, 3);
 
   let rateCalls = 0;
-  const limited = new GeminiAdapter('mock-api-key', { retryDelayMs: 1, client: { models: {
+  const limited = new GeminiAdapter('mock-api-key', { maxAttempts: 3, retryDelayMs: 1, client: { models: {
     generateContent: () => { rateCalls++; return Promise.reject(new Error('429 quota')); },
   } } });
   await assert.rejects(
