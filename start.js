@@ -11,6 +11,9 @@
  *   node start.js --skip-images   # el seed no descarga imágenes de productos
  *   node start.js --split         # backend separado (ADR-003): store-api + portal-api, cada uno con su base
  *                                 # (--api-url = portal móvil, --store-api-url = bodega móvil)
+ *   node start.js --backend-tienda  # solo la base y store-api de la tienda (PC de la tienda), sin web ni Expo;
+ *                                 # sola, sin enviar nada a ningún portal. Con --portal-url=URL se conecta a ese portal
+ *                                 # (usa STORE_SERVICE_KEY de backend/.env, que debe ser la del portal)
  *   node start.js --down          # detiene PostgreSQL (y la base del portal) y pgAdmin
  *
  * Solo usa módulos nativos de Node (>= 20). Ctrl+C detiene backend y frontends;
@@ -23,7 +26,7 @@ const path = require('path');
 const crypto = require('crypto');
 const http = require('http');
 const os = require('os');
-const { isWeakKey, withServiceKey, buildSplitEnv, mobileApiUrls, deprecatedEnvVars } = require('./dev/splitEnv');
+const { isWeakKey, withServiceKey, buildSplitEnv, storeOnlyEnv, storeApiUrl, mobileApiUrls, deprecatedEnvVars } = require('./dev/splitEnv');
 
 const ROOT = __dirname;
 const BACKEND = path.join(ROOT, 'backend');
@@ -42,6 +45,7 @@ const args = Object.fromEntries(process.argv.slice(2).map(arg => {
 }));
 
 const SPLIT = Boolean(args.split);
+const STORE_ONLY = Boolean(args['backend-tienda']);
 const children = [];
 const log = (msg) => console.log(`\x1b[36m[start]\x1b[0m ${msg}`);
 const fail = (msg) => { console.error(`\x1b[31m[start] ${msg}\x1b[0m`); process.exit(1); };
@@ -82,7 +86,8 @@ function serviceKey() {
 }
 
 function installDependencies() {
-  for (const dir of PROJECTS) {
+  // La PC de la tienda solo necesita el backend: no se instalan el web ni las apps móviles.
+  for (const dir of STORE_ONLY ? [BACKEND] : PROJECTS) {
     const name = path.relative(ROOT, dir);
     if (fs.existsSync(path.join(dir, 'node_modules'))) { log(`${name}: dependencias ya instaladas`); continue; }
     log(`${name}: npm ci`);
@@ -116,10 +121,11 @@ async function ensureDocker() {
 
 async function ensureDatabase() {
   await ensureDocker();
-  const composeArgs = SPLIT ? ['compose', '--profile', 'split', 'up', '-d'] : ['compose', 'up', '-d'];
+  const composeArgs = STORE_ONLY ? ['compose', 'up', '-d', 'postgres']
+    : SPLIT ? ['compose', '--profile', 'split', 'up', '-d'] : ['compose', 'up', '-d'];
   log(`docker ${composeArgs.join(' ')}`);
   if (run('docker', composeArgs, BACKEND).status !== 0) fail('docker compose up falló');
-  for (const service of SPLIT ? ['postgres', 'postgres_portal'] : ['postgres']) {
+  for (const service of SPLIT && !STORE_ONLY ? ['postgres', 'postgres_portal'] : ['postgres']) {
     let healthy = false;
     for (let i = 0; i < 60 && !healthy; i++) {
       const out = run('docker', ['compose', '--profile', 'split', 'ps', service, '--format', '{{.Health}}'], BACKEND, { capture: true });
@@ -231,6 +237,29 @@ function waitForBackend(port) {
   });
 }
 
+// PC de la tienda: solo la base y store-api. Las apps de bodega se conectan a la IP que se imprime aquí.
+async function startStoreOnly(backendEnv) {
+  const portalUrl = typeof args['portal-url'] === 'string' ? args['portal-url'] : undefined;
+  // La clave debe ser la del portal al que se conecta: no se genera una al azar como en desarrollo local.
+  const key = backendEnv.STORE_SERVICE_KEY;
+  if (portalUrl && isWeakKey(key)) fail('--portal-url necesita en backend/.env la STORE_SERVICE_KEY del portal (32+ caracteres)');
+  const { storePort, store, connected } = storeOnlyEnv({ env: backendEnv, portalUrl, serviceKey: key });
+  if (connected) log(`store-api se conectará al portal ${store.PORTAL_URL}: latido, catálogo y reservas se envían allí`);
+  else log('store-api arranca sola: sin portal, no se envía latido, catálogo ni reservas (usa --portal-url=URL para conectarla)');
+  start('store-api', '32', BACKEND, 'npm', ['run', 'start:store'], { env: store });
+  if (!(await waitForBackend(storePort))) log(`store-api no respondió en :${storePort}; revisa sus logs`);
+
+  const lanHost = lanAddress();
+  const url = storeApiUrl({ args, lanHost, storePort });
+  if (url) {
+    log(`Apps de bodega → EXPO_PUBLIC_API_URL=${url}`);
+    log('El teléfono debe estar en el mismo Wi-Fi y el firewall de Windows debe permitir el puerto ' + storePort);
+  } else {
+    log('No se detectó la IP de la red local: indica la URL con --store-api-url=http://IP:' + storePort + '/api/v1');
+  }
+  log('Tienda en marcha. Ctrl+C detiene store-api; la base sigue en Docker (node start.js --down la detiene).');
+}
+
 async function main() {
   if (args.down) {
     await ensureDocker();
@@ -244,10 +273,11 @@ async function main() {
   installDependencies();
   const backendEnv = readEnv(path.join(BACKEND, '.env'));
   for (const { name, reason } of deprecatedEnvVars(backendEnv)) log(`aviso: backend/.env define ${name}, que ${reason}. Puede borrarla.`);
-  const split = SPLIT ? buildSplitEnv({ env: backendEnv, serviceKey: serviceKey() }) : null;
+  const split = SPLIT && !STORE_ONLY ? buildSplitEnv({ env: backendEnv, serviceKey: serviceKey() }) : null;
   await ensureDatabase();
   seedIfNeeded(split);
   if (args.setup) return log('Entorno listo.');
+  if (STORE_ONLY) return startStoreOnly(backendEnv);
 
   let port = Number(backendEnv.PORT) || 4000;
   if (split) {
