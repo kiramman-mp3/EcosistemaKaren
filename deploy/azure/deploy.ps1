@@ -13,8 +13,10 @@
 [CmdletBinding()]
 param(
   [string]$Name = 'karen',
-  # Azure for Students limita las regiones permitidas; si falla, prueba otra (az account list-locations).
-  [string]$Location = 'eastus2',
+  # Azure for Students limita las regiones (westus3, eastus2, canadacentral, brazilsouth,
+  # southcentralus) y PostgreSQL Flexible Server solo está habilitado en westus3, canadacentral y
+  # brazilsouth. Para otra suscripción: az postgres flexible-server list-skus --location <región>.
+  [string]$Location = 'westus3',
   [string]$ResourceGroup = '',
   [switch]$UpdateOnly
 )
@@ -27,7 +29,8 @@ $secretsFile = Join-Path $PSScriptRoot ".secrets.$Name.json"
 function Invoke-Az {
   # `az` es un ejecutable nativo: $ErrorActionPreference no detiene el script si falla.
   $output = & az @args
-  if ($LASTEXITCODE -ne 0) { throw "az $($args -join ' ') falló (código $LASTEXITCODE)." }
+  # Solo el comando, sin argumentos: algunos llevan contraseñas.
+  if ($LASTEXITCODE -ne 0) { throw "az $($args | Select-Object -First 3 | ForEach-Object { $_ }) falló (código $LASTEXITCODE)." }
   return $output
 }
 
