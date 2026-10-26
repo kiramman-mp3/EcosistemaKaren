@@ -19,6 +19,8 @@ const PostgresHeartbeatStore = require('../../infrastructure/heartbeat/PostgresH
 const PromotionCache = require('../../infrastructure/cache/PromotionCache');
 const aiMetrics = require('../../infrastructure/metrics/AiMetricsCollector');
 const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
+const OpenRouterAdapter = require('../../adapters/ai/OpenRouterAdapter');
+const FallbackAiAdapter = require('../../adapters/ai/FallbackAiAdapter');
 
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
 const { GetProducts, GetProductByBarcode, CreateProduct, SetProductImage, UpdateProductPrice, UpdateProduct, GetProductPriceHistory } = require('../../use-cases/products/ProductUseCases');
@@ -150,7 +152,11 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
   if (store) {
     // Los streams de alertas se cierran cuando su token expira o se revoca.
     alertStreamManager = new AlertStreamManager({ isRevoked: (jti) => tokenBlacklistRepo.isRevoked(jti) });
-    const geminiAdapter = new GeminiAdapter(process.env.GEMINI_API_KEY);
+    const gemini = new GeminiAdapter(process.env.GEMINI_API_KEY);
+    // OpenRouter es opcional: si hay clave, respalda a Gemini cuando este falla.
+    const geminiAdapter = process.env.OPENROUTER_API_KEY
+      ? new FallbackAiAdapter(gemini, new OpenRouterAdapter(process.env.OPENROUTER_API_KEY))
+      : gemini;
     const cacheTtlSeconds = process.env.GEMINI_CACHE_TTL_SECONDS === undefined
       ? 900
       : Number(process.env.GEMINI_CACHE_TTL_SECONDS);
