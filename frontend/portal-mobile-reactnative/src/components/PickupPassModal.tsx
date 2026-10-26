@@ -1,16 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import * as Clipboard from 'expo-clipboard';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 import { ReservationPass } from '../types';
 import { Button } from './ui';
 import { Illustration } from './Illustration';
 import { Pulse, Stamp, tap } from './motion';
 import { colors, fonts, radius, themed } from '../theme/tokens';
+import { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, formatMinutes } from '../config/reservationRules';
+import { getErrorMessage } from '../utils/errors';
+import { notify } from '../utils/dialogs';
 
 interface PickupPassModalProps {
   pass: ReservationPass;
   visible: boolean;
   onClose: () => void;
+  /** Pide más tiempo a la tienda; al terminar, el pase se actualiza con el nuevo vencimiento. */
+  onExtend?: (reservationId: string) => Promise<void>;
 }
 
 const formatCountdown = (total: number) =>
@@ -20,8 +29,70 @@ const formatCountdown = (total: number) =>
  * Pase de retiro con forma de ticket térmico. El papel es siempre blanco con tinta mora para que
  * se vea y se escanee igual en modo oscuro.
  */
-export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible, onClose }) => {
+export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible, onClose, onExtend }) => {
   const [seconds, setSeconds] = useState(pass.remainingSeconds || 0);
+  const [extending, setExtending] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
+
+  // El aviso de éxito se quita solo; el de error se queda hasta el próximo intento.
+  useEffect(() => {
+    if (!notice || notice.error) return undefined;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  const ticketRef = useRef<View>(null);
+  const [copied, setCopied] = useState(false);
+  // Mientras se toma la imagen del pase se ocultan los botones, que no deben salir en ella.
+  const [capturing, setCapturing] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return undefined;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const copyCode = async () => {
+    try {
+      await Clipboard.setStringAsync(pass.code);
+      setCopied(true);
+      tap('success');
+    } catch {
+      notify('No se pudo copiar', 'Anota el código a mano o toma una captura de pantalla.');
+    }
+  };
+
+  // Imagen del pase (PNG) para guardarla o enviarla desde la hoja de compartir del teléfono.
+  const saveImage = async () => {
+    if (capturing || !ticketRef.current) return;
+    setCapturing(true);
+    try {
+      // Espera a que desaparezcan los botones antes de capturar.
+      await new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 60)));
+      const uri = await captureRef(ticketRef, { format: 'png', quality: 1, result: 'tmpfile' });
+      if (!(await Sharing.isAvailableAsync())) {
+        notify('No se pudo compartir la imagen', 'Este dispositivo no permite compartir archivos. Toma una captura de pantalla.');
+        return;
+      }
+      await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Pase de retiro', UTI: 'public.png' });
+    } catch {
+      notify('No se pudo guardar la imagen', 'Inténtalo de nuevo o toma una captura de pantalla.');
+    } finally {
+      setCapturing(false);
+    }
+  };
+
+  const extend = async () => {
+    if (!pass.id || !onExtend || extending) return;
+    setExtending(true);
+    setNotice(null);
+    try {
+      await onExtend(pass.id);
+      setNotice({ text: `+${RESERVATION_EXTENSION_MINUTES} minutos añadidos con éxito.`, error: false });
+    } catch (error: unknown) {
+      setNotice({ text: getErrorMessage(error, 'No se pudo extender el tiempo.'), error: true });
+    } finally { setExtending(false); }
+  };
 
   useEffect(() => {
     if (!visible) return;
@@ -33,14 +104,15 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
 
   const expired = seconds <= 0;
   const urgent = !expired && seconds <= 120;
-  const initial = pass.initialSeconds || 1800;
+  // Tras una extensión el tiempo restante supera la duración original: la barra parte de nuevo desde llena.
+  const initial = Math.max(pass.initialSeconds || 1800, pass.remainingSeconds || 0);
   const percent = Math.max(0, Math.min(100, (seconds / initial) * 100));
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.ticket}>
+          <View ref={ticketRef} collapsable={false} style={styles.ticket}>
             {!expired && (
               <Stamp style={styles.stamp}>
                 <Text style={styles.stampText}>¡APARTADO!</Text>
@@ -54,7 +126,19 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
             <View style={styles.qr}>
               <QRCode value={pass.code} size={170} ecl="M" color={colors.mora} backgroundColor="#FFFFFF" />
             </View>
-            <Text style={styles.code} accessibilityLabel={`Código ${pass.code.split('').join(' ')}`}>{pass.code}</Text>
+            <View style={styles.codeRow}>
+              <Text style={styles.code} accessibilityLabel={`Código ${pass.code.split('').join(' ')}`}>{pass.code}</Text>
+              {pass.code && !capturing ? (
+                <TouchableOpacity
+                  style={styles.copy}
+                  onPress={() => void copyCode()}
+                  accessibilityRole="button"
+                  accessibilityLabel={copied ? 'Código copiado' : 'Copiar código'}
+                >
+                  <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={20} color={copied ? '#0E7A43' : INK} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
 
             <View style={[styles.timer, expired ? styles.timerExpired : urgent ? styles.timerUrgent : null]} accessibilityLiveRegion="polite">
               {expired ? (
@@ -74,6 +158,27 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
               )}
             </View>
 
+            {!expired && pass.id && onExtend && !capturing ? (
+              <View style={styles.extendBox}>
+                {pass.canExtend === false ? (
+                  <Text style={styles.extendMax}>Llegaste al máximo de {formatMinutes(RESERVATION_MAX_TOTAL_MINUTES)} para esta reserva.</Text>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.extendButton, extending && styles.extendButtonBusy]}
+                    disabled={extending}
+                    onPress={() => void extend()}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Añadir ${RESERVATION_EXTENSION_MINUTES} minutos a la reserva`}
+                    accessibilityState={{ disabled: extending, busy: extending }}
+                  >
+                    <Ionicons name="time-outline" size={16} color={INK} />
+                    <Text style={styles.extendText}>{extending ? 'Extendiendo…' : `¿Necesitas más tiempo? +${RESERVATION_EXTENSION_MINUTES} min`}</Text>
+                  </TouchableOpacity>
+                )}
+                {notice ? <Text style={[styles.extendNotice, notice.error && styles.extendNoticeError]} accessibilityLiveRegion="polite">{notice.text}</Text> : null}
+              </View>
+            ) : null}
+
             {pass.items.length > 0 && (
               <>
                 <View style={styles.dashed} />
@@ -92,6 +197,16 @@ export const PickupPassModal: React.FC<PickupPassModalProps> = ({ pass, visible,
             )}
             <Text style={styles.note}>Muestra este código en caja. Pagas ahí mismo.</Text>
           </View>
+          {!expired && pass.code ? (
+            <Button
+              label={capturing ? 'Preparando imagen…' : 'Guardar como imagen'}
+              icon="download-outline"
+              variant="outline"
+              loading={capturing}
+              onPress={() => void saveImage()}
+              style={styles.done}
+            />
+          ) : null}
           <Button label="Listo" variant="sticker" onPress={onClose} style={styles.done} />
         </ScrollView>
       </View>
@@ -113,7 +228,9 @@ const styles = themed(() => StyleSheet.create({
   customer: { fontFamily: fonts.medium, fontSize: 14, color: INK, textAlign: 'center', marginBottom: 12 },
   customerName: { fontFamily: fonts.tag },
   qr: { alignSelf: 'center', padding: 8, borderWidth: 2, borderColor: INK, borderRadius: radius.tag },
-  code: { fontFamily: fonts.stamp, fontSize: 38, color: INK, textAlign: 'center', letterSpacing: 2, marginTop: 10 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 },
+  code: { fontFamily: fonts.stamp, fontSize: 38, color: INK, textAlign: 'center', letterSpacing: 2 },
+  copy: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   timer: { backgroundColor: '#FFD400', borderRadius: radius.tag, borderWidth: 2, borderColor: INK, padding: 12, alignItems: 'center', marginTop: 12 },
   timerUrgent: { backgroundColor: '#FF7A1A' },
   timerExpired: { backgroundColor: '#EFEAF5' },
@@ -121,6 +238,16 @@ const styles = themed(() => StyleSheet.create({
   timerCaption: { fontFamily: fonts.semibold, fontSize: 14, color: INK },
   bar: { alignSelf: 'stretch', height: 10, borderRadius: 5, backgroundColor: 'rgba(42,29,20,0.2)', marginTop: 8, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: INK, borderRadius: 5 },
+  extendBox: { alignItems: 'center', marginTop: 10 },
+  extendButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'stretch', minHeight: 44,
+    borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(42,29,20,0.45)', borderRadius: radius.tag, paddingHorizontal: 12,
+  },
+  extendButtonBusy: { opacity: 0.6 },
+  extendText: { fontFamily: fonts.bold, fontSize: 13, color: INK },
+  extendMax: { fontFamily: fonts.semibold, fontSize: 12, color: 'rgba(42,29,20,0.7)', textAlign: 'center' },
+  extendNotice: { fontFamily: fonts.bold, fontSize: 12, color: '#0E7A43', textAlign: 'center', marginTop: 6 },
+  extendNoticeError: { color: '#A81E14' },
   expiredTitle: { fontFamily: fonts.tag, fontSize: 18, color: INK, textAlign: 'center' },
   expiredText: { fontFamily: fonts.body, fontSize: 14, color: INK, textAlign: 'center' },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginBottom: 6 },

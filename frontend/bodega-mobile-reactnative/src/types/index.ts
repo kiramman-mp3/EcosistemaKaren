@@ -44,6 +44,16 @@ export interface CreateProductPayload {
   minStockAlerta?: number;
 }
 
+/** Edición de un producto: sin código de barras, que no se cambia. `descripcion: null` la borra. */
+export interface UpdateProductPayload {
+  categoriaId: string;
+  nombre: string;
+  descripcion: string | null;
+  precioVenta: number;
+  impuestoPorcentaje: number;
+  minStockAlerta: number;
+}
+
 export interface BackendLot {
   id: string;
   productoId: string;
@@ -91,6 +101,11 @@ export interface BackendPromotion {
   numeroLote?: string | null;
   fechaCaducidad?: string | null;
   cantidadDisponible?: number | null;
+  // Límites que fija el ADMIN (null = sin tope) y unidades con descuento que quedan.
+  limitePorPedido?: number | null;
+  stockOferta?: number | null;
+  vigenteHasta?: string | null;
+  unidadesRestantes?: number | null;
 }
 
 export interface InventoryMovement {
@@ -117,6 +132,20 @@ export interface InventoryMovement {
   reservaId?: string | null;
   metadata?: Record<string, unknown>;
   created_at: string;
+}
+
+/** Período de los indicadores del reporte: hoy, los últimos 7 o los últimos 30 días (incluido hoy). */
+export type SummaryPeriod = 'hoy' | '7d' | '30d';
+
+/** GET /inventory/summary: todas las cifras corresponden al mismo período. */
+export interface InventorySummary {
+  periodo: SummaryPeriod;
+  desde: string;
+  hasta: string;
+  ingresos: number;
+  ventas: number;
+  mermas: number;
+  costoMerma: number;
 }
 
 export interface InventoryWaste {
@@ -167,6 +196,14 @@ export interface CreateLotPayload {
   costoUnitario: number;
   cantidadIngresada: number;
   ubicacion: UbicacionLote;
+  /** Solo ADMIN: nuevo PVP del producto, guardado en la misma transacción que el lote. */
+  nuevoPrecioVenta?: number;
+}
+
+/** Cambio de PVP aplicado por el servidor. */
+export interface PriceChange {
+  anterior: number;
+  nuevo: number;
 }
 
 export interface WasteAuditResult {

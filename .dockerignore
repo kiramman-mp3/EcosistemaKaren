@@ -1,0 +1,18 @@
+# Contexto de las imágenes que se construyen desde la raíz (deploy/azure/Dockerfile.portal).
+# backend/ tiene su propio .dockerignore para `docker build ./backend`.
+.git
+.github
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+**/dist
+dist-mobile
+screenshots
+docs
+frontend/bodega-mobile-reactnative
+frontend/portal-mobile-reactnative
+backend/test
+backend/coverage
+backend/public/media
+**/*.log

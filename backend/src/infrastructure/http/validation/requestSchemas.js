@@ -42,7 +42,7 @@ const MAX_SYNC_ITEMS = 50000;
 // repositorio espejo, de modo que el contrato vive en un solo lugar.
 function catalogItemSchema(spec) {
   const shape = {};
-  for (const { key, sql, max, min, nullable } of spec.fields) {
+  for (const { key, sql, max, min, nullable, optional } of spec.fields) {
     let schema;
     if (sql === 'uuid') schema = postgresUuid;
     else if (sql === 'text') schema = z.string().min(nullable ? 0 : 1).max(max);
@@ -51,7 +51,8 @@ function catalogItemSchema(spec) {
     else if (sql === 'date') schema = isoDate;
     else if (sql === 'timestamptz') schema = z.iso.datetime({ offset: true });
     else throw new Error(`Tipo de sincronización no soportado: ${sql}`);
-    shape[key] = nullable ? schema.nullable() : schema;
+    if (nullable) schema = schema.nullable();
+    shape[key] = optional ? schema.optional() : schema;
   }
   return z.strictObject(shape);
 }
@@ -89,7 +90,7 @@ function storeCommandResultBody() {
     }),
     z.strictObject({
       status: z.literal('REJECTED'),
-      reason: z.enum(['OVERBOOKING', 'VALIDATION', 'NOT_FOUND', 'EXPIRED', 'STORE_ERROR']),
+      reason: z.enum(['OVERBOOKING', 'OFFER_LIMIT', 'VALIDATION', 'NOT_FOUND', 'EXPIRED', 'STORE_ERROR']),
       message: z.string().max(500).optional()
     }),
     z.strictObject({
@@ -118,6 +119,18 @@ const schemas = {
     impuestoPorcentaje: z.coerce.number().finite().min(0).max(100).optional(),
     minStockAlerta: z.coerce.number().int().min(0).max(10_000_000).optional()
   }),
+  productPriceBody: z.strictObject({
+    precioVenta: money
+  }),
+  // Edición completa de un producto: el código de barras no cambia (da nombre a su foto y lo usan las apps).
+  productUpdateBody: z.strictObject({
+    categoriaId: entityId,
+    nombre: text(3, 150, 'El nombre'),
+    descripcion: text(1, 1000, 'La descripción').nullable().optional(),
+    precioVenta: money,
+    impuestoPorcentaje: z.coerce.number().finite().min(0).max(100),
+    minStockAlerta: z.coerce.number().int().min(0).max(10_000_000)
+  }),
   productQuery: z.strictObject({
     q: emptyToUndefined(z.string().trim().max(120).optional()),
     categoriaId: emptyToUndefined(entityId.optional()),
@@ -134,7 +147,9 @@ const schemas = {
     fechaCaducidad: isoDate,
     costoUnitario: money,
     cantidadIngresada: positiveInteger(),
-    ubicacion: location.optional()
+    ubicacion: location.optional(),
+    // Solo ADMIN (lo comprueba el caso de uso): nuevo PVP del producto, guardado junto con el lote.
+    nuevoPrecioVenta: money.optional()
   }).superRefine((data, ctx) => {
     if (data.fechaElaboracion >= data.fechaCaducidad) {
       ctx.addIssue({ code: 'custom', path: ['fechaElaboracion'], message: 'La fecha de elaboración debe ser anterior a la fecha de caducidad.' });
@@ -150,6 +165,9 @@ const schemas = {
     loteId: emptyToUndefined(z.string().uuid('El filtro loteId debe ser un UUID válido.').optional()),
     tipo: emptyToUndefined(z.enum(['INGRESO', 'TRASLADO', 'MERMA', 'RESERVA', 'LIBERACION', 'VENTA', 'VENCIMIENTO', 'AJUSTE']).optional()),
     limit: z.coerce.number().int().min(1).max(500).default(100)
+  }),
+  summaryQuery: z.strictObject({
+    periodo: z.enum(['hoy', '7d', '30d'], 'El período debe ser hoy, 7d o 30d.').default('7d')
   }),
   wasteQuery: z.strictObject({
     loteId: emptyToUndefined(z.string().uuid('El filtro loteId debe ser un UUID válido.').optional()),
@@ -191,9 +209,17 @@ const schemas = {
     estado: z.enum(['PENDIENTE_APROBACION', 'APROBADA', 'RECHAZADA']).optional(),
     activa: z.enum(['true', 'false']).transform(value => value === 'true').optional()
   }),
+  // Los límites de la oferta son opcionales: sin enviar se conservan; null los quita (todo el lote, hasta que caduque).
   promotionUpdateBody: z.strictObject({
     descuentoPorcentaje: z.coerce.number().finite().min(5).max(50),
-    frasePromocional: text(3, 180, 'La frase promocional')
+    frasePromocional: text(3, 180, 'La frase promocional'),
+    limitePorPedido: positiveInteger(100_000).nullable().optional(),
+    stockOferta: positiveInteger(100_000).nullable().optional(),
+    vigenteHasta: z.iso.datetime({ offset: true }).nullable().optional()
+  }).superRefine((data, ctx) => {
+    if (data.limitePorPedido && data.stockOferta && data.limitePorPedido > data.stockOferta) {
+      ctx.addIssue({ code: 'custom', path: ['limitePorPedido'], message: 'El límite por pedido no puede superar el stock de oferta.' });
+    }
   }),
   registerBody: z.strictObject({
     nombre: text(2, 120, 'El nombre'),

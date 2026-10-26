@@ -1,4 +1,7 @@
+
 // Respuestas de KarenBot, el mismo asistente de preguntas frecuentes del portal web.
+import { STORE_INFO, whatsappLink } from '../config/storeInfo';
+import { RESERVATION_MAX_TOTAL_MINUTES, RESERVATION_RANGE_TEXT, formatMinutes } from '../config/reservationRules';
 
 export interface BotReply {
   text: string;
@@ -11,20 +14,18 @@ export interface FaqChip extends BotReply {
   query: string;
 }
 
-export const WELCOME_TEXT = '¡Hola! Soy KarenBot, tu asistente virtual de Supermercados Karen. ¿En qué te puedo ayudar hoy con tus reservas u ofertas?';
-
-const WHATSAPP = 'https://wa.me/593983553724';
+export const WELCOME_TEXT = `¡Hola! Soy KarenBot, tu asistente virtual de ${STORE_INFO.tradeName}. ¿En qué te puedo ayudar hoy con tus reservas u ofertas?`;
 
 export const FAQ_CHIPS: FaqChip[] = [
   {
     label: '¿Cómo retiro con mi código KR?',
     query: 'como retiro con el codigo',
-    text: '¡Es muy fácil! Cuando confirmas tu reserva generas un Pase de Retiro con un código como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en la Sucursal Matriz, mostrar el código a la cajera y pagar tus productos antes de que finalicen los 30 minutos.',
+    text: `¡Es muy fácil! Cuando confirmas tu reserva generas un Pase de Retiro con un código como "KR-XXXXXX" y un código QR. Solo debes acercarte a Caja SIACI en ${STORE_INFO.tradeName}, mostrar el código a la cajera y pagar tus productos antes de que se acabe el tiempo de la reserva (el que elegiste al apartar; si te falta, sumas 30 minutos más desde Mis reservas).`,
   },
   {
-    label: '¿Qué pasa si pasan los 30 minutos?',
-    query: 'que pasa si pasan los 30 minutos',
-    text: 'Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta exactamente por 30 minutos. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!',
+    label: '¿Qué pasa si se acaba el tiempo?',
+    query: 'que pasa si se acaba el tiempo',
+    text: `Por nuestra política anti-overbooking y respeto a los clientes en tienda, el stock se aparta por el tiempo que elijas (${RESERVATION_RANGE_TEXT}). Antes de que termine puedes sumar 30 minutos más desde Mis reservas, hasta ${formatMinutes(RESERVATION_MAX_TOTAL_MINUTES)} en total. Si el tiempo expira, los productos vuelven automáticamente a la percha física. No hay multas ni penalizaciones, ¡puedes volver a reservar cuando estés cerca!`,
   },
   {
     label: '¿Qué formas de pago aceptan?',
@@ -34,14 +35,14 @@ export const FAQ_CHIPS: FaqChip[] = [
   {
     label: 'Horarios y ubicación de la tienda',
     query: 'horarios y ubicacion',
-    text: 'Nuestra Sucursal Matriz está ubicada en Av. Principal y Calle 4ta, Guayaquil. Atendemos de Lunes a Sábado de 07:00 a 21:00 y Domingos o Feriados de 08:00 a 19:00.',
+    text: `${STORE_INFO.tradeName} está en ${STORE_INFO.address}, ${STORE_INFO.city}. Atendemos de ${STORE_INFO.hoursSentence}.`,
   },
   {
     label: 'Hablar con un asesor en WhatsApp',
     query: 'whatsapp asesor humano',
     text: 'Si necesitas asistencia personalizada, puedes escribir directamente a nuestra línea oficial de WhatsApp:',
-    actionUrl: `${WHATSAPP}?text=${encodeURIComponent('Hola Supermercado Karen, necesito ayuda con una reserva')}`,
-    actionLabel: 'Abrir WhatsApp (+593 98 355 3724)',
+    actionUrl: whatsappLink(`Hola ${STORE_INFO.tradeName}, necesito ayuda con una reserva`),
+    actionLabel: `Abrir WhatsApp (${STORE_INFO.whatsapp.label})`,
   },
 ];
 
@@ -55,21 +56,21 @@ export function replyTo(message: string): BotReply {
   if (faq) return { text: faq.text, actionUrl: faq.actionUrl, actionLabel: faq.actionLabel };
 
   if (['reserva', 'tiempo', 'minuto', 'ttl'].some(word => lower.includes(word))) {
-    return { text: 'Las reservas tienen una duración de 30 minutos. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.' };
+    return { text: `Las reservas duran el tiempo que elijas al apartar (${RESERVATION_RANGE_TEXT}) y puedes sumar 30 minutos más desde Mis reservas, hasta ${formatMinutes(RESERVATION_MAX_TOTAL_MINUTES)} en total. Una vez confirmada en el carrito, dirígete a caja con tu código KR-XXXXXX antes de que el temporizador llegue a cero.` };
   }
   if (['oferta', 'descuento', 'fefo', 'caducidad'].some(word => lower.includes(word))) {
-    return { text: 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 20% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional.' };
+    return { text: 'Nuestras ofertas por vencer (FEFO) son lotes auditados con descuentos del 5% al 50%. Tienen la misma calidad garantizada y puedes apartarlas para asegurar tu precio promocional. Algunas tienen un máximo por pedido, pocas unidades con descuento o una hora de fin: lo verás en cada oferta.' };
   }
   if (['pago', 'tarjeta', 'efectivo', 'precio'].some(word => lower.includes(word))) {
     return { text: 'El pago se realiza en caja física al momento de retirar tu pedido. Aceptamos efectivo, tarjetas y transferencias.' };
   }
   if (['hola', 'buenas', 'buenos dias'].some(word => lower.includes(word))) {
-    return { text: '¡Hola! Un gusto saludarte. ¿En qué podemos orientarte sobre tu compra o reserva en Supermercados Karen?' };
+    return { text: `¡Hola! Un gusto saludarte. ¿En qué podemos orientarte sobre tu compra o reserva en ${STORE_INFO.tradeName}?` };
   }
   if (['humano', 'asesor', 'whatsapp', 'telefono'].some(word => lower.includes(word))) {
     return {
       text: 'Con gusto te comunicamos con nuestro equipo de atención humana en WhatsApp:',
-      actionUrl: `${WHATSAPP}?text=${encodeURIComponent('Hola Supermercado Karen, necesito asistencia personalizada')}`,
+      actionUrl: whatsappLink(`Hola ${STORE_INFO.tradeName}, necesito asistencia personalizada`),
       actionLabel: 'Contactar a Asesor por WhatsApp',
     };
   }

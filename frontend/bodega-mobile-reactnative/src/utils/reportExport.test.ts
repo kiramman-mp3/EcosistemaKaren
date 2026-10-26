@@ -1,4 +1,4 @@
-import { buildCsv, buildReportHtml, csvCell, escapeHtml, ReportData } from './reportExport';
+import { buildCsv, buildReportHtml, csvCell, escapeHtml, formatAmount, formatCount, periodLabel, ReportData } from './reportExport';
 import { InventoryMovement, InventoryWaste } from '../types';
 
 const waste = (overrides: Partial<InventoryWaste> = {}): InventoryWaste => ({
@@ -12,6 +12,7 @@ const movement = (overrides: Partial<InventoryMovement> = {}): InventoryMovement
 });
 const data = (overrides: Partial<ReportData> = {}): ReportData => ({
   totals: { ingresos: 10, ventas: 5, mermas: 2, costoMerma: 2 },
+  period: 'Últimos 7 días',
   wastes: [waste()], movements: [movement()], issuedAt: new Date('2026-10-24T12:00:00Z'), ...overrides,
 });
 
@@ -82,5 +83,25 @@ describe('buildReportHtml', () => {
     const html = buildReportHtml(data({ wastes: [], movements: [] }));
     expect(html).toContain('Sin bajas registradas');
     expect(html).toContain('Sin movimientos');
+  });
+});
+
+describe('cifras de los indicadores', () => {
+  it('usa separador de miles y dos decimales en los montos', () => {
+    expect(formatAmount(14480.77)).toBe('$14,480.77');
+    expect(formatAmount(0)).toBe('$0.00');
+    expect(formatCount(36488)).toBe('36,488');
+  });
+});
+
+describe('período de los indicadores', () => {
+  it('se indica en el CSV y en el PDF', () => {
+    expect(buildCsv(data())).toContain('"Período","Últimos 7 días"');
+    expect(buildReportHtml(data())).toContain('Indicadores: Últimos 7 días');
+  });
+
+  it('cada período tiene su nombre legible', () => {
+    expect(periodLabel('hoy')).toBe('Hoy');
+    expect(periodLabel('30d')).toBe('Últimos 30 días');
   });
 });

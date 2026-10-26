@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { DataLoadState, FlashOffer, NavTab, Product } from '../types';
 import { Button, EmptyState, ExpiryStamp, OldPrice, Price, ProductImage, SectionTitle } from '../components/ui';
 import { OfferTag } from '../components/ProductTag';
+import { StoreInfoCard } from '../components/StoreInfoCard';
+import { cellWidth, useLayout } from '../theme/layout';
 import { PopPressable, Slap } from '../components/motion';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { categoryTone, toneSolid } from '../theme/categoryTone';
@@ -24,12 +26,15 @@ interface HomeScreenProps {
   onOpenPass: () => void;
   userName?: string;
   onOpenPrivacy: () => void;
+  onOpenTerms: () => void;
 }
+
+const AISLE_GAP = 10;
 
 const STEPS = [
   { title: 'Elige en línea', text: 'Ves el stock real de la tienda.' },
-  { title: 'Te lo apartamos 30 minutos', text: 'Recibes un código y nadie más se lleva esas unidades.' },
-  { title: 'Pagas y retiras en caja', text: 'Muestra el código en la Sucursal Matriz.' },
+  { title: 'Te lo apartamos el tiempo que elijas', text: 'Recibes un código y nadie más se lleva esas unidades.' },
+  { title: 'Pagas y retiras en caja', text: 'Muestra el código en caja y paga ahí.' },
 ];
 
 // Inclinaciones y tiempos fijos: parecen pegadas a mano, pero son iguales en cada carga.
@@ -41,8 +46,9 @@ const STICKERS = [
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   products, categories, offers, state, refreshing, onRefresh, onNavigate, onSelectCategory,
-  onReserveOffer, reservingOfferId, activePassCode, onOpenPass, userName, onOpenPrivacy,
+  onReserveOffer, reservingOfferId, activePassCode, onOpenPass, userName, onOpenPrivacy, onOpenTerms,
 }) => {
+  const { isTablet, aisleColumns, contentWidth, gutter } = useLayout();
   const stickers = useMemo(() => offers.slice(0, 3), [offers]);
 
   const aisles = useMemo(() => categories
@@ -62,7 +68,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.karen} colors={[colors.karen]} />}
     >
-      <View style={styles.hero}>
+      <View style={[styles.hero, isTablet && styles.heroRow]}>
+        <View style={isTablet ? styles.heroMain : undefined}>
         {activePassCode && (
           <TouchableOpacity style={styles.pass} onPress={onOpenPass} accessibilityRole="button">
             <Ionicons name="ticket" size={18} color={colors.sticker} />
@@ -72,15 +79,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </TouchableOpacity>
         )}
         <Text style={styles.greeting}>{greeting}</Text>
-        <Text style={styles.headline} accessibilityRole="header">Apártalo desde tu casa. Lo pagas cuando llegues.</Text>
-        <Text style={styles.lead}>Armas tu lista, te guardamos todo 30 minutos y pagas en caja al retirar. Sin fila.</Text>
+        <Text style={[styles.headline, isTablet && styles.headlineTablet]} accessibilityRole="header">Apártalo desde tu casa. Lo pagas cuando llegues.</Text>
+        <Text style={styles.lead}>Armas tu lista, te guardamos todo el tiempo que elijas y pagas en caja al retirar. Sin fila.</Text>
         <View style={styles.cta}>
           <Button label="Armar mi lista" icon="basket-outline" onPress={() => onNavigate('productos')} style={styles.ctaButton} />
           <Button label="Ofertas por vencer" variant="outline" onPress={() => onNavigate('ofertas')} style={styles.ctaButton} />
         </View>
+        </View>
 
         {stickers.length > 0 && (
-          <View style={styles.stickers}>
+          <View style={[styles.stickers, isTablet && styles.stickersTablet]}>
             <Text style={styles.handNote} aria-hidden>¡se va hoy!</Text>
             {stickers.map((offer, index) => {
               const style = STICKERS[index];
@@ -136,7 +144,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </View>
       )}
 
-      <View style={styles.section}>
+      <View style={[styles.section, { paddingHorizontal: gutter }]}>
         <SectionTitle title="Date una vuelta por los pasillos" subtitle={state === 'ready' ? `${products.length} productos` : undefined} />
         {state === 'offline' || state === 'error' ? (
           <EmptyState illustration="offline" title="No pudimos cargar los pasillos" text="Desliza hacia abajo para intentar de nuevo." />
@@ -151,7 +159,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   backgroundColor={solid.bg}
                   borderRadius={radius.block}
                   accessibilityLabel={`${aisle.name}, ${aisle.count} productos`}
-                  style={styles.aisle}
+                  style={{ width: cellWidth(contentWidth - gutter * 2, aisleColumns, AISLE_GAP) }}
                   bodyStyle={styles.aisleBody}
                 >
                   <View style={styles.aisleHead}>
@@ -168,10 +176,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
       </View>
 
-      <View style={styles.steps}>
+      <View style={[styles.steps, { marginHorizontal: gutter }]}>
         <Text style={styles.stepsTitle}>Apartar es así de fácil</Text>
+        <View style={isTablet ? styles.stepsRow : styles.stepsColumn}>
         {STEPS.map((step, index) => (
-          <View key={step.title} style={styles.step}>
+          <View key={step.title} style={[styles.step, isTablet && styles.flex]}>
             <View style={styles.stepNumber}><Text style={styles.stepNumberText}>{index + 1}</Text></View>
             <View style={styles.flex}>
               <Text style={styles.stepTitle}>{step.title}</Text>
@@ -179,11 +188,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </View>
           </View>
         ))}
+        </View>
       </View>
 
-      <TouchableOpacity style={styles.privacyLink} onPress={onOpenPrivacy} accessibilityRole="link">
-        <Text style={styles.privacyLinkText}>Política de privacidad</Text>
-      </TouchableOpacity>
+      <StoreInfoCard />
+
+      <View style={styles.legalLinks}>
+        <TouchableOpacity style={styles.privacyLink} onPress={onOpenTerms} accessibilityRole="link">
+          <Text style={styles.privacyLinkText}>Términos y condiciones</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.privacyLink} onPress={onOpenPrivacy} accessibilityRole="link">
+          <Text style={styles.privacyLinkText}>Política de privacidad</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
@@ -193,6 +210,12 @@ const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.aisle },
   // El espacio inferior deja libre el botón flotante del chat.
   content: { paddingBottom: 84 },
+  heroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 24, paddingHorizontal: 24 },
+  heroMain: { flex: 1.1, minWidth: 0 },
+  headlineTablet: { fontSize: 48, lineHeight: 50 },
+  stickersTablet: { flex: 1, marginTop: 0, minWidth: 0 },
+  stepsRow: { flexDirection: 'row', gap: 20 },
+  stepsColumn: { gap: 16 },
   hero: { backgroundColor: colors.sticker, padding: 20, paddingTop: 22, borderBottomWidth: 2, borderBottomColor: colors.mora },
   pass: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.mora, borderRadius: radius.pill, paddingHorizontal: 14, minHeight: 46, marginBottom: 16 },
   passText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: '#FFFFFF' },
@@ -215,12 +238,12 @@ const styles = themed(() => StyleSheet.create({
   discountText: { fontFamily: fonts.tag, fontSize: 16, color: '#FFFFFF' },
   section: { paddingHorizontal: 16, paddingTop: 28 },
   link: { minHeight: 44, justifyContent: 'center' },
-  privacyLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  legalLinks: { marginTop: 8 },
+  privacyLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   privacyLinkText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.inkSoft, textDecorationLine: 'underline' },
   linkText: { fontFamily: fonts.tag, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
   offerRow: { gap: 14, paddingRight: 16, paddingBottom: 4 },
-  aisles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  aisle: { width: '47%', flexGrow: 1 },
+  aisles: { flexDirection: 'row', flexWrap: 'wrap', gap: AISLE_GAP },
   aisleBody: { padding: 10, minHeight: 130 },
   aisleHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6, minHeight: 40 },
   aisleName: { flex: 1, fontFamily: fonts.tag, fontSize: 16, lineHeight: 19 },

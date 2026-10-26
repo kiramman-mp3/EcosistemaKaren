@@ -34,7 +34,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
 
   const test = async () => {
     if (!normalized) {
-      setResult({ tone: 'error', text: 'Escribe una dirección válida, por ejemplo 192.168.1.20 o 192.168.1.20:4001.' });
+      setResult({ tone: 'error', text: 'Escribe una dirección válida, por ejemplo 192.168.1.20 o 192.168.1.20:4000.' });
       return;
     }
     setTesting(true);
@@ -57,7 +57,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
 
   const save = async () => {
     if (!normalized) {
-      setResult({ tone: 'error', text: 'Escribe una dirección válida, por ejemplo 192.168.1.20 o 192.168.1.20:4001.' });
+      setResult({ tone: 'error', text: 'Escribe una dirección válida, por ejemplo 192.168.1.20 o 192.168.1.20:4000.' });
       return;
     }
     if (normalized !== getServerUrl()) {

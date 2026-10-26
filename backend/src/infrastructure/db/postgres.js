@@ -24,6 +24,16 @@ function connectionSettings(role = 'store', env = process.env) {
   };
 }
 
+// DB_SSL (o PORTAL_DB_SSL en el portal): 'true' cifra la conexión y verifica el certificado del
+// servidor (Azure Database for PostgreSQL, Supabase); 'no-verify' solo cifra. Sin definir, no hay TLS.
+function sslSettings(role = 'store', env = process.env) {
+  const own = role === 'portal' ? env.PORTAL_DB_SSL : undefined;
+  const value = (own !== undefined && own !== '' ? own : env.DB_SSL || '').trim().toLowerCase();
+  if (value === 'true') return { rejectUnauthorized: true };
+  if (value === 'no-verify') return { rejectUnauthorized: false };
+  return undefined;
+}
+
 // Dos roles con la misma conexión (monolito, desarrollo con una sola base) comparten pool.
 function poolKey(settings) {
   return `${settings.host}:${settings.port}/${settings.database}@${settings.user}`;
@@ -35,6 +45,7 @@ function getPool(role = 'store') {
   if (!pools.has(key)) {
     const pool = new Pool({
       ...settings,
+      ssl: sslSettings(role),
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 3000,
@@ -72,5 +83,6 @@ module.exports = {
   getPool,
   testConnection,
   closePool,
-  connectionSettings
+  connectionSettings,
+  sslSettings
 };

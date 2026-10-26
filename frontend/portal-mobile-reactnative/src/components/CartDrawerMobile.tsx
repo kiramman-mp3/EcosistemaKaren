@@ -1,25 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CartItem } from '../types';
 import { Button, EmptyState, Price, ProductImage } from './ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { categoryTone } from '../theme/categoryTone';
+import { SHEET_MAX_WIDTH } from '../theme/layout';
+import {
+  DEFAULT_RESERVATION_MINUTES, RESERVATION_DURATION_OPTIONS, RESERVATION_EXTENSION_MINUTES,
+  RESERVATION_MAX_TOTAL_MINUTES, formatMinutes,
+} from '../config/reservationRules';
 
 interface CartDrawerMobileProps {
   visible: boolean;
   onClose: () => void;
   items: CartItem[];
   onUpdateQuantity: (id: string, delta: number) => void;
-  onConfirmReservation: () => void;
+  onConfirmReservation: (ttlMinutos: number) => void;
   isSubmitting: boolean;
   isLoggedIn: boolean;
   isOnline: boolean;
 }
 
+/** Etiqueta corta del selector: "30 min", "1 h", "1 h 30", "2 h". */
+const shortDuration = (minutes: number) => {
+  if (minutes < 60) return `${minutes} min`;
+  const rest = minutes % 60;
+  return `${Math.floor(minutes / 60)} h${rest ? ` ${rest}` : ''}`;
+};
+
 export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
   visible, onClose, items, onUpdateQuantity, onConfirmReservation, isSubmitting, isLoggedIn, isOnline,
 }) => {
+  const [selectedTtl, setSelectedTtl] = useState<number>(DEFAULT_RESERVATION_MINUTES);
   const units = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const savings = items.reduce((sum, item) => {
@@ -87,9 +100,31 @@ export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
                   <Text style={styles.totalLabel}>Total a pagar en caja</Text>
                   <Price value={total} />
                 </View>
+                {isOnline && (
+                  <View style={styles.ttl}>
+                    <Text style={styles.ttlLabel}>¿Cuánto tiempo necesitas para llegar?</Text>
+                    <View style={styles.ttlOptions} accessibilityRole="radiogroup">
+                      {RESERVATION_DURATION_OPTIONS.map(minutes => {
+                        const active = selectedTtl === minutes;
+                        return (
+                          <TouchableOpacity
+                            key={minutes}
+                            style={[styles.ttlOption, active && styles.ttlOptionActive]}
+                            onPress={() => setSelectedTtl(minutes)}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: active }}
+                            accessibilityLabel={formatMinutes(minutes)}
+                          >
+                            <Text style={[styles.ttlOptionText, active && styles.ttlOptionTextActive]}>{shortDuration(minutes)}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
                 <Text style={styles.note}>
                   {isOnline
-                    ? 'Al apartar, te guardamos estas unidades 30 minutos. Pagas al retirar en la Sucursal Matriz.'
+                    ? `Al apartar, te guardamos estas unidades ${formatMinutes(selectedTtl)}. Si te hace falta, desde Mis reservas sumas ${RESERVATION_EXTENSION_MINUTES} minutos más, hasta ${formatMinutes(RESERVATION_MAX_TOTAL_MINUTES)} en total. Pagas al retirar en caja.`
                     : 'Por ahora no podemos apartar productos porque la tienda no responde.'}
                 </Text>
                 <Button
@@ -97,7 +132,7 @@ export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
                   variant="danger"
                   loading={isSubmitting}
                   disabled={!isOnline && isLoggedIn}
-                  onPress={onConfirmReservation}
+                  onPress={() => onConfirmReservation(selectedTtl)}
                 />
               </View>
             </>
@@ -110,11 +145,21 @@ export const CartDrawerMobile: React.FC<CartDrawerMobileProps> = ({
 
 const styles = themed(() => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(42,29,20,0.6)', justifyContent: 'flex-end' },
-  sheet: { maxHeight: '90%', backgroundColor: colors.aisle, borderTopLeftRadius: radius.block, borderTopRightRadius: radius.block, borderWidth: 2, borderBottomWidth: 0, borderColor: colors.mora, overflow: 'hidden' },
+  sheet: { width: '100%', maxWidth: SHEET_MAX_WIDTH, alignSelf: 'center', maxHeight: '90%', backgroundColor: colors.aisle, borderTopLeftRadius: radius.block, borderTopRightRadius: radius.block, borderWidth: 2, borderBottomWidth: 0, borderColor: colors.mora, overflow: 'hidden' },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.sticker, borderBottomWidth: 2, borderBottomColor: colors.mora, paddingLeft: 20, paddingRight: 8, paddingVertical: 10 },
   title: { fontFamily: fonts.tag, fontSize: 28, color: colors.mora },
   count: { fontFamily: fonts.tagSemibold, fontSize: 20, color: colors.mora },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  ttl: { gap: 6 },
+  ttlLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
+  ttlOptions: { flexDirection: 'row', gap: 8 },
+  ttlOption: {
+    flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill,
+    borderWidth: 2, borderColor: colors.rule, backgroundColor: colors.card,
+  },
+  ttlOptionActive: { borderColor: colors.mora, backgroundColor: colors.sticker },
+  ttlOptionText: { fontFamily: fonts.bold, fontSize: 13, color: colors.inkSoft },
+  ttlOptionTextActive: { color: colors.mora },
   emptyAction: { marginTop: 8 },
   list: { paddingHorizontal: 16, paddingTop: 14 },
   row: { flexDirection: 'row', gap: 12, backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.rule, padding: 10, marginBottom: 10 },

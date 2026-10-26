@@ -24,6 +24,13 @@ class OverbookingException extends DomainException {
   }
 }
 
+// La línea pide más de lo que permite la oferta (límite por pedido, stock de oferta o vigencia).
+class OfferLimitException extends DomainException {
+  constructor(message = 'La cantidad solicitada supera lo que permite la oferta') {
+    super(message, 409);
+  }
+}
+
 class UnauthorizedException extends DomainException {
   constructor(message = 'No autorizado') {
     super(message, 401);
@@ -54,6 +61,7 @@ module.exports = {
   NotFoundException,
   ValidationException,
   OverbookingException,
+  OfferLimitException,
   UnauthorizedException,
   ForbiddenException,
   ConflictException,

@@ -16,7 +16,8 @@ const samples = {
   categorias: { id: uuid(1), nombre: 'Lácteos', descripcion: null },
   productos: {
     id: uuid(2), categoriaId: uuid(1), codigoBarras: '7861001234567', nombre: 'Leche entera 1L',
-    descripcion: null, precioVenta: 1.25, impuestoPorcentaje: 0, imagenUrl: '/api/v1/media/productos/leche.jpg'
+    descripcion: null, precioVenta: 1.25, impuestoPorcentaje: 0, imagenUrl: '/api/v1/media/productos/leche.jpg',
+    createdAt: '2026-10-20T15:00:00.000Z', vendidos30d: 42
   },
   lotes: {
     id: uuid(3), productoId: uuid(2), numeroLote: 'L-001', fechaCaducidad: '2026-12-31',
@@ -24,7 +25,8 @@ const samples = {
   },
   promociones: {
     id: uuid(4), loteId: uuid(3), descuentoPorcentaje: 20, frasePromocional: 'Aprovecha la leche',
-    createdAt: '2026-10-24T12:00:00.000Z'
+    createdAt: '2026-10-24T12:00:00.000Z', limitePorPedido: 2, stockOferta: 10,
+    vigenteHasta: '2026-10-26T01:00:00.000Z', unidadesRestantes: 7
   }
 };
 
@@ -41,6 +43,27 @@ test('el esquema acepta un snapshot válido de cada sección', () => {
     assert.ok(result.success, `${section}: ${result.error?.message}`);
   }
   assert.ok(schemas.catalogSyncBody.safeParse({ section: 'lotes', version: 1, items: [] }).success, 'un snapshot vacío es válido');
+});
+
+test('una tienda con la versión anterior puede enviar productos sin fecha de alta ni ventas', () => {
+  const { createdAt: _createdAt, vendidos30d: _vendidos, ...legacy } = samples.productos;
+  assert.ok(schemas.catalogSyncBody.safeParse({ section: 'productos', version: 1, items: [legacy] }).success);
+  const negative = { ...samples.productos, vendidos30d: -1 };
+  assert.ok(!schemas.catalogSyncBody.safeParse({ section: 'productos', version: 1, items: [negative] }).success);
+  const fractional = { ...samples.productos, vendidos30d: 1.5 };
+  assert.ok(!schemas.catalogSyncBody.safeParse({ section: 'productos', version: 1, items: [fractional] }).success);
+});
+
+test('las ofertas pueden llegar sin límites (tienda anterior o sin topes) y nunca con límites inválidos', () => {
+  const parse = (item) => schemas.catalogSyncBody.safeParse({ section: 'promociones', version: 1, items: [item] }).success;
+  const { limitePorPedido: _l, stockOferta: _s, vigenteHasta: _v, unidadesRestantes: _u, ...legacy } = samples.promociones;
+  assert.ok(parse(legacy));
+  assert.ok(parse({ ...samples.promociones, limitePorPedido: null, stockOferta: null, vigenteHasta: null, unidadesRestantes: null }));
+  assert.ok(parse({ ...samples.promociones, unidadesRestantes: 0 }));
+  assert.ok(!parse({ ...samples.promociones, limitePorPedido: 0 }));
+  assert.ok(!parse({ ...samples.promociones, stockOferta: 2.5 }));
+  assert.ok(!parse({ ...samples.promociones, unidadesRestantes: -1 }));
+  assert.ok(!parse({ ...samples.promociones, vigenteHasta: '2026-10-26' }));
 });
 
 test('el esquema acepta cualquier UUID que PostgreSQL acepte, no solo los RFC 4122', () => {

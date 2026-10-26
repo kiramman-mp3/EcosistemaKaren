@@ -6,6 +6,7 @@ import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui';
 import { Bump, PopPressable } from './motion';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { categoryTone } from '../theme/categoryTone';
+import { maxPerOrderText, offerEndText } from '../config/offerRules';
 
 const LOW_STOCK = 5;
 
@@ -22,7 +23,26 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, inCart, onAdd }
   const disabled = soldOut || maxed;
   return (
     <View style={styles.card}>
-      <ProductImage uri={product.image} tone={categoryTone(product.category)} style={[styles.image, soldOut && styles.faded]} />
+      <View>
+        <ProductImage uri={product.image} tone={categoryTone(product.category)} style={[styles.image, soldOut && styles.faded]} />
+        {/* Insignias con datos reales: ventas de 30 días y fecha de alta (config/catalogRules). */}
+        {(product.isBestSeller || product.isNew) && (
+          <View style={styles.badges} pointerEvents="none">
+            {product.isBestSeller && (
+              <View style={[styles.badge, styles.badgeBest]}>
+                <Ionicons name="flame" size={12} color={colors.karen} />
+                <Text style={styles.badgeText}>Más vendido</Text>
+              </View>
+            )}
+            {product.isNew && (
+              <View style={[styles.badge, styles.badgeNew]}>
+                <Ionicons name="sparkles" size={12} color={colors.sticker} />
+                <Text style={[styles.badgeText, styles.badgeTextNew]}>Nuevo</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
       <View style={styles.label}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         {product.description ? <Text style={styles.desc} numberOfLines={1}>{product.description}</Text> : <View style={styles.descSpacer} />}
@@ -59,6 +79,24 @@ interface OfferTagProps {
   compact?: boolean;
 }
 
+/** Hora real de fin y límite por pedido que fijó la tienda; nada si la oferta no los tiene. */
+const OfferLimits: React.FC<{ offer: FlashOffer }> = ({ offer }) => {
+  const endText = offerEndText(offer.endsAt);
+  const limitText = maxPerOrderText(offer.maxPerOrder);
+  if (!endText && !limitText) return null;
+  return (
+    <View style={styles.offerLimits}>
+      {endText && (
+        <View style={styles.offerEnd}>
+          <Ionicons name="time-outline" size={14} color={colors.mora} />
+          <Text style={styles.left}>{endText}</Text>
+        </View>
+      )}
+      {limitText && <Text style={styles.limitChip}>{limitText}</Text>}
+    </View>
+  );
+};
+
 /** Oferta por vencer: pegatina limón con el precio rebajado y la fecha impresa. */
 export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve, busy = false, compact = false }) => (
   <View style={[styles.offer, compact && styles.offerCompact]}>
@@ -77,6 +115,7 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve, busy = fal
         <ExpiryStamp date={offer.expiresOn} color={colors.mora} />
         <Text style={styles.left}>Quedan {offer.stockAvailable}</Text>
       </View>
+      <OfferLimits offer={offer} />
       <PopPressable
         onPress={() => onReserve(offer)}
         disabled={busy}
@@ -93,6 +132,15 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve, busy = fal
 const styles = themed(() => StyleSheet.create({
   card: { flex: 1, backgroundColor: colors.card, borderRadius: radius.block, borderWidth: 2, borderColor: colors.mora, padding: 8 },
   image: { aspectRatio: 1 },
+  badges: { position: 'absolute', top: 6, right: 6, alignItems: 'flex-end', gap: 4 },
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: radius.tag, borderWidth: 1, borderColor: colors.mora,
+  },
+  badgeBest: { backgroundColor: colors.naranja },
+  badgeNew: { backgroundColor: colors.fresh },
+  badgeText: { fontFamily: fonts.bold, fontSize: 11, color: colors.mora },
+  badgeTextNew: { color: '#FFFFFF' },
   faded: { opacity: 0.4 },
   label: { padding: 6, paddingTop: 10, flex: 1 },
   name: { fontFamily: fonts.tag, fontSize: 15, lineHeight: 19, color: colors.ink, minHeight: 38 },
@@ -116,6 +164,12 @@ const styles = themed(() => StyleSheet.create({
   offerPrice: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   offerMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 },
   left: { fontFamily: fonts.semibold, fontSize: 13, color: colors.mora },
+  offerLimits: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  offerEnd: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  limitChip: {
+    fontFamily: fonts.bold, fontSize: 11, color: colors.mora, borderWidth: 1.5, borderColor: colors.mora,
+    borderRadius: radius.tag, paddingHorizontal: 6, paddingVertical: 1,
+  },
   reserve: { minHeight: 46, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   reserveText: { fontFamily: fonts.tag, fontSize: 15, color: '#FFFFFF' },
 }));

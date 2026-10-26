@@ -29,6 +29,9 @@ function catalogReadRoutes(router, { categoryController, productController, lotC
 function catalogAdminRoutes(router, { categoryController, productController }, { authenticate, authorize }) {
   router.post('/categories', authenticate, authorize('ADMIN'), validate({ body: schemas.categoryBody }), (req, res, next) => categoryController.createCategory(req, res, next));
   router.post('/products', authenticate, authorize('ADMIN'), validate({ body: schemas.productBody }), (req, res, next) => productController.createProduct(req, res, next));
+  router.patch('/products/:id', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams, body: schemas.productPriceBody }), (req, res, next) => productController.updatePrice(req, res, next));
+  router.put('/products/:id', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams, body: schemas.productUpdateBody }), (req, res, next) => productController.updateProduct(req, res, next));
+  router.get('/products/:id/price-history', authenticate, authorize('ADMIN'), validate({ params: schemas.idParams }), (req, res, next) => productController.getPriceHistory(req, res, next));
   // Foto del producto (binario, p. ej. directo de la cámara): se autentica antes de leer el cuerpo.
   router.put(
     '/products/:id/image',
@@ -47,6 +50,7 @@ function inventoryRoutes(router, { lotController }, { authenticate, authorize })
   router.post('/lots/:id/merma', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ params: schemas.idParams, body: schemas.wasteBody }), (req, res, next) => lotController.registerMerma(req, res, next));
   router.get('/inventory/movements', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.movementQuery }), (req, res, next) => lotController.getMovements(req, res, next));
   router.get('/inventory/wastes', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.wasteQuery }), (req, res, next) => lotController.getWastes(req, res, next));
+  router.get('/inventory/summary', authenticate, authorize('BODEGUERO', 'PERCHERO', 'ADMIN'), validate({ query: schemas.summaryQuery }), (req, res, next) => lotController.getSummary(req, res, next));
 }
 
 // Reservas que originan los clientes (portal)

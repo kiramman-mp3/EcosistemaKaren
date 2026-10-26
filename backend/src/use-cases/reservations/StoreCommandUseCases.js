@@ -2,6 +2,7 @@ const {
   NotFoundException,
   ValidationException,
   OverbookingException,
+  OfferLimitException,
   ForbiddenException
 } = require('../../domain/exceptions/DomainExceptions');
 const Reservation = require('../../domain/entities/Reservation');
@@ -75,6 +76,7 @@ class ProcessStoreCommand {
       return acceptedResult(await this.reservationRepository.findById(created.id));
     } catch (error) {
       if (error instanceof OverbookingException) return rejectedResult('OVERBOOKING', error.message);
+      if (error instanceof OfferLimitException) return rejectedResult('OFFER_LIMIT', error.message);
       if (error instanceof NotFoundException) return rejectedResult('NOT_FOUND', error.message);
       if (error instanceof ValidationException) return rejectedResult('VALIDATION', error.message);
       // Un dato que la base rechaza (formato, longitud...) nunca se arregla reintentando: se rechaza la

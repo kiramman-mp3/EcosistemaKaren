@@ -3,6 +3,7 @@ const Lot = require('../../domain/entities/Lot');
 const Alert = require('../../domain/entities/Alert');
 const { classifyExpiryDays, isExpiryAlertLevel } = require('../../domain/policies/BusinessRules');
 const { toDateOnly } = require('../../domain/policies/BusinessDates');
+const { assertCanChangePrice, assertValidPrice } = require('../products/ProductUseCases');
 
 class GetLots {
   constructor(lotRepository) {
@@ -53,12 +54,18 @@ class IngresarLote {
     if (lotData.costoUnitario === undefined || lotData.costoUnitario === null || lotData.costoUnitario === '') {
       throw new ValidationException('El costoUnitario es obligatorio para registrar un lote.');
     }
-    const product = await this.productRepository.findById(lotData.productoId);
+    // Nuevo PVP opcional junto con el lote: solo el ADMIN, y se guarda en la misma transacción.
+    const { nuevoPrecioVenta, ...lotFields } = lotData;
+    const hasNewPrice = nuevoPrecioVenta !== undefined && nuevoPrecioVenta !== null && nuevoPrecioVenta !== '';
+    if (hasNewPrice) assertCanChangePrice(actor);
+    const newPrice = hasNewPrice ? assertValidPrice(nuevoPrecioVenta) : null;
+
+    const product = await this.productRepository.findById(lotFields.productoId);
     if (!product) {
-      throw new NotFoundException(`El producto con ID '${lotData.productoId}' no fue encontrado.`);
+      throw new NotFoundException(`El producto con ID '${lotFields.productoId}' no fue encontrado.`);
     }
 
-    const newLot = new Lot(lotData);
+    const newLot = new Lot(lotFields);
     newLot.productoNombre = product.nombre;
     newLot.codigoBarras = product.codigoBarras;
 
@@ -79,7 +86,7 @@ class IngresarLote {
 
     // El repositorio de PostgreSQL guarda lote y alerta en una sola transacción; los demás
     // (en memoria) la guardan después por separado.
-    const savedLot = await this.lotRepository.save(newLot, actor.id, buildAlert);
+    const savedLot = await this.lotRepository.save(newLot, actor.id, buildAlert, { nuevoPrecioVenta: newPrice });
     const alert = 'alertaGenerada' in savedLot ? savedLot.alertaGenerada : buildAlert(savedLot);
     if (alert) {
       if (!('alertaGenerada' in savedLot) && this.alertRepository) {
@@ -168,6 +175,36 @@ class GetWastes {
       throw new ForbiddenException('No tiene autorización para consultar mermas.');
     }
     return this.lotRepository.findWastes(validateAuditFilters(filters, false));
+  }
+}
+
+// Días que abarca cada período del resumen, contados como días completos del negocio: "hoy" empieza
+// a la medianoche de hoy y "7d" a la de hace seis días, así un período siempre incluye el día en curso.
+const SUMMARY_PERIOD_DAYS = Object.freeze({ hoy: 1, '7d': 7, '30d': 30 });
+
+/** Inicio del período en la zona horaria del negocio (process.env.TZ). */
+function summaryPeriodStart(periodo, now = new Date()) {
+  const days = SUMMARY_PERIOD_DAYS[periodo];
+  if (!days) throw new ValidationException('El período debe ser hoy, 7d o 30d.');
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
+}
+
+class GetInventorySummary {
+  constructor(lotRepository, clock = () => new Date()) {
+    this.lotRepository = lotRepository;
+    this.clock = clock;
+  }
+
+  // Totales del mismo período para todas las cifras: antes el reporte sumaba las ventas de los últimos
+  // 200 movimientos (horas) y la merma de las últimas 200 bajas (semanas), que no se podían comparar.
+  async execute({ periodo = '7d' } = {}, actor) {
+    if (!actor || !['BODEGUERO', 'PERCHERO', 'ADMIN'].includes(actor.rol)) {
+      throw new ForbiddenException('No tiene autorización para consultar el resumen de inventario.');
+    }
+    const hasta = this.clock();
+    const desde = summaryPeriodStart(periodo, hasta);
+    const totals = await this.lotRepository.summarizeInventory({ desde, hasta });
+    return { periodo, desde: desde.toISOString(), hasta: hasta.toISOString(), ...totals };
   }
 }
 
@@ -276,6 +313,9 @@ module.exports = {
   RegisterMerma,
   GetInventoryMovements,
   GetWastes,
+  GetInventorySummary,
+  summaryPeriodStart,
+  SUMMARY_PERIOD_DAYS,
   ObtenerAlertasCaducidad,
   AtenderAlertaCaducidad,
   ExpireLots

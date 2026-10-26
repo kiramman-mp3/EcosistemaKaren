@@ -21,8 +21,8 @@ const aiMetrics = require('../../infrastructure/metrics/AiMetricsCollector');
 const GeminiAdapter = require('../../adapters/ai/GeminiAdapter');
 
 const { GetCategories, CreateCategory } = require('../../use-cases/categories/CategoryUseCases');
-const { GetProducts, GetProductByBarcode, CreateProduct, SetProductImage } = require('../../use-cases/products/ProductUseCases');
-const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
+const { GetProducts, GetProductByBarcode, CreateProduct, SetProductImage, UpdateProductPrice, UpdateProduct, GetProductPriceHistory } = require('../../use-cases/products/ProductUseCases');
+const { GetLots, GetPublicLotAvailability, IngresarLote, UpdateLotLocation, RegisterMerma, GetInventoryMovements, GetWastes, GetInventorySummary, ObtenerAlertasCaducidad, AtenderAlertaCaducidad, ExpireLots } = require('../../use-cases/lots/LotUseCases');
 const { ReservarStock, GetReservationByCode, ConfirmReservation, CleanExpiredReservations, CancelReservation, ExtendReservation, GetReservationsByUser } = require('../../use-cases/reservations/ReservationUseCases');
 const {
   GenerarPromocionesIA,
@@ -80,7 +80,10 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       productRepository: productRepo,
       imageProcessor: new SharpImageProcessor(),
       mediaStorage: new LocalMediaStorage({ mediaDir: resolveMediaDir(serviceConfig.mediaDir) })
-    }) : undefined
+    }) : undefined,
+    store ? new UpdateProductPrice(productRepo) : undefined,
+    store ? new GetProductPriceHistory(productRepo) : undefined,
+    store ? new UpdateProduct(productRepo, categoryRepo) : undefined
   );
   const getPublicLotAvailabilityUC = new GetPublicLotAvailability(lotRepo);
   const getReservationByCodeUC = new GetReservationByCode(reservationRepo);
@@ -162,7 +165,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       updateLotLocationUC: new UpdateLotLocation(lotRepo),
       registerMermaUC: new RegisterMerma(lotRepo),
       getInventoryMovementsUC: new GetInventoryMovements(lotRepo),
-      getWastesUC: new GetWastes(lotRepo)
+      getWastesUC: new GetWastes(lotRepo),
+      getInventorySummaryUC: new GetInventorySummary(lotRepo)
     };
     // Con la tienda separada del portal, atiende las reservas que éste le encarga y le avisa los cambios.
     const storeChannel = !portal && pool && serviceConfig.reservationQueueEnabled
@@ -180,7 +184,7 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
       getPendingPromotionsUC: new GetPendingPromotions(promotionRepo),
       approvePromotionUC: new ApprovePromotion(promotionRepo),
       rejectPromotionUC: new RejectPromotion(promotionRepo),
-      managePromotionsUC: new ManagePromotions(promotionRepo)
+      managePromotionsUC: new ManagePromotions(promotionRepo, lotRepo)
     };
 
     controllers.alertController = new AlertController(
@@ -215,12 +219,18 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     }
 
     // La tienda es quien emite el latido: por HTTP hacia el portal, o en proceso en el monolito.
+    // En store-api, cada latido aceptado por el portal también se registra en su monitor local, así
+    // GET /heartbeat de la tienda informa si el enlace con el portal (las reservas web) está activo.
     if (serviceConfig.heartbeatEnabled) {
       const timeoutSec = Number(process.env.HEARTBEAT_TIMEOUT_SECONDS) || 60;
       const intervalMs = Math.min(25000, Math.max(5000, Math.floor((timeoutSec * 1000) / 2)));
       const transport = portal
         ? new LocalHeartbeatTransport(heartbeatMonitor)
-        : new HttpHeartbeatTransport({ baseUrl: serviceConfig.portalUrl, apiKey: serviceConfig.storeServiceKey });
+        : new HttpHeartbeatTransport({
+          baseUrl: serviceConfig.portalUrl,
+          apiKey: serviceConfig.storeServiceKey,
+          onDelivered: () => heartbeatMonitor.recordHeartbeat()
+        });
       workers.push(new HeartbeatSenderWorker(transport, intervalMs, {
         storeId: serviceConfig.storeId,
         version: packageInfo.version,
@@ -236,7 +246,8 @@ function buildWiring({ pool, repos, store, portal, serviceConfig }) {
     lotUseCases.updateLotLocationUC,
     lotUseCases.registerMermaUC,
     lotUseCases.getInventoryMovementsUC,
-    lotUseCases.getWastesUC
+    lotUseCases.getWastesUC,
+    lotUseCases.getInventorySummaryUC
   );
 
   controllers.reservationController = portalReservations

@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { Check, Plus } from 'lucide-react';
+import { Check, Clock, Flame, Plus, Sparkles } from 'lucide-react';
 import { FlashOffer, Product } from '../types';
 import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui/Tag';
 import { Button } from './ui/Button';
 import { categoryTone, TONE_SOLID } from '../lib/categoryTone';
 import { flyToCart } from '../lib/flyToCart';
 import { PromotionGraphicBackground } from './ui/PromotionGraphicBackground';
+import { maxPerOrderText, offerEndText } from '../config/offerRules';
 
 const LOW_STOCK = 5;
 
@@ -56,6 +57,23 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, offer, showCate
           </span>
         )}
 
+        {/* Insignias con datos reales: ventas de 30 días y fecha de alta (config/catalogRules). */}
+        {(product.isBestSeller || product.isNew) && (
+          <div className="absolute top-2 right-2 flex flex-col items-end gap-1 pointer-events-none">
+            {product.isBestSeller && (
+              <span className="inline-flex items-center gap-1 rounded-tag bg-naranja border border-mora/60 px-2 py-0.5 text-[11px] font-extrabold text-mora shadow-pop-xs">
+                <Flame className="w-3 h-3 text-karen-text fill-karen-text" />
+                Más vendido
+              </span>
+            )}
+            {product.isNew && (
+              <span className="inline-flex items-center gap-1 rounded-tag bg-aguacate-solid border border-mora/60 px-2 py-0.5 text-[11px] font-extrabold text-white shadow-pop-xs">
+                <Sparkles className="w-3 h-3 text-limon" />
+                Nuevo
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col px-1.5 pt-3 pb-1">
@@ -121,6 +139,8 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
   const sold = Math.max(0, offer.stockTotal - offer.stockAvailable);
   const soldPercent = offer.stockTotal > 0 ? Math.round((sold / offer.stockTotal) * 100) : 0;
   const tone = categoryTone(offer.category);
+  const endText = offerEndText(offer.endsAt);
+  const limitText = maxPerOrderText(offer.maxPerOrder);
 
   const graphicTheme = offer.category?.match(/l[aá]cteo/i)
     ? 'lacteos'
@@ -175,6 +195,17 @@ export const OfferTag: React.FC<OfferTagProps> = ({ offer, onReserve }) => {
               Stock oferta: {offer.stockAvailable}
             </span>
           </div>
+          {(endText || limitText) && (
+            <div className="mt-2 flex items-center justify-between gap-2 flex-wrap text-sm font-bold">
+              {endText && (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="w-4 h-4" aria-hidden="true" />
+                  {endText}
+                </span>
+              )}
+              {limitText && <span className="rounded-tag border-2 border-mora px-2 py-0.5 text-xs">{limitText}</span>}
+            </div>
+          )}
 
           {/* Medidor de stock definido para la oferta */}
           <div

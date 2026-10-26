@@ -8,13 +8,17 @@ import {
   ProductImageInfo,
   BackendCategory,
   CreateProductPayload,
+  UpdateProductPayload,
   BackendPromotion,
   BackendReservation,
   CreateLotPayload,
   WasteAuditResult,
   ExpiryAlertItem,
   InventoryMovement,
+  InventorySummary,
   InventoryWaste,
+  PriceChange,
+  SummaryPeriod,
 } from '../types';
 
 
@@ -149,6 +153,14 @@ export const api = {
     return res.data.data;
   },
 
+  /** Edita nombre, descripción, pasillo, IVA, stock mínimo y PVP de un producto (solo ADMIN). El EAN no cambia. */
+  async updateProduct(productId: string, payload: UpdateProductPayload): Promise<{ product: BackendProduct; cambioPrecio: PriceChange | null }> {
+    const res = await axios.put<{ success: boolean; data: BackendProduct; cambioPrecio?: PriceChange | null }>(
+      `${getServerUrl()}/products/${encodeURIComponent(productId)}`, payload, authorizedConfig(6000)
+    );
+    return { product: res.data.data, cambioPrecio: res.data.cambioPrecio ?? null };
+  },
+
   /**
    * Sube la foto de un producto (archivo local, ya reducido en el teléfono). El servidor la vuelve a comprimir
    * y la sincroniza con el portal. Se usa fetch y no axios porque el cuerpo es un archivo binario.
@@ -186,11 +198,11 @@ export const api = {
       return res.data.data || [];
   },
 
-  async createLot(payload: CreateLotPayload): Promise<BackendLot> {
-    const res = await axios.post<{ success: boolean; data: BackendLot }>(
+  async createLot(payload: CreateLotPayload): Promise<BackendLot & { cambioPrecio: PriceChange | null }> {
+    const res = await axios.post<{ success: boolean; data: BackendLot; cambioPrecio?: PriceChange | null }>(
       `${getServerUrl()}/lots`, payload, authorizedConfig(6000)
     );
-    return res.data.data;
+    return { ...res.data.data, cambioPrecio: res.data.cambioPrecio ?? null };
   },
 
   async updateLotLocation(lotId: string, location: 'BODEGA' | 'PERCHA'): Promise<BackendLot> {
@@ -235,6 +247,13 @@ export const api = {
     return res.data.data || [];
   },
 
+  async getInventorySummary(periodo: SummaryPeriod): Promise<InventorySummary> {
+    const res = await axios.get<{ success: boolean; data: InventorySummary }>(
+      `${getServerUrl()}/inventory/summary`, { ...authorizedConfig(7000), params: { periodo } }
+    );
+    return res.data.data;
+  },
+
   async getInventoryWastes(limit = 200): Promise<InventoryWaste[]> {
     const res = await axios.get<{ success: boolean; data: InventoryWaste[] }>(
       `${getServerUrl()}/inventory/wastes`, { ...authorizedConfig(7000), params: { limit } }
@@ -266,7 +285,13 @@ export const api = {
     return res.data.data || [];
   },
 
-  async updatePromotion(id: string, payload: { descuentoPorcentaje: number; frasePromocional: string }): Promise<BackendPromotion> {
+  async updatePromotion(id: string, payload: {
+    descuentoPorcentaje: number;
+    frasePromocional: string;
+    limitePorPedido?: number | null;
+    stockOferta?: number | null;
+    vigenteHasta?: string | null;
+  }): Promise<BackendPromotion> {
     const res = await axios.patch<{ success: boolean; data: BackendPromotion }>(
       `${getServerUrl()}/promotions/${id}`, payload, authorizedConfig(7000)
     );

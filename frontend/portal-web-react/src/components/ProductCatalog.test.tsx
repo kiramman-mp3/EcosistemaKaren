@@ -105,13 +105,15 @@ describe('ProductCatalog sin stock', () => {
     expect(screen.queryByRole('heading', { name: 'Leche Vita' })).not.toBeInTheDocument();
   });
 
-  it('muestra controles de paginación y permite navegar entre páginas', () => {
+  it('pagina el catálogo completo y cuenta todos los productos', () => {
     const onPageChange = vi.fn();
+    const products = Array.from({ length: 50 }, (_, i) => ({
+      id: `p-${i}`, name: `Producto ${String(i).padStart(2, '0')}`, category: i < 30 ? 'Granos' : 'Lácteos',
+      price: 1.2, stock: 10, image: '/a.jpg',
+    }));
     render(<ProductCatalog
-      products={[
-        { id: 'p-1', name: 'Arroz Flor', category: 'Granos', price: 1.2, stock: 10, image: '/a.jpg' },
-      ]}
-      categories={['Todos']}
+      products={products}
+      categories={['Todos', 'Granos', 'Lácteos']}
       selectedCategory="Todos"
       onSelectCategory={() => {}}
       onAddToCart={() => {}}
@@ -119,16 +121,82 @@ describe('ProductCatalog sin stock', () => {
       cartCount={0}
       state="ready"
       currentPage={0}
-      totalProducts={50}
       pageSize={24}
       onPageChange={onPageChange}
     />);
 
-    expect(screen.getByText(/Página/)).toBeInTheDocument();
+    expect(screen.getByText('50 productos')).toBeInTheDocument();
     expect(screen.getByText('(50 productos en total)')).toBeInTheDocument();
-    const nextBtn = screen.getByRole('button', { name: 'Siguiente' });
-    expect(nextBtn).toBeEnabled();
-    fireEvent.click(nextBtn);
+    expect(screen.getAllByRole('article')).toHaveLength(24);
+    const aisles = screen.getByRole('navigation', { name: 'Pasillos' });
+    expect(within(aisles).getByRole('button', { name: /Lácteos\s*20/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
     expect(onPageChange).toHaveBeenCalledWith(1);
+  });
+
+  it('filtra en oferta sobre todo el catálogo, no solo la página visible', () => {
+    const products = Array.from({ length: 30 }, (_, i) => ({
+      id: `p-${i}`, name: `Producto ${String(i).padStart(2, '0')}`, category: 'Granos', price: 2, stock: 5, image: '/a.jpg',
+    }));
+    const offer = {
+      id: 'promo-29', title: 'Oferta', category: 'Granos', discountBadge: '-20%', aiBadge: true, urgencyBadge: '',
+      price: 1.6, originalPrice: 2, stockTotal: 5, stockAvailable: 5, expiryText: '', image: '/a.jpg',
+      loteId: 'lot-29', productId: 'p-29',
+    };
+    render(<ProductCatalog
+      products={products}
+      categories={['Todos', 'Granos']}
+      selectedCategory="Todos"
+      onSelectCategory={() => {}}
+      onAddToCart={() => {}}
+      onOpenCart={() => {}}
+      cartCount={0}
+      state="ready"
+      offers={[offer]}
+      currentPage={0}
+      pageSize={24}
+      onPageChange={() => {}}
+    />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'En oferta' }));
+    expect(screen.getByText('1 producto')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Producto 29' })).toBeInTheDocument();
+  });
+
+  it('filtra y ordena por más vendidos y nuevos, con insignia solo para quien tiene datos', () => {
+    const base = { category: 'Granos', price: 1, stock: 5, image: '/a.jpg' };
+    const products = [
+      { ...base, id: 'top', name: 'Arroz top', soldLast30d: 90, isBestSeller: true },
+      { ...base, id: 'nuevo', name: 'Avena nueva', createdAt: '2026-10-24T10:00:00Z', isNew: true },
+      { ...base, id: 'normal', name: 'Azúcar normal', soldLast30d: 3, createdAt: '2025-01-01T00:00:00Z' },
+    ];
+    render(<ProductCatalog
+      products={products}
+      categories={['Todos', 'Granos']}
+      selectedCategory="Todos"
+      onSelectCategory={() => {}}
+      onAddToCart={() => {}}
+      onOpenCart={() => {}}
+      cartCount={0}
+      state="ready"
+      onPageChange={() => {}}
+    />);
+
+    expect(screen.getAllByText('Más vendido')).toHaveLength(1);
+    expect(screen.getAllByText('Nuevo')).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Más vendidos' }));
+    expect(screen.getAllByRole('article').map(card => within(card).getByRole('heading').textContent)).toEqual(['Arroz top']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevos' }));
+    expect(screen.getAllByRole('article').map(card => within(card).getByRole('heading').textContent)).toEqual(['Avena nueva']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Todos' }));
+    fireEvent.change(screen.getByLabelText('Ordenar productos'), { target: { value: 'mas-vendidos' } });
+    expect(screen.getAllByRole('article').map(card => within(card).getByRole('heading').textContent))
+      .toEqual(['Arroz top', 'Azúcar normal', 'Avena nueva']);
+    fireEvent.change(screen.getByLabelText('Ordenar productos'), { target: { value: 'nuevos' } });
+    expect(screen.getAllByRole('article').map(card => within(card).getByRole('heading').textContent))
+      .toEqual(['Avena nueva', 'Azúcar normal', 'Arroz top']);
   });
 });

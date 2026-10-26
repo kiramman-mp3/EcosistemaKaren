@@ -74,6 +74,67 @@ const swaggerDocument = {
         }
       }
     },
+    '/products/{id}': {
+      put: {
+        tags: ['Productos'],
+        summary: 'Editar un producto (solo ADMIN)',
+        description: 'Reemplaza nombre, descripción, pasillo (categoría), IVA, stock mínimo y PVP. El código de barras y la foto no cambian aquí. Si el PVP cambia, queda en la bitácora de precios; el portal ve los cambios en la siguiente sincronización del catálogo.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['categoriaId', 'nombre', 'precioVenta', 'impuestoPorcentaje', 'minStockAlerta'],
+                additionalProperties: false,
+                properties: {
+                  categoriaId: { type: 'string', format: 'uuid' },
+                  nombre: { type: 'string', example: 'Leche Vita Entera 1 L' },
+                  descripcion: { type: 'string', nullable: true, example: 'Vita, caja de 1 L' },
+                  precioVenta: { type: 'number', example: 1.25 },
+                  impuestoPorcentaje: { type: 'number', example: 15 },
+                  minStockAlerta: { type: 'integer', example: 10 }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Producto actualizado y cambioPrecio { anterior, nuevo } (null si el PVP no cambió)' },
+          '400': { description: 'Datos no válidos' },
+          '403': { description: 'Solo el ADMIN edita productos' },
+          '404': { description: 'Producto o categoría inexistente' }
+        }
+      },
+      patch: {
+        tags: ['Productos'],
+        summary: 'Cambiar el PVP de un producto (solo ADMIN)',
+        description: 'El cambio queda en la bitácora de precios. Las reservas ya hechas conservan el precio con el que se apartaron; el portal ve el nuevo PVP en la siguiente sincronización.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', required: ['precioVenta'], additionalProperties: false, properties: { precioVenta: { type: 'number', example: 2.75 } } } } }
+        },
+        responses: {
+          '200': { description: 'Producto actualizado y cambioPrecio { anterior, nuevo } (null si el precio no cambió)' },
+          '400': { description: 'Precio no válido' },
+          '403': { description: 'Solo el ADMIN cambia el PVP' },
+          '404': { description: 'Producto inexistente' }
+        }
+      }
+    },
+    '/products/{id}/price-history': {
+      get: {
+        tags: ['Productos'],
+        summary: 'Últimos cambios de PVP de un producto (solo ADMIN)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'precioAnterior, precioNuevo, origen (MANUAL o INGRESO_LOTE), loteId, actor y fecha' } }
+      }
+    },
     '/products/{id}/image': {
       put: {
         tags: ['Productos'],
@@ -111,7 +172,7 @@ const swaggerDocument = {
           { name: 'offset', in: 'query', schema: { type: 'integer', default: 0, minimum: 0 } }
         ],
         responses: {
-          '200': { description: 'Lista de productos' }
+          '200': { description: 'Lista de productos. Cada uno incluye created_at (alta real en la tienda) y vendidos30d (unidades vendidas en los últimos 30 días).' }
         }
       },
       post: {
@@ -204,7 +265,8 @@ const swaggerDocument = {
                   fechaCaducidad: { type: 'string', format: 'date', example: '2026-09-25' },
                   costoUnitario: { type: 'number', example: 1.25, description: 'Costo real de adquisición por unidad' },
                   cantidadIngresada: { type: 'integer', example: 50 },
-                  ubicacion: { type: 'string', enum: ['BODEGA', 'PERCHA'], example: 'BODEGA' }
+                  ubicacion: { type: 'string', enum: ['BODEGA', 'PERCHA'], example: 'BODEGA' },
+                  nuevoPrecioVenta: { type: 'number', example: 2.75, description: 'Opcional, solo ADMIN: nuevo PVP del producto, guardado en la misma transacción que el lote' }
                 }
               }
             }
@@ -295,6 +357,22 @@ const swaggerDocument = {
         responses: { '200': { description: 'Mermas con razón, responsable y costo total' } }
       }
     },
+    '/inventory/summary': {
+      get: {
+        tags: ['Lotes e Inventario'],
+        summary: 'Resumir lo recibido, vendido y dado de baja en un mismo período',
+        description: 'Los períodos son días completos en la zona horaria del negocio: hoy, los últimos 7 o los últimos 30 días, incluido el de hoy.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'periodo', in: 'query', schema: { type: 'string', enum: ['hoy', '7d', '30d'], default: '7d' } }
+        ],
+        responses: {
+          '200': { description: 'periodo, desde, hasta, ingresos, ventas, mermas y costoMerma' },
+          '400': { description: 'Período no válido' },
+          '403': { description: 'Rol sin acceso al inventario' }
+        }
+      }
+    },
     '/reservations': {
       post: {
         tags: ['Reservaciones'],
@@ -331,7 +409,7 @@ const swaggerDocument = {
           '202': { description: 'Solo con portal y tienda separados: la tienda aún confirma la reserva (estado PENDIENTE_SYNC, sin código). Consultar GET /reservations/user/{userId}.' },
           '400': { description: 'Datos inválidos, oferta no disponible o reserva vencida antes de que la tienda la atendiera' },
           '404': { description: 'Producto inexistente' },
-          '409': { description: 'Stock insuficiente (Overbooking)' },
+          '409': { description: 'Stock insuficiente (Overbooking) o la línea en oferta pasa su límite por pedido, sus unidades de oferta o su hora de fin (OfferLimitException)' },
           '503': { description: 'Heartbeat ausente o vencido; reservas bloqueadas, o la tienda no pudo procesar la reserva' }
         }
       }
@@ -500,7 +578,7 @@ const swaggerDocument = {
       get: {
         tags: ['Promociones e IA'],
         summary: 'Obtener promociones comerciales aprobadas y activas (Público)',
-        description: 'Retorna exclusivamente las promociones que han sido aprobadas por un Administrador y se encuentran activas en el catálogo.',
+        description: 'Retorna exclusivamente las promociones aprobadas por un Administrador, activas, vigentes y con unidades de oferta. Cada una trae sus límites: limitePorPedido, stockOferta, vigenteHasta y unidadesRestantes (null = sin tope).',
         responses: {
           '200': { description: 'Lista de promociones aprobadas' }
         }
@@ -518,6 +596,54 @@ const swaggerDocument = {
         }
       }
     },
+    '/promotions/{id}': {
+      patch: {
+        tags: ['Promociones e IA'],
+        summary: 'Editar un borrador y fijar sus límites (Solo ADMIN)',
+        description: 'Solo borradores PENDIENTE_APROBACION. Los límites son opcionales: sin enviar se conservan y null los quita (todo el lote, hasta que caduque). Reglas: limitePorPedido ≤ stockOferta ≤ unidades libres del lote, y vigenteHasta futura.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['descuentoPorcentaje', 'frasePromocional'],
+                properties: {
+                  descuentoPorcentaje: { type: 'number', minimum: 5, maximum: 50, example: 25 },
+                  frasePromocional: { type: 'string', maxLength: 180, example: 'Leche entera a precio Karen' },
+                  limitePorPedido: { type: 'integer', minimum: 1, nullable: true, example: 2 },
+                  stockOferta: { type: 'integer', minimum: 1, nullable: true, example: 10 },
+                  vigenteHasta: { type: 'string', format: 'date-time', nullable: true, example: '2026-10-26T21:00:00-05:00' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { description: 'Borrador actualizado' },
+          '400': { description: 'Límites inválidos o el borrador ya no está pendiente' },
+          '403': { description: 'Requiere rol ADMIN' },
+          '404': { description: 'Promoción no encontrada' }
+        }
+      },
+      delete: {
+        tags: ['Promociones e IA'],
+        summary: 'Eliminar un borrador sin publicarlo (Solo ADMIN)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          '204': { description: 'Borrador eliminado' },
+          '400': { description: 'Solo se pueden eliminar borradores pendientes' },
+          '403': { description: 'Requiere rol ADMIN' }
+        }
+      }
+    },
     '/promotions/{id}/approve': {
       post: {
         tags: ['Promociones e IA'],
@@ -529,7 +655,7 @@ const swaggerDocument = {
         ],
         responses: {
           '200': { description: 'Promoción aprobada y publicada' },
-          '400': { description: 'La promoción ya fue aprobada/rechazada o ID inválido' },
+          '400': { description: 'La promoción ya fue aprobada/rechazada, ID inválido, o sus límites ya no caben (stock de oferta mayor que el lote u hora de fin pasada)' },
           '403': { description: 'Requiere rol ADMIN' },
           '404': { description: 'Promoción no encontrada' }
         }
@@ -667,18 +793,22 @@ function swaggerBasicAuth(username, password) {
 const OPERATION_OWNERS = [
   ['/categories', ['post'], 'store'],
   ['/products', ['post'], 'store'],
+  ['/products/{id}', null, 'store'],
+  ['/products/{id}/price-history', null, 'store'],
   ['/products/{id}/image', null, 'store'],
   ['/lots', null, 'store'],
   ['/lots/{id}/location', null, 'store'],
   ['/lots/{id}/merma', null, 'store'],
   ['/inventory/movements', null, 'store'],
   ['/inventory/wastes', null, 'store'],
+  ['/inventory/summary', null, 'store'],
   ['/reservations/{id}/confirm', null, 'store'],
   ['/alerts', null, 'store'],
   ['/alerts/{id}/atender', null, 'store'],
   ['/alerts/stream', null, 'store'],
   ['/promotions/generate', null, 'store'],
   ['/promotions/pending', null, 'store'],
+  ['/promotions/{id}', null, 'store'],
   ['/promotions/{id}/approve', null, 'store'],
   ['/promotions/{id}/reject', null, 'store'],
   ['/metrics/ai', null, 'store'],

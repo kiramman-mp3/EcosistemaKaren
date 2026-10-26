@@ -7,16 +7,43 @@ const { RESERVATION_EXTENSION_MINUTES, RESERVATION_MAX_TOTAL_MINUTES } = require
 const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
 const { toDateOnly } = require('../../domain/policies/BusinessDates');
+const { RECENT_SALES_JOIN, RECENT_SALES_COLUMN } = require('../../infrastructure/db/productSales');
+const { OFFER_COMMITTED_JOIN, OFFER_REMAINING_COLUMN, OFFER_IN_FORCE } = require('../../infrastructure/db/offerUnits');
 const {
   buildPromotionCacheKey,
-  assertPromotableLot
+  assertPromotableLot,
+  assertOfferTerms,
+  offerLimitViolation
 } = require('../../domain/policies/PromotionPolicy');
 const {
   NotFoundException,
   ValidationException,
   OverbookingException,
+  OfferLimitException,
   ForbiddenException
 } = require('../../domain/exceptions/DomainExceptions');
+
+// Límites de una oferta, tal como los espera la entidad Promotion.
+const OFFER_LIMIT_COLUMNS = 'limite_por_pedido as "limitePorPedido", stock_oferta as "stockOferta", vigente_hasta as "vigenteHasta"';
+const OFFER_LIMIT_COLUMNS_PI = 'pi.limite_por_pedido as "limitePorPedido", pi.stock_oferta as "stockOferta", pi.vigente_hasta as "vigenteHasta"';
+
+// Cambia el PVP de un producto y lo anota en la bitácora, dentro de la transacción de quien llama:
+// así el ingreso de un lote y su nuevo precio se guardan juntos o no se guarda ninguno. Devuelve
+// { anterior, nuevo }, o null si el precio no cambia (no se anota nada).
+async function applyPriceChange(client, productId, nuevoPrecio, { origen, loteId = null, actorId = null }) {
+  const current = await client.query('SELECT precio_venta FROM productos WHERE id = $1 FOR UPDATE', [productId]);
+  if (!current.rowCount) throw new NotFoundException(`Producto con ID '${productId}' no fue encontrado.`);
+  const anterior = Number(current.rows[0].precio_venta);
+  const nuevo = Math.round(Number(nuevoPrecio) * 100) / 100;
+  if (anterior === nuevo) return null;
+  await client.query('UPDATE productos SET precio_venta = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [productId, nuevo]);
+  await client.query(
+    `INSERT INTO productos_precio_historial (producto_id, precio_anterior, precio_nuevo, origen, lote_id, actor_id)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [productId, anterior, nuevo, origen, loteId, actorId]
+  );
+  return { anterior, nuevo };
+}
 
 class PostgresCategoryRepository {
   constructor(pool) {
@@ -55,9 +82,24 @@ class PostgresCategoryRepository {
 class PostgresProductRepository {
   constructor(pool) {
     this.pool = pool;
+    this._salesSource = null;
+  }
+
+  // Las ventas de 30 días se calculan del libro de movimientos donde existe (store-api y el
+  // monolito); en portal-api se leen de la copia que envía la tienda (productos.vendidos_30d).
+  _sales() {
+    if (!this._salesSource) {
+      this._salesSource = this.pool.query("SELECT to_regclass('public.inventario_movimientos') IS NOT NULL AS ledger")
+        .then(res => (res.rows[0]?.ledger
+          ? { join: RECENT_SALES_JOIN, column: RECENT_SALES_COLUMN }
+          : { join: '', column: 'p.vendidos_30d' }))
+        .catch(error => { this._salesSource = null; throw error; });
+    }
+    return this._salesSource;
   }
 
   async findAll({ q = '', categoriaId = null, limit = 30, offset = 0 } = {}) {
+    const sales = await this._sales();
     // Escapa comodines de LIKE para que '%' o '_' se busquen como texto literal.
     const term = q.trim().replace(/[\\%_]/g, char => `\\${char}`);
     const search = term ? `%${term}%` : null;
@@ -67,8 +109,8 @@ class PostgresProductRepository {
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
-             p.created_at, p.updated_at
-      FROM productos p
+             p.created_at, p.updated_at, ${sales.column} AS "vendidos30d"
+      FROM productos p ${sales.join}
       WHERE ($1::text IS NULL OR unaccent(p.nombre) ILIKE unaccent($1) OR p.codigo_barras ILIKE $1)
         AND ($2::uuid IS NULL OR p.categoria_id = $2)
       ORDER BY p.nombre ASC
@@ -88,26 +130,28 @@ class PostgresProductRepository {
   }
 
   async findById(id) {
+    const sales = await this._sales();
     const res = await this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
-             p.created_at, p.updated_at
-      FROM productos p
+             p.created_at, p.updated_at, ${sales.column} AS "vendidos30d"
+      FROM productos p ${sales.join}
       WHERE p.id = $1
     `, [id]);
     return res.rows.length ? new Product(res.rows[0]) : null;
   }
 
   async findByBarcode(barcode) {
+    const sales = await this._sales();
     const res = await this.pool.query(`
       SELECT p.id, p.categoria_id as "categoriaId", p.codigo_barras as "codigoBarras",
              p.nombre, p.descripcion, p.precio_venta as "precioVenta",
              p.impuesto_porcentaje as "impuestoPorcentaje",
              p.min_stock_alerta as "minStockAlerta", p.imagen_url as "imagenUrl",
-             p.created_at, p.updated_at
-      FROM productos p
+             p.created_at, p.updated_at, ${sales.column} AS "vendidos30d"
+      FROM productos p ${sales.join}
       WHERE p.codigo_barras = $1
     `, [barcode]);
     return res.rows.length ? new Product(res.rows[0]) : null;
@@ -124,6 +168,54 @@ class PostgresProductRepository {
       [id, imagenUrl]
     );
     return res.rows.length ? new Product(res.rows[0]) : null;
+  }
+
+  /** Cambio explícito del PVP por el ADMIN desde el catálogo, con su registro en la bitácora. */
+  async updatePriceWithAudit(id, precioVenta, { actorId }) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const cambio = await applyPriceChange(client, id, precioVenta, { origen: 'MANUAL', actorId });
+      await client.query('COMMIT');
+      return { producto: await this.findById(id), cambio };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release(); }
+  }
+
+  /** Edición del producto por el ADMIN: datos y PVP (con su bitácora) en una sola transacción. */
+  async updateDetails(id, fields, { actorId }) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const res = await client.query(
+        `UPDATE productos
+         SET categoria_id = $2, nombre = $3, descripcion = $4, impuesto_porcentaje = $5, min_stock_alerta = $6,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [id, fields.categoriaId, fields.nombre, fields.descripcion, fields.impuestoPorcentaje, fields.minStockAlerta]
+      );
+      if (!res.rowCount) throw new NotFoundException(`Producto con ID '${id}' no fue encontrado.`);
+      const cambio = await applyPriceChange(client, id, fields.precioVenta, { origen: 'MANUAL', actorId });
+      await client.query('COMMIT');
+      return { producto: await this.findById(id), cambio };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release(); }
+  }
+
+  /** Últimos cambios de PVP del producto, del más reciente al más antiguo. */
+  async findPriceHistory(id, limit = 20) {
+    const res = await this.pool.query(`
+      SELECT h.id, h.precio_anterior::float8 AS "precioAnterior", h.precio_nuevo::float8 AS "precioNuevo",
+             h.origen, h.lote_id AS "loteId", h.actor_id AS "actorId", u.nombre AS "actorNombre", h.created_at
+      FROM productos_precio_historial h LEFT JOIN usuarios u ON u.id = h.actor_id
+      WHERE h.producto_id = $1
+      ORDER BY h.created_at DESC, h.id DESC LIMIT $2
+    `, [id, limit]);
+    return res.rows;
   }
 
   /** Cuántos productos usan esa foto: una foto compartida no se borra del disco. */
@@ -247,7 +339,9 @@ class PostgresLotRepository {
    * así un fallo no deja un lote sin su alerta, y reintentar no duplica el lote. La alerta queda en
    * `saved.alertaGenerada` (propiedad no enumerable, no se publica por la API).
    */
-  async save(lot, actorId, buildAlert = null) {
+  // `nuevoPrecioVenta` (solo ADMIN, lo valida el caso de uso) actualiza el PVP del producto en la
+  // misma transacción que el lote.
+  async save(lot, actorId, buildAlert = null, { nuevoPrecioVenta = null } = {}) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -274,6 +368,10 @@ class PostgresLotRepository {
       const saved = new Lot(row);
       saved.productoNombre = lot.productoNombre;
       saved.codigoBarras = lot.codigoBarras;
+      if (nuevoPrecioVenta !== null && nuevoPrecioVenta !== undefined) {
+        const cambio = await applyPriceChange(client, row.productoId, nuevoPrecioVenta, { origen: 'INGRESO_LOTE', loteId: row.id, actorId });
+        Object.defineProperty(saved, 'cambioPrecio', { value: cambio, enumerable: false });
+      }
       if (typeof buildAlert === 'function') {
         const alert = buildAlert(saved);
         let storedAlert = null;
@@ -434,6 +532,26 @@ class PostgresLotRepository {
     return result.rows;
   }
 
+  /** Unidades recibidas y vendidas (movimientos) y merma con su costo (bajas) entre desde y hasta, ambos incluidos. */
+  async summarizeInventory({ desde, hasta }) {
+    const [movements, wastes] = await Promise.all([
+      this.pool.query(`
+        SELECT COALESCE(SUM(cantidad) FILTER (WHERE tipo = 'INGRESO'), 0)::int AS ingresos,
+               COALESCE(SUM(cantidad) FILTER (WHERE tipo = 'VENTA'), 0)::int AS ventas
+        FROM inventario_movimientos
+        WHERE created_at >= $1 AND created_at <= $2
+      `, [desde, hasta]),
+      this.pool.query(`
+        SELECT COALESCE(SUM(cantidad), 0)::int AS mermas,
+               COALESCE(SUM(costo_total), 0)::float8 AS "costoMerma"
+        FROM mermas
+        WHERE created_at >= $1 AND created_at <= $2
+      `, [desde, hasta])
+    ]);
+    const { costoMerma, mermas } = wastes.rows[0];
+    return { ...movements.rows[0], mermas, costoMerma: Math.round(costoMerma * 100) / 100 };
+  }
+
   async _lockLot(client, lotId) {
     const result = await client.query(`
       SELECT id, producto_id as "productoId", numero_lote as "numeroLote", fecha_elaboracion as "fechaElaboracion",
@@ -534,19 +652,33 @@ class PostgresReservationRepository {
         let promotedLotId = null;
         let unitPrice = Number(product.precioVenta);
         if (item.promocionId) {
+          // La oferta queda bloqueada hasta el fin de la transacción: dos reservas simultáneas de la
+          // misma oferta cuentan sus unidades una después de la otra y nunca pasan stock_oferta.
           const promotionResult = await client.query(`
-            SELECT pi.lote_id as "loteId", pi.descuento_porcentaje as "descuentoPorcentaje"
+            SELECT pi.lote_id as "loteId", pi.descuento_porcentaje as "descuentoPorcentaje",
+                   pi.limite_por_pedido as "limitePorPedido", pi.stock_oferta as "stockOferta",
+                   pi.vigente_hasta as "vigenteHasta", CURRENT_TIMESTAMP as "ahora"
             FROM promociones_ia pi
             JOIN lotes l ON l.id = pi.lote_id
             WHERE pi.id = $1 AND l.producto_id = $2
               AND pi.estado = 'APROBADA' AND pi.activa = TRUE
               AND l.estado = 'ACTIVO' AND l.fecha_caducidad > CURRENT_DATE
+            FOR UPDATE OF pi
           `, [item.promocionId, item.productoId]);
           if (!promotionResult.rows.length) {
             throw new ValidationException('La oferta seleccionada ya no está disponible para este producto.');
           }
-          promotedLotId = promotionResult.rows[0].loteId;
-          unitPrice = Number((unitPrice * (1 - Number(promotionResult.rows[0].descuentoPorcentaje) / 100)).toFixed(2));
+          const offer = promotionResult.rows[0];
+          const committed = offer.stockOferta === null ? 0 : Number((await client.query(`
+            SELECT COALESCE(SUM(rd.cantidad), 0)::int AS total
+            FROM reserva_detalles rd
+            JOIN reservas r ON r.id = rd.reserva_id
+            WHERE rd.promocion_id = $1 AND r.estado IN ('PENDIENTE', 'CONFIRMADA')
+          `, [item.promocionId])).rows[0].total);
+          const violation = offerLimitViolation(offer, item.cantidad, committed, new Date(offer.ahora));
+          if (violation) throw new OfferLimitException(violation);
+          promotedLotId = offer.loteId;
+          unitPrice = Number((unitPrice * (1 - Number(offer.descuentoPorcentaje) / 100)).toFixed(2));
         }
         const lotsResult = await client.query(`
           SELECT id, cantidad_disponible as "cantidadDisponible",
@@ -611,11 +743,11 @@ class PostgresReservationRepository {
       const savedDetails = [];
       for (const detail of details) {
         const detailResult = await client.query(`
-          INSERT INTO reserva_detalles (reserva_id, lote_id, cantidad, precio_unitario)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO reserva_detalles (reserva_id, lote_id, cantidad, precio_unitario, promocion_id)
+          VALUES ($1, $2, $3, $4, $5)
           RETURNING id, reserva_id as "reservaId", lote_id as "loteId",
-                    cantidad, precio_unitario as "precioUnitario"
-        `, [reservationResult.rows[0].id, detail.loteId, detail.cantidad, detail.precioUnitario]);
+                    cantidad, precio_unitario as "precioUnitario", promocion_id as "promocionId"
+        `, [reservationResult.rows[0].id, detail.loteId, detail.cantidad, detail.precioUnitario, detail.promocionId]);
         savedDetails.push(detailResult.rows[0]);
         await this._insertMovement(client, {
           loteId: detail.loteId, tipo: 'RESERVA', cantidad: detail.cantidad,
@@ -1245,24 +1377,45 @@ class PostgresAlertRepository {
 class PostgresPromotionRepository {
   constructor(pool) {
     this.pool = pool;
+    this._unitsSource = null;
   }
 
+  // Las unidades de oferta que quedan se calculan de las reservas donde existen (store-api y el
+  // monolito); en portal-api se leen de la copia que envía la tienda (promociones_ia.unidades_restantes).
+  _units() {
+    if (!this._unitsSource) {
+      this._unitsSource = this.pool.query("SELECT to_regclass('public.reserva_detalles') IS NOT NULL AS ledger")
+        .then(res => (res.rows[0]?.ledger
+          ? { join: OFFER_COMMITTED_JOIN, column: OFFER_REMAINING_COLUMN }
+          : { join: '', column: 'pi.unidades_restantes' }))
+        .catch(error => { this._unitsSource = null; throw error; });
+    }
+    return this._unitsSource;
+  }
+
+  // Ofertas que ve el cliente: aprobadas, activas, vigentes, sobre un lote que todavía se vende y
+  // con unidades de oferta disponibles.
   async findAllApproved() {
+    const units = await this._units();
     const res = await this.pool.query(`
       SELECT pi.id, pi.lote_id as "loteId",
              pi.descuento_porcentaje as "descuentoPorcentaje",
              pi.frase_promocional as "frasePromocional", pi.razon_ia as "razonIa",
              pi.activa, pi.estado, pi.modelo_ia as "modeloIa",
              pi.prompt_version as "promptVersion", pi.cache_key as "cacheKey",
-             pi.cache_hit as "cacheHit", pi.aprobada_por as "aprobadaPor",
-             pi.aprobada_at as "aprobadaAt", pi.created_at
+             pi.cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS_PI}, pi.aprobada_por as "aprobadaPor",
+             pi.aprobada_at as "aprobadaAt", pi.created_at,
+             ${units.column} as "unidadesRestantes"
       FROM promociones_ia pi
       JOIN lotes l ON l.id = pi.lote_id
+      ${units.join}
       WHERE pi.estado = 'APROBADA'
         AND pi.activa = TRUE
+        AND ${OFFER_IN_FORCE}
         AND l.estado = 'ACTIVO'
         AND l.fecha_caducidad > CURRENT_DATE
         AND l.cantidad_disponible > 0
+        AND (${units.column} IS NULL OR ${units.column} > 0)
       ORDER BY pi.created_at DESC
     `);
     return res.rows.map(r => new Promotion(r));
@@ -1275,24 +1428,27 @@ class PostgresPromotionRepository {
       SELECT id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
              frase_promocional as "frasePromocional", razon_ia as "razonIa",
              activa, estado, modelo_ia as "modeloIa", prompt_version as "promptVersion",
-             cache_key as "cacheKey", cache_hit as "cacheHit", created_at
+             cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
       FROM promociones_ia WHERE estado = 'PENDIENTE_APROBACION' ORDER BY created_at ASC
     `);
     return res.rows.map(r => new Promotion(r));
   }
 
   async findAllOperational({ estado, activa } = {}) {
+    const units = await this._units();
     const res = await this.pool.query(`
       SELECT pi.id, pi.lote_id as "loteId", pi.descuento_porcentaje as "descuentoPorcentaje",
              pi.frase_promocional as "frasePromocional", pi.razon_ia as "razonIa",
              pi.activa, pi.estado, pi.modelo_ia as "modeloIa", pi.prompt_version as "promptVersion",
-             pi.cache_key as "cacheKey", pi.cache_hit as "cacheHit",
+             pi.cache_key as "cacheKey", pi.cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS_PI},
              pi.motivo_rechazo as "motivoRechazo", pi.created_at,
              l.numero_lote as "numeroLote", l.fecha_caducidad as "fechaCaducidad",
-             l.cantidad_disponible as "cantidadDisponible", p.nombre as "productoNombre"
+             l.cantidad_disponible as "cantidadDisponible", p.nombre as "productoNombre",
+             ${units.column} as "unidadesRestantes"
       FROM promociones_ia pi
       JOIN lotes l ON l.id = pi.lote_id
       JOIN productos p ON p.id = l.producto_id
+      ${units.join}
       WHERE ($1::estado_promocion IS NULL OR pi.estado = $1)
         AND ($2::boolean IS NULL OR pi.activa = $2)
       ORDER BY pi.created_at DESC
@@ -1300,15 +1456,16 @@ class PostgresPromotionRepository {
     return res.rows.map(row => new Promotion(row));
   }
 
-  async updateDraft(id, { descuentoPorcentaje, frasePromocional }) {
+  async updateDraft(id, { descuentoPorcentaje, frasePromocional, limitePorPedido = null, stockOferta = null, vigenteHasta = null }) {
     const res = await this.pool.query(`
-      UPDATE promociones_ia SET descuento_porcentaje = $2, frase_promocional = $3
+      UPDATE promociones_ia SET descuento_porcentaje = $2, frase_promocional = $3,
+        limite_por_pedido = $4, stock_oferta = $5, vigente_hasta = $6
       WHERE id = $1 AND estado = 'PENDIENTE_APROBACION'
       RETURNING id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
         frase_promocional as "frasePromocional", razon_ia as "razonIa", activa, estado,
         modelo_ia as "modeloIa", prompt_version as "promptVersion", cache_key as "cacheKey",
-        cache_hit as "cacheHit", created_at
-    `, [id, descuentoPorcentaje, frasePromocional]);
+        cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
+    `, [id, descuentoPorcentaje, frasePromocional, limitePorPedido, stockOferta, vigenteHasta]);
     return res.rows.length ? new Promotion(res.rows[0]) : null;
   }
 
@@ -1319,7 +1476,7 @@ class PostgresPromotionRepository {
       RETURNING id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
         frase_promocional as "frasePromocional", razon_ia as "razonIa", activa, estado,
         modelo_ia as "modeloIa", prompt_version as "promptVersion", cache_key as "cacheKey",
-        cache_hit as "cacheHit", created_at
+        cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
     `, [id]);
     return res.rows.length ? new Promotion(res.rows[0]) : null;
   }
@@ -1336,7 +1493,7 @@ class PostgresPromotionRepository {
       SELECT id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
              frase_promocional as "frasePromocional", razon_ia as "razonIa",
              activa, estado, modelo_ia as "modeloIa", prompt_version as "promptVersion",
-             cache_key as "cacheKey", cache_hit as "cacheHit",
+             cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS},
              aprobada_por as "aprobadaPor", aprobada_at as "aprobadaAt",
              rechazada_por as "rechazadaPor", rechazada_at as "rechazadaAt",
              motivo_rechazo as "motivoRechazo", created_at
@@ -1356,7 +1513,7 @@ class PostgresPromotionRepository {
         SELECT id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
                frase_promocional as "frasePromocional", razon_ia as "razonIa",
                activa, estado, modelo_ia as "modeloIa", prompt_version as "promptVersion",
-               cache_key as "cacheKey", cache_hit as "cacheHit", created_at
+               cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
         FROM promociones_ia
         WHERE lote_id = $1 AND cache_key = $2 AND estado = 'PENDIENTE_APROBACION' LIMIT 1
       `, [loteId, cacheKey]);
@@ -1376,7 +1533,7 @@ class PostgresPromotionRepository {
         RETURNING id, lote_id as "loteId", descuento_porcentaje as "descuentoPorcentaje",
                   frase_promocional as "frasePromocional", razon_ia as "razonIa",
                   activa, estado, modelo_ia as "modeloIa", prompt_version as "promptVersion",
-                  cache_key as "cacheKey", cache_hit as "cacheHit", created_at
+                  cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
       `, [loteId, descuentoPorcentaje, frasePromocional, razonIa,
           modeloIa, promptVersion, cacheKey, Boolean(cacheHit)]);
       await client.query('COMMIT');
@@ -1396,7 +1553,8 @@ class PostgresPromotionRepository {
       const locked = await client.query(`
         SELECT pi.id, pi.lote_id as "loteId", pi.estado,
                pi.cache_key as "cacheKey", pi.prompt_version as "promptVersion",
-               pi.modelo_ia as "modeloIa",
+               pi.modelo_ia as "modeloIa", pi.stock_oferta as "stockOferta",
+               pi.vigente_hasta as "vigenteHasta",
                l.numero_lote as "numeroLote", l.fecha_caducidad as "fechaCaducidad",
                l.cantidad_disponible as "cantidadDisponible", l.estado as "lotEstado",
                pr.precio_venta as "precioVenta"
@@ -1418,6 +1576,8 @@ class PostgresPromotionRepository {
         cantidadDisponible: Number(current.cantidadDisponible),
         estado: current.lotEstado
       });
+      // Los límites se revisan otra vez: el lote pudo venderse o la hora de fin pasar desde la edición.
+      assertOfferTerms(current, { cantidadDisponible: Number(current.cantidadDisponible) });
       const currentCacheKey = buildPromotionCacheKey({
         loteId: current.loteId,
         fechaCaducidad: current.fechaCaducidad,
@@ -1447,7 +1607,7 @@ class PostgresPromotionRepository {
                   frase_promocional as "frasePromocional", razon_ia as "razonIa",
                   activa, estado, aprobada_por as "aprobadaPor", aprobada_at as "aprobadaAt",
                   modelo_ia as "modeloIa", prompt_version as "promptVersion",
-                  cache_key as "cacheKey", cache_hit as "cacheHit", created_at
+                  cache_key as "cacheKey", cache_hit as "cacheHit", ${OFFER_LIMIT_COLUMNS}, created_at
       `, [promotionId, adminUserId]);
       if (res.rowCount === 0) {
         throw new ValidationException('No se puede aprobar: la promoción cambió concurrentemente.');

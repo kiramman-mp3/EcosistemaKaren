@@ -30,15 +30,55 @@ sale en ~300 KB— y el servidor la vuelve a comprimir (máx. 1024 px), la guard
 Usa los módulos nativos `expo-image-picker` y `expo-image-manipulator`: **hay que volver a compilar el APK** de bodega para tener
 esta función (un APK anterior no la trae). El permiso de cámara ya lo pedía la app para escanear códigos.
 
+## Registrar y editar productos (ADMIN)
+
+En **Catálogo**, el ADMIN registra un producto con **Registrar producto** (escanea el EAN) y lo edita tocándolo en la lista. Los dos
+usan el mismo formulario: pasillo, nombre, marca y contenido, PVP, IVA, stock mínimo y **foto opcional** (cámara o galería). La foto
+elegida se reduce igual que arriba y se sube al guardar; si la subida falla el producto queda guardado y la app avisa para repetirla
+desde la miniatura. El **código EAN no se puede cambiar** al editar. Si el PVP cambia, queda en la bitácora de precios
+(`PUT /products/:id`). No agrega módulos nativos, pero el APK lleva el código de la app: **hay que recompilarlo** para tener el formulario.
+
+## Tabletas
+
+Las dos apps se adaptan al ancho de la pantalla y no al modelo del aparato: desde 600 px se consideran tableta, así que también
+responden al girar la tableta o a la ventana dividida. En el portal la cuadrícula de productos sube hasta 5 columnas, las ofertas
+a 2 o 3, y Inicio pone el texto junto a las ofertas. En la bodega las listas de tarjetas pasan a 2 columnas desde 840 px, y los
+formularios, las hojas y las pestañas quedan centrados con un ancho máximo. En iPad la app ya no corre en modo de compatibilidad
+con iPhone (`supportsTablet`) y ninguna app bloquea la orientación. Es un cambio de configuración nativa: hay que recompilar el APK o IPA.
+
 ## Reportes de bodega (PDF y Excel)
 
 En **Reportes**, los botones **PDF** y **Excel** exportan los movimientos y mermas. En el navegador el PDF abre el diálogo de
 impresión y el Excel (CSV) se descarga; en el teléfono ambos abren la hoja de compartir (correo, WhatsApp, Drive...). Los datos que
 escribe el personal (nombres de producto, motivos) se escapan en el PDF y se neutralizan en el CSV para que Excel no ejecute
-fórmulas. La razón social, la sucursal y el RUC que se imprimen están en `src/config/storeInfo.ts` y son de demostración: cambiarlos
-por los reales. Usa `expo-print`, `expo-sharing` y `expo-file-system`, por lo que **hay que recompilar el APK** para tener esta función.
+fórmulas. Llevan el período elegido (hoy, 7 o 30 días). El nombre comercial, la razón social, la dirección y el RUC que se imprimen
+son los reales de la tienda y están en `src/config/storeInfo.ts`; cada dato se puede cambiar al compilar con su variable
+`EXPO_PUBLIC_STORE_*` (ver `.env.example`). Usa `expo-print`, `expo-sharing` y `expo-file-system`, por lo que **hay que recompilar el APK**
+para tener esta función.
+
+## Qué trae un APK compilado ahora
+
+Las apps no se actualizan solas: todo lo que cambia en su código llega al teléfono solo con un APK nuevo. Desde los APK anteriores:
+
+| App | Cambios |
+|---|---|
+| Bodega | Datos reales de la tienda; encabezado y métricas compactos en pantallas angostas; resumen de reportes por período; el ADMIN puede cambiar el PVP al ingresar un lote; el ADMIN fija en cada oferta el máximo por pedido, el stock de oferta y la fecha y hora de fin; el ADMIN registra y edita productos desde el catálogo, con foto opcional. |
+| Portal | Datos reales de la tienda; filtros "Más vendidos" y "Nuevos" con datos reales; las ofertas muestran su hora real de fin, el máximo por pedido y las unidades que quedan; el pase de retiro dice "Supermercado Karen"; el cliente elige cuánto tiempo apartar (30 minutos a 2 horas) y puede sumar 30 minutos desde Mis reservas o desde el pase, hasta 4 horas; el catálogo se ordena por precio y filtra "En oferta"; aviso cuando el stock puede no estar al día; términos y condiciones por pestañas; datos de la tienda con teléfono, correo, WhatsApp, Facebook y "Cómo llegar"; copiar el código y guardar el pase como imagen. |
+
+Los cambios de la bodega no agregan módulos nativos: basta recompilar con los mismos pasos. El portal sí: suma `expo-clipboard`, `expo-sharing` y `react-native-view-shot` (copiar el código y guardar el pase como imagen), así que hay que recompilarlo y no sirve actualizar solo el JavaScript de un APK anterior. Después de instalar, conviene
+repasar la lista de [verificación en un teléfono](verificacion-telefono.md).
 
 ## Android (.apk)
+
+### En GitHub Actions (sin instalar nada en el PC)
+
+El workflow **Build Android APK** (`.github/workflows/build-android-apk.yml`) compila los dos APK en un runner de Linux, que ya trae el
+SDK de Android. Se lanza a mano en GitHub: **Actions > Build Android APK > Run workflow**, sobre la rama que se quiera compilar (el
+código tiene que estar en GitHub). La casilla de la red local (marcada por defecto) equivale a `KAREN_ALLOW_CLEARTEXT=1` y
+`EXPO_PUBLIC_SERVER_CONFIG=1`. Al terminar, `SupermercadoKaren-portal-apk` y `SupermercadoKaren-bodega-apk` quedan como artefactos
+de la ejecución durante 14 días: se descargan como `.zip` con el `.apk` dentro.
+
+### En el PC
 
 Hace falta Android Studio (trae el JDK y el SDK). Desde la carpeta de cada app:
 

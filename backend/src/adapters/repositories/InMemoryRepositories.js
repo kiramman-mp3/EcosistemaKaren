@@ -8,12 +8,15 @@ const Alert = require('../../domain/entities/Alert');
 const Promotion = require('../../domain/entities/Promotion');
 const {
   buildPromotionCacheKey,
-  assertPromotableLot
+  assertPromotableLot,
+  assertOfferTerms,
+  offerLimitViolation
 } = require('../../domain/policies/PromotionPolicy');
 const {
   NotFoundException,
   ValidationException,
   OverbookingException,
+  OfferLimitException,
   ForbiddenException
 } = require('../../domain/exceptions/DomainExceptions');
 
@@ -28,6 +31,7 @@ class InMemoryRepositories {
     this.promotions = [];
     this.movements = [];
     this.wastes = [];
+    this.priceHistory = [];
     this.revokedTokens = new Map();
 
     this.seed();
@@ -236,7 +240,23 @@ class InMemoryRepositories {
         prod.updated_at = new Date();
         return prod;
       },
-      countByImageUrl: async (imagenUrl) => this.products.filter(p => p.imagenUrl === imagenUrl).length
+      countByImageUrl: async (imagenUrl) => this.products.filter(p => p.imagenUrl === imagenUrl).length,
+      updatePriceWithAudit: async (id, precioVenta, { actorId }) => {
+        const cambio = this._applyPriceChange(id, precioVenta, { origen: 'MANUAL', actorId });
+        return { producto: this.products.find(p => p.id === id), cambio };
+      },
+      updateDetails: async (id, fields, { actorId }) => {
+        const prod = this.products.find(p => p.id === id);
+        if (!prod) throw new NotFoundException(`Producto con ID '${id}' no fue encontrado.`);
+        Object.assign(prod, {
+          categoriaId: fields.categoriaId, nombre: fields.nombre, descripcion: fields.descripcion,
+          impuestoPorcentaje: fields.impuestoPorcentaje, minStockAlerta: fields.minStockAlerta, updated_at: new Date()
+        });
+        const cambio = this._applyPriceChange(id, fields.precioVenta, { origen: 'MANUAL', actorId });
+        return { producto: prod, cambio };
+      },
+      findPriceHistory: async (id, limit = 20) => this.priceHistory
+        .filter(entry => entry.productoId === id).slice(-limit).reverse()
     };
   }
 
@@ -277,8 +297,12 @@ class InMemoryRepositories {
         }
         return { countExpired };
       },
-      save: async (lotInstance, actorId) => {
+      save: async (lotInstance, actorId, _buildAlert = null, { nuevoPrecioVenta = null } = {}) => {
         if (!lotInstance.id) lotInstance.id = randomUUID();
+        if (nuevoPrecioVenta !== null && nuevoPrecioVenta !== undefined) {
+          const cambio = this._applyPriceChange(lotInstance.productoId, nuevoPrecioVenta, { origen: 'INGRESO_LOTE', loteId: lotInstance.id, actorId });
+          Object.defineProperty(lotInstance, 'cambioPrecio', { value: cambio, enumerable: false, configurable: true });
+        }
         this.lots.push(lotInstance);
         this.movements.push(this._newMovement({
           loteId: lotInstance.id, tipo: 'INGRESO', cantidad: lotInstance.cantidadIngresada,
@@ -343,6 +367,18 @@ class InMemoryRepositories {
             costoUnitario: lot?.costoUnitario, fechaElaboracion: lot?.fechaElaboracion,
             fechaCaducidad: lot?.fechaCaducidad };
         }),
+      summarizeInventory: async ({ desde, hasta }) => {
+        const inRange = item => new Date(item.created_at) >= desde && new Date(item.created_at) <= hasta;
+        const sum = (list, pick) => list.reduce((total, item) => total + (Number(pick(item)) || 0), 0);
+        const movements = this.movements.filter(inRange);
+        const wastes = this.wastes.filter(inRange);
+        return {
+          ingresos: sum(movements.filter(m => m.tipo === 'INGRESO'), m => m.cantidad),
+          ventas: sum(movements.filter(m => m.tipo === 'VENTA'), m => m.cantidad),
+          mermas: sum(wastes, w => w.cantidad),
+          costoMerma: Math.round(sum(wastes, w => w.costoTotal) * 100) / 100
+        };
+      },
       findWastes: async ({ loteId, limit } = {}) => this.wastes
         .filter(w => !loteId || w.loteId === loteId)
         .slice(-(Math.min(Number(limit) || 100, 500))).reverse()
@@ -354,6 +390,18 @@ class InMemoryRepositories {
             registradaPorNombre: actor?.nombre };
         })
     };
+  }
+
+  _applyPriceChange(productId, nuevoPrecio, { origen, loteId = null, actorId = null }) {
+    const product = this.products.find(p => p.id === productId);
+    if (!product) throw new NotFoundException(`Producto con ID '${productId}' no fue encontrado.`);
+    const anterior = Number(product.precioVenta);
+    const nuevo = Math.round(Number(nuevoPrecio) * 100) / 100;
+    if (anterior === nuevo) return null;
+    product.precioVenta = nuevo;
+    product.updated_at = new Date();
+    this.priceHistory.push({ id: randomUUID(), productoId: productId, precioAnterior: anterior, precioNuevo: nuevo, origen, loteId, actorId, created_at: new Date() });
+    return { anterior, nuevo };
   }
 
   _newMovement(data) {
@@ -390,6 +438,8 @@ class InMemoryRepositories {
             if (!promotion || !promotionLot || promotionLot.productoId !== product.id) {
               throw new ValidationException('La oferta seleccionada ya no está disponible para este producto.');
             }
+            const violation = offerLimitViolation(promotion, item.cantidad, this._offerCommitted(promotion.id));
+            if (violation) throw new OfferLimitException(violation);
             promotedLotId = promotion.loteId;
             unitPrice = Number((unitPrice * (1 - Number(promotion.descuentoPorcentaje) / 100)).toFixed(2));
           }
@@ -437,7 +487,8 @@ class InMemoryRepositories {
             reservaId: reservationInstance.id,
             loteId: allocation.lot.id,
             cantidad: allocation.quantity,
-            precioUnitario: allocation.price
+            precioUnitario: allocation.price,
+            promocionId: allocation.promocionId
           };
         });
         this.reservations.push(reservationInstance);
@@ -669,9 +720,27 @@ class InMemoryRepositories {
     };
   }
 
+  // Unidades de una oferta tomadas por reservas pendientes o confirmadas (como en PostgreSQL).
+  _offerCommitted(promotionId) {
+    return this.reservations
+      .filter(r => r.estado === 'PENDIENTE' || r.estado === 'CONFIRMADA')
+      .flatMap(r => r.detalles || [])
+      .filter(d => d.promocionId === promotionId)
+      .reduce((sum, d) => sum + Number(d.cantidad), 0);
+  }
+
+  _withRemaining(promotion) {
+    if (promotion.stockOferta) {
+      promotion.unidadesRestantes = Math.max(0, promotion.stockOferta - this._offerCommitted(promotion.id));
+    }
+    return promotion;
+  }
+
   get promotionRepository() {
     const isPubliclyValid = (promotion) => {
       if (promotion.estado !== 'APROBADA' || !promotion.activa) return false;
+      if (promotion.vigenteHasta && new Date(promotion.vigenteHasta) <= new Date()) return false;
+      if (promotion.unidadesRestantes === 0) return false;
       const lot = this.lots.find(item => item.id === promotion.loteId);
       if (!lot) return false;
       try {
@@ -683,8 +752,8 @@ class InMemoryRepositories {
     };
 
     return {
-      findAllApproved: async () => this.promotions.filter(isPubliclyValid),
-      findAllActive: async () => this.promotions.filter(isPubliclyValid),
+      findAllApproved: async () => this.promotions.map(p => this._withRemaining(p)).filter(isPubliclyValid),
+      findAllActive: async () => this.promotions.map(p => this._withRemaining(p)).filter(isPubliclyValid),
       findAllPending: async () => this.promotions.filter(p => p.estado === 'PENDIENTE_APROBACION'),
       findAllOperational: async ({ estado, activa } = {}) => this.promotions.filter(p =>
         (!estado || p.estado === estado) && (activa === undefined || p.activa === activa)
@@ -695,6 +764,9 @@ class InMemoryRepositories {
         if (!promo) return null;
         promo.descuentoPorcentaje = Number(data.descuentoPorcentaje);
         promo.frasePromocional = data.frasePromocional.trim();
+        promo.limitePorPedido = data.limitePorPedido ?? null;
+        promo.stockOferta = data.stockOferta ?? null;
+        promo.vigenteHasta = data.vigenteHasta ?? null;
         return promo;
       },
       deactivate: async (id) => {
@@ -744,6 +816,7 @@ class InMemoryRepositories {
         }
         const lot = this.lots.find(item => item.id === promo.loteId);
         assertPromotableLot(lot);
+        assertOfferTerms(promo, lot);
         const product = this.products.find(item => item.id === lot.productoId);
         if (!product) {
           throw new ValidationException('El producto asociado a la promoción ya no existe.');

@@ -7,9 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { BackendPromotion } from '../types';
 import { confirmAction, notify } from '../utils/dialogs';
+import { contentFrame, sheetFrame, useLayout } from '../theme/layout';
 import { Button, Chip, EmptyState, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage, getServerMessage } from '../utils/errors';
+import {
+  END_PRESETS, OfferTermsInput, describeOfferTerms, presetEnd, sameTerms, termsToInput, validateOfferTerms,
+} from '../utils/offerTerms';
 
 type Filter = 'PENDIENTES' | 'ACTIVAS' | 'FINALIZADAS' | 'RECHAZADAS' | 'TODAS';
 
@@ -30,12 +34,15 @@ function statusOf(item: BackendPromotion) {
 }
 
 export const AprobacionesScreen: React.FC = () => {
+  const { listColumns: columns, gutter } = useLayout();
   const [items, setItems] = useState<BackendPromotion[]>([]);
   const [filter, setFilter] = useState<Filter>('PENDIENTES');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<BackendPromotion | null>(null);
   const [discount, setDiscount] = useState('');
   const [phrase, setPhrase] = useState('');
+  const [terms, setTerms] = useState<OfferTermsInput>({ limit: '', stock: '', endDate: '', endTime: '' });
+  const setTerm = (key: keyof OfferTermsInput) => (value: string) => setTerms(current => ({ ...current, [key]: value }));
   const [rejectReason, setRejectReason] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -56,6 +63,7 @@ export const AprobacionesScreen: React.FC = () => {
     setSelected(item);
     setDiscount(String(item.descuentoPorcentaje));
     setPhrase(item.frasePromocional);
+    setTerms(termsToInput(item));
     setRejectReason('');
     setFormError(null);
   };
@@ -78,11 +86,15 @@ export const AprobacionesScreen: React.FC = () => {
     const value = Number(discount.replace(',', '.'));
     if (!Number.isFinite(value) || value < 5 || value > 50) { setFormError('El descuento debe estar entre 5% y 50%.'); return null; }
     if (phrase.trim().length < 3 || phrase.trim().length > 180) { setFormError('La frase debe tener entre 3 y 180 caracteres.'); return null; }
-    return { descuentoPorcentaje: value, frasePromocional: phrase.trim() };
+    const limits = validateOfferTerms(terms, selected?.cantidadDisponible);
+    if ('error' in limits) { setFormError(limits.error); return null; }
+    return { descuentoPorcentaje: value, frasePromocional: phrase.trim(), ...limits.terms };
   };
 
+  const parsedTerms = selected ? validateOfferTerms(terms, selected.cantidadDisponible) : null;
   const isEdited = selected
     ? Number(discount.replace(',', '.')) !== Number(selected.descuentoPorcentaje) || phrase.trim() !== selected.frasePromocional
+      || !parsedTerms || 'error' in parsedTerms || !sameTerms(parsedTerms.terms, selected)
     : false;
 
   const save = () => {
@@ -116,9 +128,12 @@ export const AprobacionesScreen: React.FC = () => {
 
   return <View style={styles.container}>
     <FlatList
+      key={columns}
       data={items}
       keyExtractor={item => item.id}
-      contentContainerStyle={styles.content}
+      numColumns={columns}
+      columnWrapperStyle={columns > 1 ? styles.columns : undefined}
+      contentContainerStyle={[styles.content, contentFrame, { padding: gutter }]}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.karen} colors={[colors.karen]} />}
       ListHeaderComponent={<>
         <ScreenTitle title="Ofertas" subtitle="Revisa los descuentos sugeridos antes de que los vean los clientes." />
@@ -131,14 +146,16 @@ export const AprobacionesScreen: React.FC = () => {
         : <EmptyState icon="megaphone-outline" title="Nada en este grupo" text="Las ofertas sugeridas desde 'Por vencer' aparecen aquí para revisarlas." />}
       renderItem={({ item }) => {
         const status = statusOf(item);
+        const limits = describeOfferTerms(item);
         return (
-          <TouchableOpacity style={styles.card} onPress={() => open(item)} accessibilityRole="button" accessibilityLabel={`${item.productoNombre || 'Oferta'}, ${status.label}`}>
+          <TouchableOpacity style={[styles.card, columns > 1 && styles.cardColumn]} onPress={() => open(item)} accessibilityRole="button" accessibilityLabel={`${item.productoNombre || 'Oferta'}, ${status.label}`}>
             <View style={styles.discount}>
               <Text style={styles.discountText}>-{item.descuentoPorcentaje}%</Text>
             </View>
             <View style={styles.cardBody}>
               <Text style={styles.product} numberOfLines={2}>{item.productoNombre || 'Producto'}</Text>
               <Text style={styles.phrase} numberOfLines={2}>{item.frasePromocional}</Text>
+              {limits.length > 0 && <Text style={styles.limits} numberOfLines={2}>{limits.join(' · ')}</Text>}
               <View style={styles.cardMeta}>
                 {item.fechaCaducidad ? <ExpiryStamp date={item.fechaCaducidad} /> : null}
                 <View style={[styles.status, { backgroundColor: status.bg }]}>
@@ -153,7 +170,7 @@ export const AprobacionesScreen: React.FC = () => {
 
     <Modal visible={Boolean(selected)} transparent animationType="slide" onRequestClose={() => setSelected(null)}>
       <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, sheetFrame]}>
           <ScrollView keyboardShouldPersistTaps="handled">
             <View style={styles.sheetHead}>
               <View style={styles.flex}>
@@ -173,6 +190,37 @@ export const AprobacionesScreen: React.FC = () => {
             {selected?.estado === 'PENDIENTE_APROBACION' ? <>
               <Field label="Descuento (%)" hint="Entre 5 y 50." keyboardType="decimal-pad" value={discount} onChangeText={setDiscount} />
               <Field label="Frase que verá el cliente" multiline maxLength={180} value={phrase} onChangeText={setPhrase} style={styles.textarea} />
+              <Text style={styles.sectionLabel}>Límites de la oferta</Text>
+              <Text style={styles.sectionHint}>Opcionales. Vacío: todo el lote, hasta que caduque.</Text>
+              {/* Cada campo va en su propia columna flexible: el estilo de Field se aplica al cuadro de texto. */}
+              <View style={styles.cols}>
+                <View style={styles.col}>
+                  <Field label="Máx. por pedido" placeholder="Sin tope" keyboardType="number-pad" value={terms.limit} onChangeText={setTerm('limit')} />
+                </View>
+                <View style={styles.col}>
+                  <Field label="Stock de oferta" placeholder="Todo el lote"
+                    hint={selected.cantidadDisponible != null ? `Hasta ${selected.cantidadDisponible}.` : undefined}
+                    keyboardType="number-pad" value={terms.stock} onChangeText={setTerm('stock')} />
+                </View>
+              </View>
+              <View style={styles.cols}>
+                <View style={styles.col}>
+                  <Field label="Termina el" placeholder="AAAA-MM-DD" autoCapitalize="none" maxLength={10} value={terms.endDate} onChangeText={setTerm('endDate')} />
+                </View>
+                <View style={styles.col}>
+                  <Field label="A las" placeholder="HH:MM" maxLength={5} value={terms.endTime} onChangeText={setTerm('endTime')} />
+                </View>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.presets}>
+                {END_PRESETS.map(preset => {
+                  const end = presetEnd(preset.id);
+                  return <Chip key={preset.id} label={preset.label}
+                    active={terms.endDate === end.endDate && terms.endTime === end.endTime}
+                    onPress={() => setTerms(current => ({ ...current, ...end }))} />;
+                })}
+                <Chip label="Sin fecha de fin" active={!terms.endDate && !terms.endTime}
+                  onPress={() => setTerms(current => ({ ...current, endDate: '', endTime: '' }))} />
+              </ScrollView>
               {!!selected.razonIa && (
                 <View style={styles.reason}>
                   <Text style={styles.reasonLabel}>Por qué se sugiere</Text>
@@ -191,6 +239,7 @@ export const AprobacionesScreen: React.FC = () => {
               <View style={styles.readOnly}>
                 <Text style={styles.readOnlyDiscount}>-{selected?.descuentoPorcentaje}%</Text>
                 <Text style={styles.readOnlyPhrase}>{selected?.frasePromocional}</Text>
+                {selected && describeOfferTerms(selected).map(line => <Text key={line} style={styles.readOnlyLimit}>{line}</Text>)}
               </View>
               {!!selected?.razonIa && (
                 <View style={styles.reason}>
@@ -218,6 +267,8 @@ export const AprobacionesScreen: React.FC = () => {
 const styles = themed(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.aisle },
   content: { padding: 16, paddingBottom: 32 },
+  columns: { gap: 12 },
+  cardColumn: { flex: 1, minWidth: 0, maxWidth: '50%' },
   flex: { flex: 1 },
   filters: { gap: 8, paddingBottom: 14 },
   loader: { margin: 30 },
@@ -230,6 +281,7 @@ const styles = themed(() => StyleSheet.create({
   cardBody: { flex: 1, padding: 12, gap: 4 },
   product: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
   phrase: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.inkSoft },
+  limits: { fontFamily: fonts.semibold, fontSize: 12, lineHeight: 17, color: colors.mora },
   cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4, flexWrap: 'wrap' },
   status: { borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 3 },
   statusText: { fontFamily: fonts.bold, fontSize: 12 },
@@ -244,8 +296,13 @@ const styles = themed(() => StyleSheet.create({
   reasonLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, marginBottom: 4 },
   reasonText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.inkSoft },
   cols: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  col: { flex: 1, minWidth: 0 },
+  sectionLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, marginTop: 6 },
+  sectionHint: { fontFamily: fonts.body, fontSize: 13, color: colors.inkMuted, marginTop: 2 },
+  presets: { gap: 8, paddingBottom: 16 },
   divider: { height: 1, backgroundColor: colors.rule, marginVertical: 18 },
   readOnly: { backgroundColor: colors.sticker, borderRadius: radius.tag, padding: 16, marginBottom: 14 },
   readOnlyDiscount: { fontFamily: fonts.tag, fontSize: 40, lineHeight: 42, color: '#A81E14' },
   readOnlyPhrase: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 21, color: colors.mora, marginTop: 6 },
+  readOnlyLimit: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.ink, marginTop: 4 },
 }));

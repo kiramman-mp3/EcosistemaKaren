@@ -19,6 +19,14 @@ export interface Product {
   promotionId?: string;
   offerLotId?: string;
   isOffer?: boolean;
+  /** Unidades de la oferta que admite un pedido (el carrito no deja pasar de ahí). */
+  maxPerOrder?: number | null;
+  /** Alta real del producto en la tienda y unidades vendidas en los últimos 30 días. */
+  createdAt?: string;
+  soldLast30d?: number;
+  /** Insignias calculadas con las reglas de config/catalogRules. */
+  isNew?: boolean;
+  isBestSeller?: boolean;
 }
 
 export interface FlashOffer {
@@ -34,6 +42,8 @@ export interface FlashOffer {
   stockAvailable: number;
   expiryText: string;    // "⏰ Caduca: Hoy, 20:00"
   expiresOn?: string;    // AAAA-MM-DD del lote en oferta
+  maxPerOrder?: number | null; // límite por pedido que fijó la tienda
+  endsAt?: string | null;      // fecha y hora real de fin de la oferta
   productName?: string;
   image: string;
   loteId?: string;

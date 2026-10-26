@@ -71,7 +71,11 @@ públicamente en `GET /api/v1/media/productos/<archivo>` (`ETag`, `Cache-Control
 
 `POST /internal/v1/store/sync/catalog`, autenticado con la cabecera `x-store-key` y fuera de la
 API pública. Cuerpo: `{ "section": "categorias|productos|lotes|promociones", "version": <entero creciente>, "items": [...] }`.
-Es un snapshot completo de la sección: el portal reemplaza su copia. Responde
+Es un snapshot completo de la sección: el portal reemplaza su copia. Los productos incluyen `createdAt` y
+`vendidos30d`, opcionales para que una tienda con una versión anterior siga sincronizando: si faltan, el
+portal conserva lo que tenía (o usa la fecha actual y 0 en un producto nuevo). Las promociones incluyen,
+también opcionales, `limitePorPedido`, `stockOferta`, `vigenteHasta` y `unidadesRestantes` (las calcula la
+tienda; `null` = sin tope). Una oferta vencida o sin unidades de oferta deja de enviarse. Responde
 `{ "success": true, "section", "version", "applied", "count" }`; si ya tiene una versión igual o
 mayor, `applied` es `false` y devuelve `currentVersion`. Campos no incluidos en el contrato
 (costos, ubicación, razones de IA, etc.) se rechazan con `400`. Solo está disponible cuando
@@ -100,11 +104,17 @@ Consulta el catálogo con búsqueda y paginación. Admite `q`, `categoriaId`, `l
       "descripcion": "Leche pasteurizada UHT",
       "precioVenta": 0.95,
       "impuestoPorcentaje": 15,
-      "minStockAlerta": 20
+      "minStockAlerta": 20,
+      "vendidos30d": 118,
+      "created_at": "2026-03-14T15:20:00.000Z"
     }
   ]
 }
 ```
+* `created_at` es el alta real del producto en la tienda y `vendidos30d` las unidades vendidas (movimientos
+  `VENTA`) en los últimos 30 días. Con ellos los portales marcan **Nuevo** (alta de hace 14 días o menos) y
+  **Más vendido** (el 10 % superior del catálogo, solo productos con ventas). En portal-api llegan con la
+  sincronización del catálogo; en store-api y el monolito se calculan al consultar.
 
 ### `GET /products/barcode/:barcode`
 Busca un producto por lectura de código de barras.
@@ -124,6 +134,38 @@ Crea un nuevo producto en catálogo.
   "minStockAlerta": 10
 }
 ```
+
+### `PUT /products/:id`
+Edita un producto. Solo `ADMIN` y solo store-api; el portal lo recibe en la siguiente sincronización del catálogo.
+* **Body Payload** (todos los campos salvo `descripcion`; no admite otros, y el código de barras no se cambia):
+```json
+{
+  "categoriaId": "f1b2c3...",
+  "nombre": "Queso Crema Toni 200g",
+  "descripcion": "Queso untable",
+  "precioVenta": 2.05,
+  "impuestoPorcentaje": 15,
+  "minStockAlerta": 10
+}
+```
+* **Respuesta (200)**: `{ "success": true, "data": <producto>, "cambioPrecio": { "anterior", "nuevo" } }`;
+  `cambioPrecio` es `null` si el PVP no cambió. Si cambió, queda en la bitácora de precios en la misma transacción.
+* Errores: `400` datos no válidos, `401`/`403` sin sesión o sin rol ADMIN, `404` producto o categoría inexistente.
+
+### `PATCH /products/:id`
+Cambia el PVP de un producto. Solo `ADMIN` y solo store-api; el portal lo recibe en la siguiente
+sincronización del catálogo (unos 15 s).
+* **Body Payload**: `{ "precioVenta": 2.75 }` (mayor a 0 y hasta 1.000.000; no admite otros campos).
+* **Respuesta (200)**: `{ "success": true, "data": <producto>, "cambioPrecio": { "anterior": 2.5, "nuevo": 2.75 } }`.
+  Si el precio es el mismo, `cambioPrecio` es `null` y no se anota nada.
+* Cada cambio queda en `productos_precio_historial` con el precio anterior, el nuevo, el origen (`MANUAL`), el
+  ADMIN que lo hizo y la fecha.
+* Las reservas ya hechas conservan el precio con el que se apartaron (`reserva_detalles.precio_unitario`).
+* Errores: `400` precio no válido, `401`/`403` sin sesión o sin rol ADMIN, `404` producto inexistente.
+
+### `GET /products/:id/price-history`
+Últimos 20 cambios de PVP del producto, del más reciente al más antiguo (`ADMIN`). Cada uno trae
+`precioAnterior`, `precioNuevo`, `origen` (`MANUAL` o `INGRESO_LOTE`), `loteId`, `actorNombre` y `created_at`.
 
 ### `PUT /products/:id/image`
 Sube o reemplaza la foto del producto (`ADMIN` o `BODEGUERO`; solo store-api). El cuerpo es la **foto en
@@ -160,9 +202,13 @@ Registra un nuevo lote de producto recibido en bodega.
   "fechaCaducidad": "2026-09-05",
   "costoUnitario": 1.25,
   "cantidadIngresada": 50,
-  "ubicacion": "BODEGA"
+  "ubicacion": "BODEGA",
+  "nuevoPrecioVenta": 2.75
 }
 ```
+* `nuevoPrecioVenta` es opcional y solo lo puede enviar el `ADMIN` (un `BODEGUERO` recibe `403` y el lote no se
+  guarda). Se aplica en la misma transacción que el lote: si el lote falla, el precio no cambia. La respuesta
+  incluye `cambioPrecio: { anterior, nuevo }` y el cambio queda en la bitácora con origen `INGRESO_LOTE`.
 
 ### `PATCH /lots/:id/location`
 Actualiza la ubicación física del lote (`BODEGA` -> `PERCHA`).
@@ -196,6 +242,19 @@ ventas, mermas y vencimientos. Requiere rol operativo o ADMIN.
 Consulta las mermas auditables con cantidad, razón, responsable, costo unitario,
 costo total y vínculo al movimiento que modificó el inventario.
 
+### `GET /inventory/summary?periodo=hoy|7d|30d`
+Totales de un mismo período para los indicadores del reporte de bodega: unidades
+recibidas (`INGRESO`) y vendidas (`VENTA`) según `inventario_movimientos`, y unidades
+y costo de merma según `mermas`. El período son días completos en la zona horaria del
+negocio e incluye el día en curso (`7d` empieza a la medianoche de hace seis días).
+Sin `periodo` se usa `7d`. Requiere rol operativo o ADMIN.
+
+```json
+{ "success": true, "data": { "periodo": "7d", "desde": "2026-10-19T05:00:00.000Z",
+  "hasta": "2026-10-25T18:30:00.000Z", "ingresos": 1240, "ventas": 860,
+  "mermas": 95, "costoMerma": 152.4 } }
+```
+
 ---
 
 ## 3. Reservaciones de Stock Anti-Overbooking (`/reservations`)
@@ -228,8 +287,10 @@ que siempre:
 
 * `201` con `codigoRetiro`, `fechaExpiracion` y `detalles` (lote, cantidad, precio y datos del
   producto) si la tienda aceptó la reserva.
-* El error habitual si la rechazó: `409` sin stock suficiente, `400` (oferta no disponible o
-  reserva vencida), `404` (producto inexistente) o `503` (la tienda no pudo procesarla).
+* El error habitual si la rechazó: `409` sin stock suficiente, `409` con `"error": "OfferLimitException"`
+  si la línea con `promocionId` pasa el límite por pedido o las unidades de oferta que quedan, o la oferta
+  ya terminó (motivo `OFFER_LIMIT`), `400` (oferta no disponible o reserva vencida), `404` (producto
+  inexistente) o `503` (la tienda no pudo procesarla).
 * `202` con `"estado": "PENDIENTE_SYNC"` y sin `codigoRetiro` si la tienda tarda más. El
   cliente consulta `GET /reservations/user/:userId` hasta que pase a `PENDIENTE` (aceptada con
   su código) o `RECHAZADA` (con `motivoRechazo` y `mensajeRechazo`).
@@ -327,7 +388,18 @@ data: {"tipo":"NUEVO_LOTE_CADUCIDAD_CERCANA","loteId":"...","numeroLote":"LOT-YG
 1. **Generación**: Un usuario con rol `BODEGUERO`, `PERCHERO` o `ADMIN` solicita una promoción para un lote en alerta `ROJO` (1–6 días) o `AMARILLO` (7–14 días).
 2. **Borrador PENDIENTE_APROBACION**: Gemini genera un descuento dentro de los límites estrictos (`ROJO`: 20–50%, `AMARILLO`: 5–30%). El registro se guarda con `estado = 'PENDIENTE_APROBACION'` y `activa = false`.
 3. **Revisión y Aprobación**: Exclusivamente un `ADMIN` puede aprobar (`POST /promotions/:id/approve`) o rechazar (`POST /promotions/:id/reject`).
-4. **Publicación**: El catálogo público (`GET /promotions`) únicamente muestra promociones con `estado = 'APROBADA'` y `activa = true`.
+4. **Publicación**: El catálogo público (`GET /promotions`) únicamente muestra promociones con `estado = 'APROBADA'` y `activa = true`, vigentes y con unidades de oferta.
+
+### Límites de una oferta
+Al revisar el borrador, el `ADMIN` puede fijar tres límites opcionales (sin valor, la oferta cubre todo el lote hasta que caduque):
+
+| Campo | Qué limita |
+|---|---|
+| `limitePorPedido` | Unidades de la oferta que admite una sola reserva. |
+| `stockOferta` | Unidades del lote que se venden con descuento, sumando todas las reservas pendientes o confirmadas. Las vencidas o canceladas devuelven sus unidades. |
+| `vigenteHasta` | Fecha y hora (ISO 8601 con zona) en que la oferta deja de aplicarse. |
+
+Reglas: el límite por pedido no supera el stock de oferta, el stock de oferta no supera las unidades libres del lote y `vigenteHasta` es futura. Se validan al editar el borrador y otra vez al aprobarlo. Al reservar, la tienda bloquea la oferta y comprueba los tres límites en la misma transacción que descuenta el stock, de modo que reservas simultáneas nunca pasan de `stockOferta`. Cada línea reservada con descuento guarda su `promocion_id`.
 
 ---
 
@@ -370,7 +442,25 @@ Genera un borrador de promoción comercial mediante Google Gemini AI con salida 
 ### `GET /promotions`
 Retorna el catálogo público de promociones comerciales.
 * **Acceso**: Público (sin autenticación).
-* **Filtro**: Solo promociones con `estado = 'APROBADA'` y `activa = true`.
+* **Filtro**: Solo promociones con `estado = 'APROBADA'` y `activa = true`, sobre un lote vigente con existencias, con `vigenteHasta` futura (o sin ella) y con unidades de oferta (o sin `stockOferta`).
+* **Campos de límites**: `limitePorPedido`, `stockOferta`, `vigenteHasta` y `unidadesRestantes` (`null` = sin tope).
+
+---
+
+### `PATCH /promotions/:id`
+Edita un borrador `PENDIENTE_APROBACION`. Solo `ADMIN`.
+* **Body**:
+```json
+{
+  "descuentoPorcentaje": 25,
+  "frasePromocional": "Leche entera a precio Karen",
+  "limitePorPedido": 2,
+  "stockOferta": 10,
+  "vigenteHasta": "2026-10-26T21:00:00-05:00"
+}
+```
+`descuentoPorcentaje` (5–50) y `frasePromocional` son obligatorios. Los límites son opcionales: sin enviar se conservan; `null` los quita.
+* **Errores**: `400` si un límite no cumple las reglas de arriba o el borrador ya no está pendiente; `403` si no es `ADMIN`.
 
 ---
 

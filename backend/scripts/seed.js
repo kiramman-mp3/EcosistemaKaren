@@ -4,7 +4,7 @@
  *
  * - Catálogo real de productos comercializados en Ecuador (seed/catalogo-ecuador.json)
  *   con PVP referencial e IVA (15% o 0%), e imágenes descargadas de Open Food Facts.
- * - Usuarios, lotes, reservas, movimientos, mermas, alertas y promociones generados
+ * - Usuarios, lotes, reservas, movimientos, mermas, alertas, promociones y cambios de PVP generados
  *   mediante una simulación cronológica que respeta las reglas del dominio (FEFO,
  *   saldos antes/después, estados de lote y de reserva).
  *
@@ -29,6 +29,10 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { getPool, closePool, connectionSettings } = require('../src/infrastructure/db/postgres');
 const { runMigrations } = require('../src/infrastructure/db/migrations');
+const { buildPromotionCacheKey } = require('../src/domain/policies/PromotionPolicy');
+const {
+  RESERVATION_TTL_MINUTES, RESERVATION_MAX_TOTAL_MINUTES, RESERVATION_EXTENSION_MINUTES
+} = require('../src/domain/policies/BusinessRules');
 
 const args = Object.fromEntries(process.argv.slice(2).map(arg => {
   const [key, value] = arg.replace(/^--/, '').split('=');
@@ -245,12 +249,17 @@ function ingressQuantity(pvp) {
   return randInt(2, 6) * 6;
 }
 
+// Días que un producto se considera "Nuevo" en el portal (debe coincidir con la regla de los frontends).
+const NEW_PRODUCT_DAYS = 14;
+
 function buildLots(products) {
   const lots = [];
   for (const product of products) {
     const info = CATEGORY_INFO[product.categoria];
     const perishable = Boolean(info.perishable);
-    const count = perishable ? randInt(5, 8) : randInt(2, 4);
+    // Alrededor del 5 % del catálogo se dio de alta hace menos de dos semanas: solo tiene su primer lote.
+    product.recentlyAdded = chance(0.05);
+    const count = product.recentlyAdded ? 1 : perishable ? randInt(5, 8) : randInt(2, 4);
     const window = perishable ? 75 : HISTORY_DAYS + 30;
     for (let i = 0; i < count; i++) {
       // El último lote siempre es reciente para que todo producto tenga stock vigente.
@@ -277,9 +286,48 @@ function buildLots(products) {
         expired: false
       });
     }
+    // El alta del producto es anterior a su primer lote: la de un producto nuevo, unas horas antes
+    // (siempre dentro de la ventana de "Nuevos"); la de los demás, entre 3 días y 10 meses antes.
+    const firstIngreso = Math.min(...lots.filter(lot => lot.product === product).map(lot => lot.ingreso));
+    product.createdAt = product.recentlyAdded
+      ? Math.max(NOW - (NEW_PRODUCT_DAYS - 1) * DAY_MS, firstIngreso - randInt(2, 20) * 3600000)
+      : firstIngreso - randInt(3, 300) * DAY_MS;
   }
   return lots;
 }
+
+// ---------------------------------------------------------------------------
+// Cambios de PVP
+// ---------------------------------------------------------------------------
+// Alrededor del 12 % de los productos subió de precio en el período simulado: la mitad al recibir un
+// lote (el ADMIN fija el nuevo PVP en el ingreso) y la otra mitad desde el catálogo. El precio del
+// catálogo es el nuevo; las reservas anteriores al cambio se hicieron con el precio de entonces.
+function buildPriceChanges(products, lots, users) {
+  const admins = users.filter(u => u.rol === 'ADMIN');
+  const lotsByProduct = new Map();
+  for (const lot of lots) {
+    if (!lotsByProduct.has(lot.product.codigoBarras)) lotsByProduct.set(lot.product.codigoBarras, []);
+    lotsByProduct.get(lot.product.codigoBarras).push(lot);
+  }
+  const changes = [];
+  for (const product of products) {
+    if (!chance(0.12)) continue;
+    const anterior = round2(product.pvp * (0.86 + rand() * 0.1));
+    if (anterior <= 0 || anterior >= product.pvp) continue;
+    const candidates = (lotsByProduct.get(product.codigoBarras) || [])
+      .filter(lot => lot.ingreso > NOW - HISTORY_DAYS * DAY_MS && lot.ingreso < NOW - DAY_MS);
+    const withLot = candidates.length > 0 && chance(0.5);
+    const lot = withLot ? pick(candidates) : null;
+    const t = lot ? lot.ingreso : NOW - randInt(2, HISTORY_DAYS - 5) * DAY_MS - randInt(8, 18) * 3600000;
+    const change = { t, anterior, nuevo: product.pvp, origen: lot ? 'INGRESO_LOTE' : 'MANUAL', lot, actor: pick(admins) };
+    product.priceChange = change;
+    changes.push({ product, ...change });
+  }
+  return changes;
+}
+
+/** PVP vigente del producto en el instante t (antes de su cambio, el precio anterior). */
+const priceAt = (product, t) => (product.priceChange && t < product.priceChange.t ? product.priceChange.anterior : product.pvp);
 
 function simulate({ products, lots, users }) {
   const clients = users.filter(u => u.rol === 'CLIENTE');
@@ -353,7 +401,9 @@ function simulate({ products, lots, users }) {
     const t = TODAY - day * DAY_MS + hourLocal * 3600000 + randInt(0, 3599) * 1000;
     if (t < NOW - 15 * MIN_MS) events.push({ t, kind: 'reserva' });
   }
-  events.sort((a, b) => a.t - b.t);
+  // Un traslado, un vencimiento o un retiro calculado a partir de la fecha del lote puede caer
+  // después de este momento: esos eventos todavía no ocurrieron y no se siembran.
+  const timeline = events.filter(event => event.t < NOW).sort((a, b) => a.t - b.t);
 
   const allocate = (product, qty, t) => {
     const allocation = [];
@@ -368,8 +418,31 @@ function simulate({ products, lots, users }) {
     return remaining === 0 ? allocation : null;
   };
 
-  const placeReservation = (t, estado) => {
-    const user = pickClient();
+  // Plazo que elige el cliente al apartar (como en las apps: 30 min por defecto) y, a veces, una o dos
+  // extensiones de 30 min, sin pasar de 4 horas en total.
+  const TTL_CHOICES = [[RESERVATION_TTL_MINUTES, 0.62], [45, 0.12], [60, 0.14], [90, 0.07], [120, 0.05]];
+  const pickTtl = weightedPicker(TTL_CHOICES, ([, weight]) => weight);
+  const reservationWindow = () => {
+    const ttl = pickTtl()[0];
+    const room = Math.floor((RESERVATION_MAX_TOTAL_MINUTES - ttl) / RESERVATION_EXTENSION_MINUTES);
+    const extensions = chance(0.14) ? Math.min(room, randInt(1, 2)) : 0;
+    return { ttl, extensions, minutes: ttl + extensions * RESERVATION_EXTENSION_MINUTES };
+  };
+
+  // La confirmación en caja, la cancelación o el vencimiento ocurren más tarde: se programan como
+  // eventos propios para que el historial de cada lote siga en orden. Lo que todavía no ocurrió
+  // (hora futura) deja la reserva PENDIENTE, con su stock apartado.
+  const scheduled = [];
+  const schedule = (at, run) => {
+    let i = scheduled.length;
+    while (i > 0 && scheduled[i - 1].at > at) i--;
+    scheduled.splice(i, 0, { at, run });
+  };
+  const runScheduledUntil = (t) => {
+    while (scheduled.length && scheduled[0].at <= t) scheduled.shift().run();
+  };
+
+  const placeReservation = (t, outcome, { user = pickClient(), window = reservationWindow() } = {}) => {
     const itemCount = Math.min(8, 1 + Math.floor(Math.pow(rand(), 1.8) * 8));
     const chosen = new Map();
     for (let i = 0; i < itemCount * 2 && chosen.size < itemCount; i++) {
@@ -389,48 +462,71 @@ function simulate({ products, lots, users }) {
         lot.res += q;
         move(lot, 'RESERVA', q, before, { disp: lot.disp, res: lot.res },
           { motivo: 'Stock asignado a reserva', actor: user.id, reserva: reservaId, at: t });
-        lines.push({ lot, q, price: product.pvp });
+        lines.push({ lot, q, price: priceAt(product, t) });
       }
     }
-    if (!lines.length) return;
+    if (!lines.length) return null;
 
-    const expiresAt = t + 10 * MIN_MS;
-    let updatedAt = t;
-    if (estado === 'CONFIRMADA') {
-      const at = t + randInt(2, 9) * MIN_MS;
-      const cashier = pick(cashiers);
-      for (const { lot, q } of lines) {
-        const before = { disp: lot.disp, res: lot.res };
-        lot.res -= q;
-        move(lot, 'VENTA', q, before, { disp: lot.disp, res: lot.res },
-          { motivo: 'Venta confirmada desde reserva', actor: cashier.id, reserva: reservaId, at });
-      }
-      updatedAt = at;
-    } else if (estado === 'EXPIRADA' || estado === 'CANCELADA') {
-      const at = estado === 'EXPIRADA' ? expiresAt + randInt(0, 59) * 1000 : t + randInt(1, 8) * MIN_MS;
-      for (const { lot, q } of lines) {
-        const before = { disp: lot.disp, res: lot.res };
-        lot.disp += q;
-        lot.res -= q;
-        move(lot, 'LIBERACION', q, before, { disp: lot.disp, res: lot.res }, {
-          motivo: estado === 'EXPIRADA' ? 'Liberación automática por expiración de reserva' : 'Reserva cancelada por el cliente',
-          actor: estado === 'CANCELADA' ? user.id : null, reserva: reservaId, at
-        });
-      }
-      updatedAt = at;
-    }
-
-    reservations.push({
-      id: reservaId, usuario_id: user.id, codigo_retiro: newCode(), estado,
-      fecha_expiracion: iso(expiresAt), created_at: iso(t), updated_at: iso(updatedAt)
-    });
+    const expiresAt = t + window.minutes * MIN_MS;
+    const row = {
+      id: reservaId, usuario_id: user.id, cliente_nombre: user.nombre, codigo_retiro: newCode(), estado: 'PENDIENTE',
+      fecha_expiracion: iso(expiresAt), created_at: iso(t), updated_at: iso(t), extensiones: window.extensions
+    };
+    reservations.push(row);
     for (const { lot, q, price } of lines) {
       details.push({ id: uuid(), reserva_id: reservaId, lote_id: lot.id, cantidad: q, precio_unitario: price });
     }
+
+    // Cada extensión se pide unos minutos antes de que venza el plazo vigente; la última queda en updated_at.
+    for (let k = 0; k < window.extensions; k++) {
+      const due = t + (window.ttl + k * RESERVATION_EXTENSION_MINUTES) * MIN_MS;
+      const askedAt = due - randInt(2, 12) * MIN_MS;
+      if (askedAt < NOW) row.updated_at = iso(Math.max(Date.parse(row.updated_at) + MIN_MS, askedAt));
+    }
+
+    // El cliente pasa por caja dentro del plazo, cancela poco después de apartar o deja que venza.
+    let at;
+    if (outcome === 'CONFIRMADA') {
+      const latest = Math.max(4, Math.floor(window.minutes * 0.9));
+      at = t + Math.min(latest, 3 + Math.floor(Math.pow(rand(), 1.6) * latest)) * MIN_MS;
+    } else if (outcome === 'CANCELADA') {
+      at = t + randInt(1, Math.min(20, window.minutes - 1)) * MIN_MS;
+    } else if (outcome === 'EXPIRADA') {
+      at = expiresAt + randInt(0, 59) * 1000;
+    } else {
+      return row;
+    }
+    at = Math.max(at, Date.parse(row.updated_at) + MIN_MS);
+    schedule(at, () => {
+      if (at >= NOW) return;
+      if (outcome === 'CONFIRMADA') {
+        const cashier = pick(cashiers);
+        for (const { lot, q } of lines) {
+          const before = { disp: lot.disp, res: lot.res };
+          lot.res -= q;
+          move(lot, 'VENTA', q, before, { disp: lot.disp, res: lot.res },
+            { motivo: 'Venta confirmada desde reserva', actor: cashier.id, reserva: reservaId, at });
+        }
+      } else {
+        for (const { lot, q } of lines) {
+          const before = { disp: lot.disp, res: lot.res };
+          lot.disp += q;
+          lot.res -= q;
+          move(lot, 'LIBERACION', q, before, { disp: lot.disp, res: lot.res }, {
+            motivo: outcome === 'EXPIRADA' ? 'Liberación automática por expiración de reserva' : 'Reserva cancelada por el cliente',
+            actor: outcome === 'CANCELADA' ? user.id : null, reserva: reservaId, at
+          });
+        }
+      }
+      row.estado = outcome;
+      row.updated_at = iso(at);
+    });
+    return row;
   };
 
-  for (const event of events) {
+  for (const event of timeline) {
     const { lot, t } = event;
+    runScheduledUntil(t);
     if (event.kind === 'ingreso') {
       lot.received = true;
       lot.disp = lot.ingresada;
@@ -476,9 +572,24 @@ function simulate({ products, lots, users }) {
     }
   }
 
-  // Reservas vigentes en este momento (pendientes de retiro en caja)
+  runScheduledUntil(NOW);
+
+  // Reservas vigentes en este momento (pendientes de retiro en caja), todas con tiempo restante.
   const pendingCount = Math.round(35 * SCALE);
-  for (let i = 0; i < pendingCount; i++) placeReservation(NOW - randInt(0, 8) * MIN_MS - randInt(0, 59) * 1000, 'PENDIENTE');
+  for (let i = 0; i < pendingCount; i++) {
+    const window = reservationWindow();
+    const age = randInt(0, Math.max(1, window.minutes - 10));
+    placeReservation(NOW - age * MIN_MS - randInt(0, 59) * 1000, 'PENDIENTE', { window });
+  }
+  // La cuenta cliente@ queda con dos reservas para probar: una recién hecha y otra ya extendida una vez.
+  const demoClient = clients.find(c => c.email === `cliente@${DEMO_EMAIL_DOMAIN}`);
+  if (demoClient) {
+    const base = RESERVATION_TTL_MINUTES;
+    placeReservation(NOW - 5 * MIN_MS, 'PENDIENTE', { user: demoClient, window: { ttl: base, extensions: 0, minutes: base } });
+    placeReservation(NOW - 40 * MIN_MS, 'PENDIENTE', {
+      user: demoClient, window: { ttl: base, extensions: 1, minutes: base + RESERVATION_EXTENSION_MINUTES }
+    });
+  }
 
   return { movements, wastes, reservations, details };
 }
@@ -533,12 +644,20 @@ function buildAlertsAndPromotions(lots, users) {
       cache_key: `seed:${lot.id}:${estado}`, cache_hit: false, created_at: iso(createdAt),
       aprobada_por: null, aprobada_at: null, rechazada_por: null, rechazada_at: null, motivo_rechazo: null
     };
+    // La aprobación compara esta clave con el lote y el precio actuales: un borrador sin cambios desde
+    // su generación lleva la clave real para que el ADMIN pueda publicarlo desde la bodega.
+    if (estado === 'PENDIENTE_APROBACION') {
+      row.cache_key = buildPromotionCacheKey({
+        loteId: lot.id, fechaCaducidad: dateOnly(lot.caducidad), cantidadDisponible: lot.disp,
+        precioVenta: lot.product.pvp, promptVersion: row.prompt_version, modelName: row.modelo_ia
+      });
+    }
     if (estado === 'APROBADA') {
       row.aprobada_por = pick(admins).id;
-      row.aprobada_at = iso(createdAt + randInt(10, 240) * MIN_MS);
+      row.aprobada_at = iso(Math.min(NOW - MIN_MS, createdAt + randInt(10, 240) * MIN_MS));
     } else if (estado === 'RECHAZADA') {
       row.rechazada_por = pick(admins).id;
-      row.rechazada_at = iso(createdAt + randInt(10, 240) * MIN_MS);
+      row.rechazada_at = iso(Math.min(NOW - MIN_MS, createdAt + randInt(10, 240) * MIN_MS));
       row.motivo_rechazo = pick(REJECT_REASONS);
     }
     promotions.push(row);
@@ -567,6 +686,68 @@ function buildAlertsAndPromotions(lots, users) {
   return { alerts, promotions };
 }
 
+// Límites que el ADMIN fija a cada oferta aprobada. Las vigentes terminan entre unas horas y 7 días
+// después del seed (nunca después de que caduque su lote); un 15 % terminó en los últimos 3 días para
+// probar ofertas vencidas. Las reservas hechas sobre el lote en oferta mientras estaba vigente se
+// enlazan con ella (promocion_id, precio con descuento) y una parte de las ofertas con stock propio
+// queda agotada justo con esas reservas.
+const OFFER_PAST_DAYS = 3;
+const OFFER_FUTURE_DAYS = 7;
+
+function applyOfferLimits(promotions, lots, sim) {
+  const lotById = new Map(lots.map(l => [l.id, l]));
+  const reservationById = new Map(sim.reservations.map(r => [r.id, r]));
+  const live = promotions.filter(p => p.estado === 'APROBADA' && p.activa);
+  const linked = { offers: 0, lines: 0, soldOut: 0, ended: 0 };
+
+  for (const promo of live) {
+    const lot = lotById.get(promo.lote_id);
+    const approvedAt = Date.parse(promo.aprobada_at);
+    const lotEnd = lot.caducidad; // medianoche del día de caducidad: desde ahí el lote ya no se vende
+    if (chance(0.15)) {
+      promo.vigente_hasta = iso(Math.max(approvedAt + 30 * MIN_MS, NOW - randInt(1, OFFER_PAST_DAYS * 24) * 3600000));
+      if (Date.parse(promo.vigente_hasta) >= NOW) promo.vigente_hasta = iso(NOW - MIN_MS);
+      linked.ended++;
+    } else if (chance(0.8)) {
+      const end = NOW + randInt(2, OFFER_FUTURE_DAYS * 24) * 3600000;
+      promo.vigente_hasta = iso(Math.min(end, lotEnd - MIN_MS));
+    } else {
+      promo.vigente_hasta = null; // hasta que caduque el lote
+    }
+    const until = promo.vigente_hasta ? Date.parse(promo.vigente_hasta) : NOW;
+
+    // Reservas del lote tomadas mientras la oferta estaba vigente: llevan el descuento.
+    const lines = sim.details.filter(d => {
+      if (d.lote_id !== lot.id) return false;
+      const reservation = reservationById.get(d.reserva_id);
+      const t = Date.parse(reservation.created_at);
+      return t >= approvedAt && t < until;
+    });
+    let committed = 0;
+    for (const line of lines) {
+      const reservation = reservationById.get(line.reserva_id);
+      const base = priceAt(lot.product, Date.parse(reservation.created_at));
+      line.promocion_id = promo.id;
+      line.precio_unitario = Number((base * (1 - promo.descuento_porcentaje / 100)).toFixed(2));
+      if (reservation.estado === 'PENDIENTE' || reservation.estado === 'CONFIRMADA') committed += line.cantidad;
+    }
+    if (lines.length) { linked.offers++; linked.lines += lines.length; }
+
+    // Stock de oferta: nunca menos de lo ya comprometido ni más de lo que hay en el lote.
+    if (chance(0.6)) {
+      const soldOut = committed > 0 && chance(0.4);
+      const max = committed + lot.disp;
+      promo.stock_oferta = soldOut ? committed : Math.max(1, Math.min(max, committed + randInt(2, 12)));
+      if (soldOut) linked.soldOut++;
+    }
+    if (chance(0.6)) {
+      const cap = promo.stock_oferta || Math.max(1, lot.disp);
+      promo.limite_por_pedido = Math.min(cap, randInt(1, 4));
+    }
+  }
+  return linked;
+}
+
 // ---------------------------------------------------------------------------
 // Persistencia
 // ---------------------------------------------------------------------------
@@ -575,6 +756,9 @@ async function cleanPreviousSeed(client) {
     SELECT id FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}'`);
   await client.query(`CREATE TEMP TABLE seed_lots ON COMMIT DROP AS
     SELECT id FROM lotes WHERE numero_lote LIKE '${LOT_PREFIX}%'`);
+  // Antes de borrar usuarios y lotes: sus claves foráneas dejarían el historial sin actor ni lote.
+  await client.query(`DELETE FROM productos_precio_historial WHERE actor_id IN (SELECT id FROM seed_users)
+    OR lote_id IN (SELECT id FROM seed_lots)`);
   await client.query(`CREATE TEMP TABLE seed_reservations ON COMMIT DROP AS
     SELECT id FROM reservas WHERE usuario_id IN (SELECT id FROM seed_users)
     UNION SELECT reserva_id FROM reserva_detalles WHERE lote_id IN (SELECT id FROM seed_lots)`);
@@ -589,16 +773,62 @@ async function cleanPreviousSeed(client) {
 
 // La base del portal solo guarda clientes: se copian con los mismos ids para que el cliente
 // autenticado en el portal sea el mismo que figura en las reservas de la tienda.
-async function seedPortalClients(portalPool, clients) {
+// Copia en el portal de las reservas de los clientes demo, tal como las vería si las hubieran hecho
+// desde las apps: mismo id, código y plazo que en la tienda, las líneas que pidió el cliente (`items`)
+// y lo que asignó la tienda (`detalles`, en el formato de su respuesta). Así "Mis reservas" muestra el
+// historial también con la tienda y el portal en bases separadas.
+function buildPortalReservations(sim, lots) {
+  const lotById = new Map(lots.map(l => [l.id, l]));
+  const linesByReservation = new Map();
+  for (const detail of sim.details) {
+    if (!linesByReservation.has(detail.reserva_id)) linesByReservation.set(detail.reserva_id, []);
+    linesByReservation.get(detail.reserva_id).push(detail);
+  }
+  return sim.reservations.map(reservation => {
+    const lines = linesByReservation.get(reservation.id) || [];
+    const items = new Map();
+    for (const line of lines) {
+      const lot = lotById.get(line.lote_id);
+      const key = `${lot.product.id}:${line.promocion_id || ''}`;
+      const item = items.get(key) || { productoId: lot.product.id, cantidad: 0, ...(line.promocion_id ? { promocionId: line.promocion_id } : {}) };
+      item.cantidad += line.cantidad;
+      items.set(key, item);
+    }
+    return {
+      id: reservation.id, cliente_id: reservation.usuario_id, estado: reservation.estado,
+      codigo_retiro: reservation.codigo_retiro, fecha_expiracion: reservation.fecha_expiracion,
+      items: [...items.values()],
+      detalles: lines.map(line => {
+        const lot = lotById.get(line.lote_id);
+        return {
+          loteId: lot.id, cantidad: line.cantidad, precioUnitario: Number(line.precio_unitario),
+          numeroLote: lot.numero_lote, productoId: lot.product.id, productoNombre: lot.product.nombre,
+          codigoBarras: lot.product.codigoBarras, imagenUrl: lot.product.imagenUrl || null
+        };
+      }),
+      created_at: reservation.created_at, updated_at: reservation.updated_at
+    };
+  });
+}
+
+async function seedPortal(portalPool, clients, portalReservations) {
   await runMigrations(portalPool, { targets: ['portal'] });
   const client = await portalPool.connect();
   try {
     await client.query('BEGIN');
+    // Primero las reservas (y sus comandos, en cascada): impiden borrar a sus clientes.
+    await client.query(`DELETE FROM reservas_portal WHERE cliente_id IN
+      (SELECT id FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}')`);
     await client.query(`DELETE FROM usuarios WHERE email LIKE '%@${DEMO_EMAIL_DOMAIN}'`);
     await bulkInsert(client, 'usuarios', [
       ['id', 'uuid'], ['nombre', 'text'], ['email', 'text'], ['rol', 'text', 'rol_usuario'],
       ['password_hash', 'text'], ['created_at', 'timestamptz']
     ], clients);
+    await bulkInsert(client, 'reservas_portal', [
+      ['id', 'uuid'], ['cliente_id', 'uuid'], ['estado', 'text'], ['codigo_retiro', 'text'],
+      ['fecha_expiracion', 'timestamptz'], ['items', 'jsonb'], ['detalles', 'jsonb'],
+      ['created_at', 'timestamptz'], ['updated_at', 'timestamptz']
+    ], portalReservations);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -621,16 +851,16 @@ async function upsertCatalog(client, catalog) {
     const descripcion = [product.marca, product.contenido].filter(Boolean).join(' · ') || null;
     const res = await client.query(`
       INSERT INTO productos (categoria_id, codigo_barras, nombre, descripcion, precio_venta,
-                             impuesto_porcentaje, min_stock_alerta, imagen_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                             impuesto_porcentaje, min_stock_alerta, imagen_url, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (codigo_barras) DO UPDATE SET
         categoria_id = EXCLUDED.categoria_id, nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion,
         precio_venta = EXCLUDED.precio_venta, impuesto_porcentaje = EXCLUDED.impuesto_porcentaje,
         min_stock_alerta = EXCLUDED.min_stock_alerta, imagen_url = EXCLUDED.imagen_url,
-        updated_at = CURRENT_TIMESTAMP
+        created_at = EXCLUDED.created_at, updated_at = CURRENT_TIMESTAMP
       RETURNING id`,
     [categoryIds.get(product.categoria), product.codigoBarras, product.nombre, descripcion, product.pvp,
-      product.iva, product.pvp < 2 ? randInt(20, 40) : randInt(8, 20), product.imagenUrl]);
+      product.iva, product.pvp < 2 ? randInt(20, 40) : randInt(8, 20), product.imagenUrl, iso(product.createdAt)]);
     product.id = res.rows[0].id;
   }
 }
@@ -652,9 +882,11 @@ async function main() {
     const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
     const users = buildUsers(passwordHash);
     const lots = buildLots(products);
+    const priceChanges = buildPriceChanges(products, lots, users);
     const sim = simulate({ products, lots, users });
     finalizeLots(lots);
     const { alerts, promotions } = buildAlertsAndPromotions(lots, users);
+    const offerStats = applyOfferLimits(promotions, lots, sim);
 
     await client.query('BEGIN');
     await cleanPreviousSeed(client);
@@ -675,12 +907,23 @@ async function main() {
       cantidad_disponible: l.disp, cantidad_reservada: l.res, ubicacion: l.ubicacion, estado: l.estado,
       created_at: iso(l.ingreso), updated_at: iso(Math.min(NOW, Math.max(l.ingreso, l.caducidad)))
     })));
+    // Las ofertas van antes que las reservas: sus líneas con descuento las referencian.
+    await bulkInsert(client, 'promociones_ia', [
+      ['id', 'uuid'], ['lote_id', 'uuid'], ['descuento_porcentaje', 'numeric'], ['frase_promocional', 'text'],
+      ['razon_ia', 'text'], ['activa', 'boolean'], ['estado', 'text', 'estado_promocion'], ['modelo_ia', 'text'],
+      ['prompt_version', 'text'], ['cache_key', 'text'], ['cache_hit', 'boolean'], ['created_at', 'timestamptz'],
+      ['aprobada_por', 'uuid'], ['aprobada_at', 'timestamptz'], ['rechazada_por', 'uuid'],
+      ['rechazada_at', 'timestamptz'], ['motivo_rechazo', 'text'], ['limite_por_pedido', 'int'],
+      ['stock_oferta', 'int'], ['vigente_hasta', 'timestamptz']
+    ], promotions.map(p => ({ limite_por_pedido: null, stock_oferta: null, vigente_hasta: null, ...p })));
     await bulkInsert(client, 'reservas', [
-      ['id', 'uuid'], ['usuario_id', 'uuid'], ['codigo_retiro', 'text'], ['estado', 'text', 'estado_reserva'],
-      ['fecha_expiracion', 'timestamptz'], ['created_at', 'timestamptz'], ['updated_at', 'timestamptz']
+      ['id', 'uuid'], ['usuario_id', 'uuid'], ['cliente_nombre', 'text'], ['codigo_retiro', 'text'],
+      ['estado', 'text', 'estado_reserva'], ['fecha_expiracion', 'timestamptz'], ['created_at', 'timestamptz'],
+      ['updated_at', 'timestamptz']
     ], sim.reservations);
     await bulkInsert(client, 'reserva_detalles', [
-      ['id', 'uuid'], ['reserva_id', 'uuid'], ['lote_id', 'uuid'], ['cantidad', 'int'], ['precio_unitario', 'numeric']
+      ['id', 'uuid'], ['reserva_id', 'uuid'], ['lote_id', 'uuid'], ['cantidad', 'int'], ['precio_unitario', 'numeric'],
+      ['promocion_id', 'uuid']
     ], sim.details);
     await bulkInsert(client, 'inventario_movimientos', [
       ['id', 'uuid'], ['lote_id', 'uuid'], ['tipo', 'text'], ['cantidad', 'int'],
@@ -696,20 +939,21 @@ async function main() {
       ['id', 'uuid'], ['lote_id', 'uuid'], ['dias_para_vencer', 'int'], ['nivel', 'text', 'nivel_alerta'],
       ['atendida', 'boolean'], ['created_at', 'timestamptz']
     ], alerts);
-    await bulkInsert(client, 'promociones_ia', [
-      ['id', 'uuid'], ['lote_id', 'uuid'], ['descuento_porcentaje', 'numeric'], ['frase_promocional', 'text'],
-      ['razon_ia', 'text'], ['activa', 'boolean'], ['estado', 'text', 'estado_promocion'], ['modelo_ia', 'text'],
-      ['prompt_version', 'text'], ['cache_key', 'text'], ['cache_hit', 'boolean'], ['created_at', 'timestamptz'],
-      ['aprobada_por', 'uuid'], ['aprobada_at', 'timestamptz'], ['rechazada_por', 'uuid'],
-      ['rechazada_at', 'timestamptz'], ['motivo_rechazo', 'text']
-    ], promotions);
+    await bulkInsert(client, 'productos_precio_historial', [
+      ['producto_id', 'uuid'], ['precio_anterior', 'numeric'], ['precio_nuevo', 'numeric'], ['origen', 'text'],
+      ['lote_id', 'uuid'], ['actor_id', 'uuid'], ['created_at', 'timestamptz']
+    ], priceChanges.map(change => ({
+      producto_id: change.product.id, precio_anterior: change.anterior, precio_nuevo: change.nuevo, origen: change.origen,
+      lote_id: change.lot ? change.lot.id : null, actor_id: change.actor.id, created_at: iso(change.t)
+    })));
     await client.query('COMMIT');
 
     const separatePortalDb = JSON.stringify(connectionSettings('portal')) !== JSON.stringify(connectionSettings('store'));
     if (separatePortalDb) {
       const portalPool = getPool('portal');
-      await seedPortalClients(portalPool, users.filter(u => u.rol === 'CLIENTE'));
-      console.log(`👥 ${users.filter(u => u.rol === 'CLIENTE').length} clientes demo copiados a la base del portal`);
+      const portalReservations = buildPortalReservations(sim, lots);
+      await seedPortal(portalPool, users.filter(u => u.rol === 'CLIENTE'), portalReservations);
+      console.log(`👥 ${users.filter(u => u.rol === 'CLIENTE').length} clientes demo y ${portalReservations.length} reservas copiados a la base del portal`);
     }
 
     const byState =(list, key) => list.reduce((acc, x) => { acc[x[key]] = (acc[x[key]] || 0) + 1; return acc; }, {});
@@ -726,11 +970,15 @@ async function main() {
       movimientos: sim.movements.length,
       mermas: sim.wastes.length,
       alertas: alerts.length,
-      promociones: promotions.length
+      promociones: promotions.length,
+      cambios_pvp: priceChanges.length,
+      productos_nuevos: products.filter(p => p.createdAt > NOW - NEW_PRODUCT_DAYS * DAY_MS).length
     });
     console.log('Lotes por estado:', byState(lots, 'estado'));
     console.log('Reservas por estado:', byState(sim.reservations, 'estado'));
     console.log('Promociones por estado:', byState(promotions, 'estado'));
+    console.log(`Ofertas con límites: ${offerStats.ended} vencidas, ${offerStats.soldOut} agotadas, `
+      + `${offerStats.lines} líneas de reserva en ${offerStats.offers} ofertas`);
     console.log(`Ventas confirmadas simuladas: $${round2(revenue).toLocaleString('es-EC')}`);
     console.log(`\n🔑 Accesos demo (contraseña: ${DEMO_PASSWORD}):`);
     console.log(`   admin@${DEMO_EMAIL_DOMAIN} · bodega@${DEMO_EMAIL_DOMAIN} · percha@${DEMO_EMAIL_DOMAIN} · cliente@${DEMO_EMAIL_DOMAIN}`);

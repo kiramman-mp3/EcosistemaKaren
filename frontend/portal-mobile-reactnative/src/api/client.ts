@@ -69,6 +69,8 @@ export interface BackendProduct {
   minStockAlerta: number;
   imagenUrl?: string | null;
   aliasId?: string;
+  /** Unidades vendidas en los últimos 30 días (lo calcula la tienda). */
+  vendidos30d?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -95,10 +97,26 @@ export interface BackendPromotion {
   razonIa?: string;
   activa: boolean;
   created_at?: string;
+  /** Límites que fija el ADMIN (null = sin tope) y unidades con descuento que quedan. */
+  limitePorPedido?: number | null;
+  stockOferta?: number | null;
+  vigenteHasta?: string | null;
+  unidadesRestantes?: number | null;
+}
+
+export interface CatalogStatus {
+  success: boolean;
+  mode: 'mirror' | 'direct';
+  /** true si falta alguna sección o la copia lleva demasiado sin sincronizarse con la tienda. */
+  stale: boolean;
+  lastSyncAt: string | null;
+  message?: string;
 }
 
 export interface CreateReservationRequest {
   usuarioId: string;
+  /** Cuánto tiempo se aparta (el backend acepta de 15 a 240 minutos; la app ofrece de 30 a 120). Sin él, 30. */
+  ttlMinutos?: number;
   items: {
     productoId: string;
     cantidad: number;
@@ -175,6 +193,16 @@ export const api = {
     }
   },
 
+  // Estado de la copia del catálogo que mantiene el portal (ADR-003). Si el backend no lo expone, se ignora.
+  async getCatalogStatus(): Promise<CatalogStatus | null> {
+    try {
+      const res = await apiClient.get<CatalogStatus>('/catalog/status', { timeout: 4000 });
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+
   // 4. Lots
   async getLots(): Promise<BackendLot[]> {
     const res = await apiClient.get<{ success: boolean; data: BackendLot[] }>('/availability');
@@ -202,6 +230,17 @@ export const api = {
 
   async cancelReservation(id: string): Promise<BackendReservation> {
     const res = await apiClient.post<{ success: boolean; data: BackendReservation }>(`/reservations/${id}/cancel`);
+    return res.data.data;
+  },
+
+  /**
+   * Suma tiempo a una reserva por retirar. La tienda confirma el nuevo vencimiento y el servidor puede tardar
+   * hasta ~8 s en recibir su respuesta, por eso el plazo es mayor que el de las demás solicitudes.
+   */
+  async extendReservation(id: string, minutosAdicionales: number): Promise<BackendReservation> {
+    const res = await apiClient.post<{ success: boolean; data: BackendReservation }>(
+      `/reservations/${encodeURIComponent(id)}/extend`, { minutosAdicionales }, { timeout: 15000 }
+    );
     return res.data.data;
   },
 

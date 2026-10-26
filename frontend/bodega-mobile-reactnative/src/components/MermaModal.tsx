@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { confirmAction } from '../utils/dialogs';
+import { sheetFrame } from '../theme/layout';
 import { Button, Chip, Field, Notice } from './ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { getErrorMessage } from '../utils/errors';
@@ -70,7 +71,7 @@ export const MermaModal: React.FC<MermaModalProps> = ({ visible, lotId, lotNumbe
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, sheetFrame]}>
           <ScrollView keyboardShouldPersistTaps="handled">
             <View style={styles.head}>
               <View style={styles.flex}>

@@ -19,11 +19,14 @@ import { Footer } from './components/Footer';
 import { ThemeProvider } from './context/ThemeContext';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './types';
 import { AlertTriangle } from 'lucide-react';
-import { api, BackendCategory, BackendReservation } from './api/client';
+import { api, BackendReservation } from './api/client';
 import { reservationToPass, selectActiveReservation } from './reservations/recovery';
 import { isAwaitingStore, waitForStoreResolution } from './reservations/awaitStore';
 import { daysUntil, formatDate } from './utils/dates';
-import { getErrorMessage } from './utils/errors';
+import { getErrorMessage, getErrorStatus } from './utils/errors';
+import { STORE_INFO } from './config/storeInfo';
+import { bestSellerIds, isNewProduct } from './config/catalogRules';
+import { offerCartCap, offerEnded, offerUnitsAvailable } from './config/offerRules';
 
 // Foto neutra si un producto aún no tiene imagen propia.
 const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -51,10 +54,7 @@ export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [offers, setOffers] = useState<FlashOffer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [backendCategories, setBackendCategories] = useState<BackendCategory[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(0);
-  const [totalProducts, setTotalProducts] = useState<number>(0);
-  const [stockByProduct, setStockByProduct] = useState<Map<string, number>>(new Map());
 
   const [currentPass, setCurrentPass] = useState<ReservationPass | null>(null);
   const [reservations, setReservations] = useState<BackendReservation[]>([]);
@@ -85,6 +85,11 @@ export const App: React.FC = () => {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToastMessage(null), 3500);
   }, []);
+
+  // Con la lista abierta el aviso sobra (el producto ya se ve en ella) y taparía el selector de tiempo.
+  useEffect(() => {
+    if (isCartOpen) setToastMessage(null);
+  }, [isCartOpen]);
 
   const goTo = useCallback((tab: NavTab) => {
     setActiveTab(tab);
@@ -129,11 +134,9 @@ export const App: React.FC = () => {
     try {
       await checkHeartbeat();
       void api.getCatalogStatus().then(status => setCatalogStale(Boolean(status?.stale)));
-      const [backendCats, pageRes, backendLots, backendPromos] = await Promise.all([
-        api.getCategories(), api.getProductsPage({ limit: 24, offset: 0 }), api.getLots(), api.getPromotions(),
+      const [backendCats, backendProducts, backendLots, backendPromos] = await Promise.all([
+        api.getCategories(), api.getAllProducts(), api.getLots(), api.getPromotions(),
       ]);
-      setBackendCategories(backendCats);
-      setTotalProducts(pageRes.total);
       const categoryById = new Map(backendCats.map(category => [category.id, category.nombre]));
       setCategoriesList(Array.from(new Set(['Todos', ...backendCats.map(category => category.nombre)])));
 
@@ -142,9 +145,8 @@ export const App: React.FC = () => {
         if (lot.estado !== 'ACTIVO') continue;
         stockMap.set(lot.productoId, (stockMap.get(lot.productoId) || 0) + (lot.cantidadDisponible || 0));
       }
-      setStockByProduct(stockMap);
 
-      const mappedProducts: Product[] = pageRes.items.map(bp => {
+      const mappedProducts: Product[] = backendProducts.map(bp => {
         const catName = categoryById.get(bp.categoriaId) || 'Sin categoría';
         return {
           id: bp.id,
@@ -157,27 +159,37 @@ export const App: React.FC = () => {
           unit: 'Unidad',
           description: describe(bp.descripcion),
           barcode: bp.codigoBarras,
+          createdAt: bp.created_at,
+          soldLast30d: bp.vendidos30d ?? 0,
+          isNew: isNewProduct(bp.created_at),
         };
       });
+      const bestSellers = bestSellerIds(mappedProducts);
+      for (const product of mappedProducts) product.isBestSeller = bestSellers.has(product.id);
       setProducts(mappedProducts);
 
-      const productById = new Map(pageRes.items.map(product => [product.id, product]));
+      const productById = new Map(backendProducts.map(product => [product.id, product]));
       const mappedOffers: FlashOffer[] = backendPromos.flatMap(promo => {
         const lot = backendLots.find(l => l.id === promo.loteId);
         const product = lot && productById.get(lot.productoId);
-        if (!lot || !product || lot.cantidadDisponible <= 0) return [];
+        if (!lot || !product || lot.cantidadDisponible <= 0 || offerEnded(promo.vigenteHasta)) return [];
         const originalPrice = Number(product.precioVenta);
+        // Con stock de oferta, el medidor y las unidades son los de la oferta; sin él, los del lote.
+        const units = offerUnitsAvailable({ lotAvailable: lot.cantidadDisponible, unidadesRestantes: promo.unidadesRestantes });
+        if (units <= 0) return [];
         return [{
           id: promo.id,
           title: promo.frasePromocional,
           category: categoryById.get(product.categoriaId) || 'Oferta',
           discountBadge: `-${promo.descuentoPorcentaje}%`,
           aiBadge: true,
-          urgencyBadge: `Quedan ${lot.cantidadDisponible}`,
+          urgencyBadge: `Quedan ${units}`,
           price: +(originalPrice * (1 - promo.descuentoPorcentaje / 100)).toFixed(2),
           originalPrice,
-          stockTotal: Math.max(lot.cantidadIngresada || 0, lot.cantidadDisponible),
-          stockAvailable: lot.cantidadDisponible,
+          stockTotal: promo.stockOferta ? Math.max(promo.stockOferta, units) : Math.max(lot.cantidadIngresada || 0, units),
+          stockAvailable: units,
+          maxPerOrder: promo.limitePorPedido ?? null,
+          endsAt: promo.vigenteHasta ?? null,
           expiryText: `Vence: ${formatDate(lot.fechaCaducidad)}`,
           expiresOn: lot.fechaCaducidad,
           productName: product.nombre,
@@ -213,65 +225,10 @@ export const App: React.FC = () => {
     return () => clearInterval(hbInterval);
   }, [loadBackendData, checkHeartbeat, syncReservations]);
 
-  // Debounce para búsqueda en servidor
-  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Al cambiar búsqueda o categoría, reiniciar paginación
+  // Una búsqueda o un pasillo nuevo vuelven a la primera página del catálogo.
   useEffect(() => {
     setCurrentPage(0);
-  }, [debouncedSearch, selectedCategory]);
-
-  // Consultar productos del servidor ante cambios de filtro o página
-  const fetchProductsPage = useCallback(async (q: string, category: string, page: number) => {
-    if (backendCategories.length === 0) return;
-    setLoadingProducts(true);
-    try {
-      const selectedCat = backendCategories.find(c => c.nombre === category);
-      const categoriaId = category !== 'Todos' && selectedCat ? selectedCat.id : undefined;
-      const pageSize = 24;
-      const res = await api.getProductsPage({
-        q: q.trim() || undefined,
-        categoriaId,
-        limit: pageSize,
-        offset: page * pageSize,
-      });
-      setTotalProducts(res.total);
-      const categoryById = new Map(backendCategories.map(c => [c.id, c.nombre]));
-      const mappedProducts: Product[] = res.items.map(bp => {
-        const catName = categoryById.get(bp.categoriaId) || 'Sin categoría';
-        return {
-          id: bp.id,
-          name: bp.nombre,
-          category: catName,
-          price: Number(bp.precioVenta),
-          stock: stockByProduct.get(bp.id) || 0,
-          image: bp.imagenUrl || FALLBACK_IMAGE,
-          badge: catName,
-          unit: 'Unidad',
-          description: describe(bp.descripcion),
-          barcode: bp.codigoBarras,
-        };
-      });
-      setProducts(mappedProducts);
-      setDataState(mappedProducts.length === 0 ? 'empty' : 'ready');
-    } catch {
-      // Ignorar fallo transitorio
-    } finally {
-      setLoadingProducts(false);
-    }
-  }, [backendCategories, stockByProduct]);
-
-  useEffect(() => {
-    if (backendCategories.length > 0 && activeTab === 'productos') {
-      void fetchProductsPage(debouncedSearch, selectedCategory, currentPage);
-    }
-  }, [debouncedSearch, selectedCategory, currentPage, activeTab, fetchProductsPage, backendCategories.length]);
+  }, [searchQuery, selectedCategory]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -306,7 +263,9 @@ export const App: React.FC = () => {
     if (product.stock <= 0) return;
     const existing = cart.find(item => item.product.id === product.id);
     if (existing && existing.quantity >= product.stock) {
-      showToast(`Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
+      showToast(product.maxPerOrder && product.maxPerOrder === product.stock
+        ? `Esta oferta admite hasta ${product.stock} por pedido. Ya los tienes en tu lista.`
+        : `Solo quedan ${product.stock} de ${product.name}. Ya los tienes todos en tu lista.`);
       return;
     }
     setCart(prev => existing
@@ -396,7 +355,7 @@ export const App: React.FC = () => {
         initialSeconds: remainingSeconds,
         remainingSeconds,
         customerName: currentUser.nombre,
-        storeLocation: 'Sucursal Matriz',
+        storeLocation: STORE_INFO.tradeName,
         items: cart.map(i => ({ productName: i.product.name, quantity: i.quantity, price: i.product.price, lotCode: 'FEFO' })),
         total,
       });
@@ -407,6 +366,8 @@ export const App: React.FC = () => {
       void loadBackendData();
     } catch (err: unknown) {
       setCartError(getErrorMessage(err, 'No pudimos apartar tus productos. Intenta de nuevo.'));
+      // Sin stock o fuera de los límites de una oferta: se actualizan las unidades que se muestran.
+      if (getErrorStatus(err) === 409) void loadBackendData();
     } finally {
       setIsSubmittingReservation(false);
     }
@@ -428,7 +389,8 @@ export const App: React.FC = () => {
       isOffer: true,
       price: offer.price,
       originalPrice: offer.originalPrice,
-      stock: offer.stockAvailable,
+      stock: offerCartCap({ lotAvailable: offer.stockAvailable, limitePorPedido: offer.maxPerOrder }),
+      maxPerOrder: offer.maxPerOrder,
       badge: offer.discountBadge,
     });
   };
@@ -570,7 +532,6 @@ export const App: React.FC = () => {
             searchQuery={searchQuery}
             onSearch={setSearchQuery}
             currentPage={currentPage}
-            totalProducts={totalProducts}
             pageSize={24}
             onPageChange={page => setCurrentPage(page)}
           />

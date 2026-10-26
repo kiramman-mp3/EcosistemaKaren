@@ -15,7 +15,8 @@ describe('Nuevas funcionalidades en rama fix/arreglos', () => {
 
     rerender(<TermsModal isOpen={true} onClose={handleClose} />);
     expect(screen.getByText(/Términos y Condiciones del Servicio/i)).toBeInTheDocument();
-    expect(screen.getByText(/TTL de 30 Minutos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Política de Reserva y Tiempo de Retiro/i)).toBeInTheDocument();
+    expect(screen.getByText(/hasta un máximo de 4 horas/i)).toBeInTheDocument();
     expect(screen.getByText(/Sistema FEFO/i)).toBeInTheDocument();
 
     const acceptBtn = screen.getByRole('button', { name: /Entendido y Acepto/i });

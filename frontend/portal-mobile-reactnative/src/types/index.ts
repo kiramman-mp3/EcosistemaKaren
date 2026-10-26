@@ -14,6 +14,12 @@ export interface Product {
   unit?: string;
   description?: string;
   barcode?: string;
+  /** Alta real del producto en la tienda y unidades vendidas en los últimos 30 días. */
+  createdAt?: string;
+  soldLast30d?: number;
+  /** Insignias calculadas con las reglas de config/catalogRules. */
+  isNew?: boolean;
+  isBestSeller?: boolean;
 }
 
 export interface FlashOffer {
@@ -29,6 +35,8 @@ export interface FlashOffer {
   stockAvailable: number;
   expiryText: string;
   expiresOn?: string;
+  maxPerOrder?: number | null; // límite por pedido que fijó la tienda
+  endsAt?: string | null;      // fecha y hora real de fin de la oferta
   productName?: string;
   image: string | null;
   loteId?: string;
@@ -43,6 +51,10 @@ export interface CategoryItem {
 }
 
 export interface ReservationPass {
+  /** Id de la reserva, para pedirle más tiempo a la tienda. */
+  id?: string;
+  /** Si todavía cabe otra extensión sin pasar del máximo permitido. */
+  canExtend?: boolean;
   code: string;
   status: string;
   /** Duración total de la reserva; si falta se asume la de 30 minutos. */

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { connectionSettings } = require('../src/infrastructure/db/postgres');
+const { connectionSettings, sslSettings } = require('../src/infrastructure/db/postgres');
 
 const storeEnv = {
   DB_HOST: 'db-tienda',
@@ -44,4 +44,20 @@ test('las variables vacías se ignoran y se aplican los valores por defecto', ()
   assert.equal(settings.database, 'ecosistema_karen');
   assert.equal(settings.port, 5432);
   assert.equal(settings.host, 'localhost');
+});
+
+test('sin DB_SSL no se usa TLS', () => {
+  assert.equal(sslSettings('store', {}), undefined);
+  assert.equal(sslSettings('portal', { DB_SSL: 'false' }), undefined);
+});
+
+test('DB_SSL=true verifica el certificado y no-verify solo cifra', () => {
+  assert.deepEqual(sslSettings('store', { DB_SSL: 'true' }), { rejectUnauthorized: true });
+  assert.deepEqual(sslSettings('store', { DB_SSL: 'no-verify' }), { rejectUnauthorized: false });
+});
+
+test('el portal prefiere PORTAL_DB_SSL y cae en DB_SSL; la tienda ignora PORTAL_DB_SSL', () => {
+  assert.deepEqual(sslSettings('portal', { DB_SSL: 'true', PORTAL_DB_SSL: 'no-verify' }), { rejectUnauthorized: false });
+  assert.deepEqual(sslSettings('portal', { DB_SSL: 'true', PORTAL_DB_SSL: '' }), { rejectUnauthorized: true });
+  assert.equal(sslSettings('store', { PORTAL_DB_SSL: 'true' }), undefined);
 });

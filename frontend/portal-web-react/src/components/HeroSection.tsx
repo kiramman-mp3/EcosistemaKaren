@@ -5,6 +5,7 @@ import { ExpiryStamp, OldPrice, Price, ProductImage } from './ui/Tag';
 import { Button } from './ui/Button';
 import { Sticker } from './ui/Sticker';
 import { categoryTone } from '../lib/categoryTone';
+import { RESERVATION_RANGE_TEXT } from '../config/reservationRules';
 
 interface HeroSectionProps {
   onNavigate: (tab: NavTab) => void;
@@ -58,7 +59,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             Apártalo desde tu casa. Lo pagas cuando llegues.
           </h1>
           <p className="mt-6 text-lg leading-relaxed max-w-[44ch] font-semibold text-mora/90">
-            Armas tu lista, te guardamos todo 30 minutos y pagas en caja al retirar. Sin fila.
+            Armas tu lista, te la guardamos {RESERVATION_RANGE_TEXT} y pagas en caja al retirar. Sin fila.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button onClick={() => onNavigate('productos')} size="lg">

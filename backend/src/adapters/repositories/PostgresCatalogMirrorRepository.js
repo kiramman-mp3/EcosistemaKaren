@@ -25,6 +25,10 @@ class PostgresCatalogMirrorRepository {
     const columns = spec.fields.map(f => f.column);
     const fixed = spec.fixed || [];
     const recordDef = spec.fields.map(f => `${f.column} ${f.sql}`).join(', ');
+    // Un campo opcional que no llegó conserva el valor de la copia (prev) o toma su valor por defecto.
+    const values = spec.fields.map(f => (f.optional
+      ? `COALESCE(x.${f.column}, prev.${f.column}, ${f.fallback}) AS ${f.column}`
+      : `x.${f.column}`));
     const updates = [
       ...columns.filter(column => column !== 'id').map(column => `${column} = EXCLUDED.${column}`),
       ...fixed.map(([column]) => `${column} = EXCLUDED.${column}`),
@@ -32,8 +36,9 @@ class PostgresCatalogMirrorRepository {
     ];
     return `
       INSERT INTO ${spec.table} (${[...columns, ...fixed.map(([column]) => column)].join(', ')})
-      SELECT ${[...columns, ...fixed.map(([column, value]) => `${value} AS ${column}`)].join(', ')}
+      SELECT ${[...values, ...fixed.map(([column, value]) => `${value} AS ${column}`)].join(', ')}
       FROM jsonb_to_recordset($1::jsonb) AS x(${recordDef})
+      LEFT JOIN ${spec.table} prev ON prev.id = x.id
       ON CONFLICT (id) DO UPDATE SET ${updates.join(', ')}`;
   }
 

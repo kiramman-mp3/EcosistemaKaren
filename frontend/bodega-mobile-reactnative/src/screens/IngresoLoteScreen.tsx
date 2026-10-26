@@ -8,8 +8,11 @@ import { classifyExpiryDays } from '../config/businessRules';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { Button, DaysCounter, ExpiryStamp, Field, Notice, ScreenTitle } from '../components/ui';
+import { formFrame } from '../theme/layout';
 import { colors, fonts, levelColors, radius, themed } from '../theme/tokens';
 import { getErrorMessage, getErrorStatus } from '../utils/errors';
+import { confirmAction } from '../utils/dialogs';
+import { newPriceFrom } from '../utils/price';
 
 type BarcodeLookupState = 'idle' | 'loading' | 'found' | 'invalid' | 'not-found' | 'error';
 
@@ -19,12 +22,14 @@ interface IngresoLoteScreenProps {
   onOpenCatalog: () => void;
   onRefresh: () => void;
   refreshing: boolean;
+  /** Solo el ADMIN puede cambiar el PVP al recibir un lote. */
+  canChangePrice?: boolean;
 }
 
 const newLotNumber = () => `LOT-IN-${Math.floor(1000 + Math.random() * 9000)}`;
 
 export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
-  products, onLotCreated, onOpenCatalog, onRefresh, refreshing,
+  products, onLotCreated, onOpenCatalog, onRefresh, refreshing, canChangePrice = false,
 }) => {
   const [barcode, setBarcode] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<BackendProduct | null>(null);
@@ -34,6 +39,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   const [costoUnitario, setCostoUnitario] = useState('');
   const [cantidad, setCantidad] = useState('50');
   const [ubicacion, setUbicacion] = useState<UbicacionLote>('BODEGA');
+  const [nuevoPvp, setNuevoPvp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -131,6 +137,22 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       setError('Escribe cuántas unidades llegaron.');
       return;
     }
+    const currentPrice = Number(selectedProduct.precioVenta);
+    const newPrice = canChangePrice ? newPriceFrom(nuevoPvp, currentPrice) : undefined;
+    if (newPrice === null) {
+      setError('El nuevo PVP debe ser un monto mayor a cero, por ejemplo 2.75. Déjalo vacío para no cambiarlo.');
+      return;
+    }
+    // Cambiar el PVP afecta a todo el producto y a lo que ven los clientes: se confirma antes.
+    if (newPrice !== undefined) {
+      const confirmed = await confirmAction(
+        'Cambiar el PVP',
+        `${selectedProduct.nombre} pasará de $${currentPrice.toFixed(2)} a $${newPrice.toFixed(2)} junto con este lote. `
+          + 'Las reservas ya hechas conservan su precio y el portal lo verá en unos segundos.',
+        { confirmLabel: 'Cambiar PVP' },
+      );
+      if (!confirmed) return;
+    }
 
     setLoading(true);
     setError(null);
@@ -144,12 +166,17 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
       costoUnitario: cost,
       cantidadIngresada: qty,
       ubicacion,
+      ...(newPrice !== undefined ? { nuevoPrecioVenta: newPrice } : {}),
     };
 
     try {
       const created = await api.createLot(payload);
-      setSuccessMsg(`Lote ${created.numeroLote} registrado: ${created.cantidadIngresada} unidades en ${created.ubicacion === 'PERCHA' ? 'percha' : 'bodega'}.`);
+      const priceNote = created.cambioPrecio
+        ? ` PVP actualizado de $${created.cambioPrecio.anterior.toFixed(2)} a $${created.cambioPrecio.nuevo.toFixed(2)}.`
+        : '';
+      setSuccessMsg(`Lote ${created.numeroLote} registrado: ${created.cantidadIngresada} unidades en ${created.ubicacion === 'PERCHA' ? 'percha' : 'bodega'}.${priceNote}`);
       setNumeroLote(newLotNumber());
+      setNuevoPvp('');
       setBarcode('');
       onLotCreated();
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -171,7 +198,7 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, formFrame]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} colors={[colors.ink]} />}
     >
@@ -273,6 +300,19 @@ export const IngresoLoteScreen: React.FC<IngresoLoteScreenProps> = ({
           })}
         </View>
       </Section>
+
+      {canChangePrice && selectedProduct && (
+        <Section step={4} title="Precio de venta">
+          <Field
+            label="Nuevo PVP ($), opcional"
+            value={nuevoPvp}
+            onChangeText={value => { setError(null); setNuevoPvp(value); }}
+            keyboardType="decimal-pad"
+            placeholder={Number(selectedProduct.precioVenta).toFixed(2)}
+            hint={`Déjalo vacío para mantener $${Number(selectedProduct.precioVenta).toFixed(2)}. Solo administración puede cambiarlo.`}
+          />
+        </Section>
+      )}
 
       <Button label="Registrar lote" icon="checkmark-outline" variant="danger" loading={loading} onPress={() => void handleSave()} />
 

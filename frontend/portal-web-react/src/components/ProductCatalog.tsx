@@ -21,17 +21,17 @@ interface ProductCatalogProps {
   onReserveOffer?: (offer: FlashOffer) => void | Promise<void>;
   searchQuery?: string;
   onSearch?: (query: string) => void;
+  /** El catálogo llega completo y se pagina aquí, después de filtrar y ordenar. */
   currentPage?: number;
-  totalProducts?: number;
   pageSize?: number;
   onPageChange?: (page: number) => void;
 }
 
 import { categoryTone, Tone } from '../lib/categoryTone';
-import { Tag as TagIcon } from 'lucide-react';
+import { Flame, Sparkles, Tag as TagIcon } from 'lucide-react';
 
-type SortKey = 'nombre' | 'precio-asc' | 'precio-desc';
-type QuickFilter = 'todos' | 'ofertas';
+type SortKey = 'nombre' | 'precio-asc' | 'precio-desc' | 'mas-vendidos' | 'nuevos';
+type QuickFilter = 'todos' | 'mas-vendidos' | 'nuevos' | 'ofertas';
 
 const TONE_DOT: Record<Tone, string> = {
   limon: 'bg-limon-deep',
@@ -46,11 +46,13 @@ const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').t
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   products, categories, selectedCategory, onSelectCategory, onAddToCart, loading = false, state,
   errorMessage, onRefresh, offers = [], onReserveOffer, searchQuery = '', onSearch,
-  currentPage = 0, totalProducts, pageSize = 24, onPageChange,
+  currentPage = 0, pageSize = 24, onPageChange,
 }) => {
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('todos');
   const [sort, setSort] = useState<SortKey>('nombre');
+  // Un filtro nuevo vuelve a la primera página: la actual podría no existir con menos resultados.
+  const resetPage = () => onPageChange?.(0);
 
   // Si un producto tiene varias promociones aprobadas se muestra la de mayor descuento.
   const offersByProduct = useMemo(() => {
@@ -80,6 +82,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         || (product.barcode || '').includes(query));
       const matchQuick =
         quickFilter === 'todos' ? true
+        : quickFilter === 'mas-vendidos' ? Boolean(product.isBestSeller)
+        : quickFilter === 'nuevos' ? Boolean(product.isNew)
         : quickFilter === 'ofertas' ? offersByProduct.has(product.id)
         : true;
       return matchCat && matchStock && matchSearch && matchQuick;
@@ -88,11 +92,23 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const priceOf = (product: Product) => offersByProduct.get(product.id)?.price ?? product.price;
 
     return list.sort((a, b) => {
+      // Más vendidos: por unidades vendidas en 30 días. Nuevos: por fecha de alta, la más reciente primero.
+      if (sort === 'mas-vendidos') {
+        return (b.soldLast30d ?? 0) - (a.soldLast30d ?? 0) || a.name.localeCompare(b.name, 'es');
+      }
+      if (sort === 'nuevos') {
+        const created = (product: Product) => (product.createdAt ? new Date(product.createdAt).getTime() : 0);
+        return created(b) - created(a) || a.name.localeCompare(b.name, 'es');
+      }
       if (sort === 'precio-asc') return priceOf(a) - priceOf(b);
       if (sort === 'precio-desc') return priceOf(b) - priceOf(a);
       return a.name.localeCompare(b.name, 'es');
     });
   }, [products, selectedCategory, onlyInStock, quickFilter, searchQuery, sort, offersByProduct]);
+
+  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
+  const page = Math.min(currentPage, pageCount - 1);
+  const pageItems = visible.slice(page * pageSize, (page + 1) * pageSize);
 
   const title = searchQuery.trim()
     ? `Resultados para “${searchQuery.trim()}”`
@@ -163,10 +179,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           })}
         </div>
 
-        {/* Barra de Filtros Rápidos: Todos / En oferta */}
+        {/* Barra de Filtros Rápidos: Todos / Más vendidos / Nuevos / En oferta */}
         <div className="flex items-center gap-2 mb-5 overflow-x-auto no-scrollbar pb-1">
           <button
-            onClick={() => setQuickFilter('todos')}
+            onClick={() => { setQuickFilter('todos'); resetPage(); }}
             className={`press inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border-2 text-xs font-extrabold transition-colors shrink-0 ${
               quickFilter === 'todos'
                 ? 'bg-mora text-white border-mora shadow-pop-xs'
@@ -176,7 +192,29 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             Todos
           </button>
           <button
-            onClick={() => setQuickFilter('ofertas')}
+            onClick={() => { setQuickFilter('mas-vendidos'); resetPage(); }}
+            className={`press inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border-2 text-xs font-extrabold transition-colors shrink-0 ${
+              quickFilter === 'mas-vendidos'
+                ? 'bg-naranja text-mora border-mora shadow-pop-xs'
+                : 'bg-surface text-ink-soft border-aisle-rule hover:bg-page'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-karen-text fill-karen-text" />
+            Más vendidos
+          </button>
+          <button
+            onClick={() => { setQuickFilter('nuevos'); resetPage(); }}
+            className={`press inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border-2 text-xs font-extrabold transition-colors shrink-0 ${
+              quickFilter === 'nuevos'
+                ? 'bg-aguacate-solid text-white border-mora shadow-pop-xs'
+                : 'bg-surface text-ink-soft border-aisle-rule hover:bg-page'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-limon" />
+            Nuevos
+          </button>
+          <button
+            onClick={() => { setQuickFilter('ofertas'); resetPage(); }}
             className={`press inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border-2 text-xs font-extrabold transition-colors shrink-0 ${
               quickFilter === 'ofertas'
                 ? 'bg-karen text-white border-mora shadow-pop-xs'
@@ -192,7 +230,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           <div>
             <h2 className="text-3xl sm:text-5xl text-ink leading-tight">{title}</h2>
             <p className="mt-1 text-sm text-ink-muted tabular">
-              {state === 'ready' || state === 'empty' ? `${visible.length} productos` : ' '}
+              {state === 'ready' || state === 'empty' ? `${visible.length} ${visible.length === 1 ? 'producto' : 'productos'}` : ' '}
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -200,7 +238,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               <input
                 type="checkbox"
                 checked={onlyInStock}
-                onChange={event => setOnlyInStock(event.target.checked)}
+                onChange={event => { setOnlyInStock(event.target.checked); resetPage(); }}
                 className="w-5 h-5 sm:w-4 sm:h-4 accent-[var(--c-karen)]"
               />
               Solo con stock
@@ -209,10 +247,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             <select
               id="orden"
               value={sort}
-              onChange={event => setSort(event.target.value as SortKey)}
+              onChange={event => { setSort(event.target.value as SortKey); resetPage(); }}
               className="h-11 min-w-0 flex-1 sm:flex-none rounded-full border-2 border-mora bg-surface px-4 text-base sm:text-sm font-semibold text-ink"
             >
               <option value="nombre">Nombre (A–Z)</option>
+              <option value="mas-vendidos">Más vendidos primero</option>
+              <option value="nuevos">Nuevos primero</option>
               <option value="precio-asc">Precio: menor a mayor</option>
               <option value="precio-desc">Precio: mayor a menor</option>
             </select>
@@ -268,7 +308,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
-              {visible.map(product => (
+              {pageItems.map(product => (
                 <ProductTag
                   key={product.id}
                   product={product}
@@ -280,24 +320,24 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               ))}
             </div>
 
-            {totalProducts !== undefined && onPageChange && Math.ceil(totalProducts / (pageSize || 24)) > 1 && (
+            {onPageChange && pageCount > 1 && (
               <nav aria-label="Paginación de catálogo" className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-aisle-rule pt-4 text-sm">
                 <p className="text-ink-soft">
-                  Página <span className="font-semibold text-ink">{(currentPage || 0) + 1}</span> de{' '}
-                  <span className="font-semibold text-ink">{Math.ceil(totalProducts / (pageSize || 24))}</span>{' '}
-                  <span className="text-ink-muted">({totalProducts} productos en total)</span>
+                  Página <span className="font-semibold text-ink">{page + 1}</span> de{' '}
+                  <span className="font-semibold text-ink">{pageCount}</span>{' '}
+                  <span className="text-ink-muted">({visible.length} productos en total)</span>
                 </p>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => onPageChange((currentPage || 0) - 1)}
-                    disabled={(currentPage || 0) <= 0 || loading}
+                    onClick={() => onPageChange(page - 1)}
+                    disabled={page <= 0}
                     className="press h-10 px-5 rounded-full border-2 border-mora bg-surface font-bold text-ink disabled:opacity-40"
                   >
                     Anterior
                   </button>
                   <button
-                    onClick={() => onPageChange((currentPage || 0) + 1)}
-                    disabled={(currentPage || 0) >= Math.ceil(totalProducts / (pageSize || 24)) - 1 || loading}
+                    onClick={() => onPageChange(page + 1)}
+                    disabled={page >= pageCount - 1}
                     className="press h-10 px-5 rounded-full border-2 border-mora bg-surface font-bold text-ink disabled:opacity-40"
                   >
                     Siguiente

@@ -73,13 +73,18 @@ test('PostgresRateLimitStore y PostgresHeartbeatStore sincronizan en PostgreSQL'
   await rateLimitStore.resetKey(testKey);
 });
 
-test('HeartbeatSenderWorker emite latidos periódicos por su transporte', async () => {
+test('HeartbeatSenderWorker emite latidos periódicos por su transporte', async (t) => {
   let recorded = 0;
   const mockTransport = {
     send: async () => {
       recorded++;
     }
   };
+  // El aviso de arranque del worker, mezclado con la salida del ejecutor de pruebas de Node 22,
+  // a veces lo hace fallar ("Unable to deserialize cloned data"): se silencia durante la prueba.
+  const originalLog = console.log;
+  console.log = () => {};
+  t.after(() => { console.log = originalLog; });
 
   const worker = new HeartbeatSenderWorker(mockTransport, 50);
   worker.start();
@@ -147,4 +152,24 @@ test('HttpHeartbeatTransport envía la clave de servicio y falla si el portal re
 
   status = 401;
   await assert.rejects(() => transport.send({}), /HTTP 401/);
+});
+
+test('HttpHeartbeatTransport avisa solo de los latidos que el portal aceptó', async () => {
+  const HttpHeartbeatTransport = require('../src/infrastructure/heartbeat/HttpHeartbeatTransport');
+  let status = 200;
+  const monitor = new HeartbeatMonitor(30);
+  const transport = new HttpHeartbeatTransport({
+    baseUrl: 'https://portal.karen.example',
+    apiKey: 'clave-de-servicio',
+    fetchImpl: async () => ({ ok: status < 400, status }),
+    onDelivered: () => monitor.recordHeartbeat()
+  });
+
+  status = 503;
+  await assert.rejects(() => transport.send({}), /HTTP 503/);
+  assert.equal((await monitor.getStatus()).status, 'OFFLINE');
+
+  status = 200;
+  await transport.send({});
+  assert.equal((await monitor.getStatus()).status, 'ONLINE');
 });

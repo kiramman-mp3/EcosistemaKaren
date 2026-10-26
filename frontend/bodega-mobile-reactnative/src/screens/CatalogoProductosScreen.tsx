@@ -11,10 +11,12 @@ import { BackendCategory, BackendProduct } from '../types';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
 import { notify } from '../utils/dialogs';
 import { formatBytes } from '../utils/photo';
+import { formFromProduct, parseProductForm } from '../utils/productForm';
 import { compressPhoto } from '../utils/photoUpload';
 import { Button, Chip, EmptyState, Field, Notice, ScreenTitle } from '../components/ui';
 import { colors, fonts, getAisleColor, radius, themed } from '../theme/tokens';
 import { getErrorStatus, getServerMessage } from '../utils/errors';
+import { sheetFrame, useLayout } from '../theme/layout';
 
 const PAGE_SIZE = 30;
 const EMPTY_FORM = { categoriaId: '', nombre: '', descripcion: '', precioVenta: '', impuestoPorcentaje: '15', minStockAlerta: '10' };
@@ -42,6 +44,11 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
   const [savingCategory, setSavingCategory] = useState(false);
   const [photoTarget, setPhotoTarget] = useState<BackendProduct | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  // Producto que se está editando; null cuando el formulario registra uno nuevo.
+  const [editing, setEditing] = useState<BackendProduct | null>(null);
+  // Foto elegida en el formulario (ya reducida): se sube después de guardar el producto.
+  const [formPhoto, setFormPhoto] = useState<string | null>(null);
+  const { listColumns: columns, gutter } = useLayout();
   const requestId = useRef(0);
   const canCreate = role === 'ADMIN';
   const canEditPhoto = role === 'ADMIN' || role === 'BODEGUERO';
@@ -72,27 +79,33 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, categoryId]);
 
-  // Foto del producto: cámara o galería -> se reduce en el teléfono -> el servidor la comprime y la guarda.
+  // Cámara o galería -> se reduce en el teléfono. Devuelve el archivo listo para subir, o null si se canceló.
+  const capturePhoto = async (source: 'camera' | 'library'): Promise<string | null> => {
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        notify('Sin permiso de cámara', 'Activa el permiso de la cámara para esta app en los ajustes del teléfono.');
+        return null;
+      }
+    }
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false };
+    const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+    const asset = result.canceled ? undefined : result.assets?.[0];
+    if (!asset) return null;
+    return (await compressPhoto(asset.uri, asset.width, asset.height)).uri;
+  };
+
+  // Foto de un producto de la lista: se sube enseguida y el servidor la comprime y la guarda.
   const pickPhoto = async (source: 'camera' | 'library') => {
     const product = photoTarget;
     setPhotoTarget(null);
     if (!product) return;
     try {
-      if (source === 'camera') {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) {
-          notify('Sin permiso de cámara', 'Activa el permiso de la cámara para esta app en los ajustes del teléfono.');
-          return;
-        }
-      }
-      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false };
-      const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
-      const asset = result.canceled ? undefined : result.assets?.[0];
-      if (!asset) return;
+      const uri = await capturePhoto(source);
+      if (!uri) return;
 
       setUploadingId(product.id);
-      const compressed = await compressPhoto(asset.uri, asset.width, asset.height);
-      const { product: updated, image } = await api.uploadProductImage(product.id, compressed.uri);
+      const { product: updated, image } = await api.uploadProductImage(product.id, uri);
       setProducts(current => current.map(item => (item.id === updated.id ? { ...item, imagenUrl: updated.imagenUrl } : item)));
       notify('Foto actualizada', `Se envió ${formatBytes(image.originalBytes)} y se guardó ${formatBytes(image.bytes)} (${image.width}×${image.height}).`);
       void onCatalogChanged();
@@ -103,7 +116,32 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     }
   };
 
+  // Foto del formulario: queda elegida y se sube al guardar. El formulario se cierra un momento para que
+  // la cámara o la galería no se abran encima de otro modal (iOS lo rechaza); sus datos se conservan.
+  const pickFormPhoto = async (source: 'camera' | 'library') => {
+    setFormOpen(false);
+    try {
+      const uri = await capturePhoto(source);
+      if (uri) setFormPhoto(uri);
+    } catch (error: unknown) {
+      notify('No se pudo preparar la foto', getServerMessage(error) || 'Inténtalo de nuevo.');
+    } finally {
+      setFormOpen(true);
+    }
+  };
+
+  const openEdit = (product: BackendProduct) => {
+    setEditing(product);
+    setFormPhoto(null);
+    setBarcode(product.codigoBarras);
+    setForm(formFromProduct(product));
+    setFormError(null);
+    setFormOpen(true);
+  };
+
   const openRegistration = (code = '') => {
+    setEditing(null);
+    setFormPhoto(null);
     setBarcode(normalizeBarcode(code));
     setForm({ ...EMPTY_FORM, categoriaId: categories.length === 1 ? categories[0].id : '' });
     setFormError(null);
@@ -133,28 +171,53 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     openRegistration(normalized);
   };
 
+  // Sube la foto elegida en el formulario, si hay. El producto ya está guardado: si la foto falla no se deshace
+  // nada, solo se avisa para que se vuelva a intentar desde la miniatura de la lista.
+  const uploadFormPhoto = async (productId: string): Promise<{ imagenUrl?: string | null; failure?: string }> => {
+    if (!formPhoto) return {};
+    try {
+      const { product } = await api.uploadProductImage(productId, formPhoto);
+      return { imagenUrl: product.imagenUrl };
+    } catch (error: unknown) {
+      return { failure: getServerMessage(error) || 'Revisa la conexión con la tienda.' };
+    }
+  };
+  const photoFailureNote = (failure?: string) => (failure
+    ? ` La foto no se pudo guardar: ${failure.replace(/[.\s]+$/, '')}. Vuelve a intentarlo tocando la miniatura del producto.`
+    : '');
+
   const saveProduct = async () => {
-    const price = Number(form.precioVenta.replace(',', '.'));
-    const tax = Number(form.impuestoPorcentaje.replace(',', '.'));
-    const minimum = Number(form.minStockAlerta);
-    if (validateScannedBarcode(barcode) !== 'valid') return setFormError('Escanea o escribe un código EAN válido.');
-    if (!form.categoriaId) return setFormError('Elige el pasillo (categoría) del producto.');
-    if (form.nombre.trim().length < 3) return setFormError('El nombre debe tener al menos 3 caracteres.');
-    if (!Number.isFinite(price) || price <= 0) return setFormError('El PVP debe ser mayor a cero.');
-    if (!Number.isFinite(tax) || tax < 0 || tax > 100) return setFormError('El IVA debe estar entre 0 y 100%.');
-    if (!Number.isInteger(minimum) || minimum < 0) return setFormError('El stock mínimo debe ser un número entero.');
+    if (!editing && validateScannedBarcode(barcode) !== 'valid') return setFormError('Escanea o escribe un código EAN válido.');
+    const parsed = parseProductForm(form);
+    if ('error' in parsed) return setFormError(parsed.error);
+    const { values } = parsed;
     setSaving(true); setFormError(null);
     try {
-      const created = await api.createProduct({
-        categoriaId: form.categoriaId, codigoBarras: barcode, nombre: form.nombre.trim(),
-        descripcion: form.descripcion.trim() || undefined, precioVenta: price, impuestoPorcentaje: tax, minStockAlerta: minimum,
-      });
-      setFormOpen(false);
-      setQuery(created.codigoBarras);
-      await onCatalogChanged();
-      notify('Producto registrado', `${created.nombre} ya se puede recibir en bodega.`);
+      if (editing) {
+        const { product: saved, cambioPrecio } = await api.updateProduct(editing.id, { ...values, descripcion: values.descripcion ?? null });
+        const { imagenUrl, failure } = await uploadFormPhoto(saved.id);
+        const updated = imagenUrl ? { ...saved, imagenUrl } : saved;
+        setFormOpen(false);
+        // Si el producto cambió de pasillo y hay un pasillo filtrado, deja de pertenecer a esta lista.
+        const leavesFilter = Boolean(categoryId) && updated.categoriaId !== categoryId;
+        setProducts(current => (leavesFilter
+          ? current.filter(item => item.id !== updated.id)
+          : current.map(item => (item.id === updated.id ? { ...item, ...updated } : item))));
+        if (leavesFilter) setTotal(current => Math.max(0, current - 1));
+        void onCatalogChanged();
+        notify('Producto actualizado', `${cambioPrecio
+          ? `${updated.nombre}: el PVP pasó de $${cambioPrecio.anterior.toFixed(2)} a $${cambioPrecio.nuevo.toFixed(2)}.`
+          : `${updated.nombre} se guardó con los datos nuevos.`}${photoFailureNote(failure)}`);
+      } else {
+        const created = await api.createProduct({ ...values, codigoBarras: barcode });
+        const { failure } = await uploadFormPhoto(created.id);
+        setFormOpen(false);
+        setQuery(created.codigoBarras);
+        await onCatalogChanged();
+        notify('Producto registrado', `${created.nombre} ya se puede recibir en bodega.${photoFailureNote(failure)}`);
+      }
     } catch (error: unknown) {
-      setFormError(getServerMessage(error) || 'No se pudo registrar el producto.');
+      setFormError(getServerMessage(error) || (editing ? 'No se pudieron guardar los cambios.' : 'No se pudo registrar el producto.'));
     } finally { setSaving(false); }
   };
 
@@ -181,19 +244,25 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
     }
   };
 
+  // Vista previa: la foto recién elegida o, al editar, la que el producto ya tiene.
+  const formPhotoPreview = formPhoto ?? (editing ? mediaUrl(editing.imagenUrl) : null);
+
   const categoryName = (id: string) => categories.find(category => category.id === id)?.nombre || 'Sin categoría';
 
   return <View style={styles.screen}>
     <FlatList
+      key={columns}
       data={products}
       keyExtractor={item => item.id}
-      contentContainerStyle={styles.list}
+      numColumns={columns}
+      columnWrapperStyle={columns > 1 ? styles.columns : undefined}
+      contentContainerStyle={[styles.list, { padding: gutter }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(false); }} tintColor={colors.ink} colors={[colors.ink]} />}
       onEndReached={() => { if (!loading && !loadingMore && products.length < total) void load(true); }}
       onEndReachedThreshold={0.35}
       ListHeaderComponent={<>
-        <ScreenTitle title="Catálogo" subtitle={`${total} producto${total === 1 ? '' : 's'} con su PVP e IVA.`} />
+        <ScreenTitle title="Catálogo" subtitle={`${total} producto${total === 1 ? '' : 's'} con su PVP e IVA.${canCreate ? ' Toca uno para editarlo.' : ''}`} />
         {canCreate && <View style={styles.adminActions}>
           <Button label="Registrar producto" icon="barcode-outline" onPress={() => setScannerOpen(true)} style={styles.flex} compact />
           <Button label="Categoría" icon="add" variant="outline" compact onPress={() => { setCategoryError(null); setCategoryFormOpen(true); }} />
@@ -227,7 +296,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
         const catName = categoryName(item.categoriaId);
         const aisle = getAisleColor(catName);
         return (
-          <View style={styles.row}>
+          <View style={[styles.row, columns > 1 && styles.rowColumn]}>
             <TouchableOpacity
               style={styles.thumb}
               disabled={!canEditPhoto || uploadingId !== null}
@@ -242,18 +311,27 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
                   : <Ionicons name={canEditPhoto ? 'camera-outline' : 'image-outline'} size={24} color={colors.inkFaint} />}
               {canEditPhoto && uploadingId !== item.id && image ? <View style={styles.cameraBadge}><Ionicons name="camera" size={11} color="#FFFFFF" /></View> : null}
             </TouchableOpacity>
-            <View style={styles.rowInfo}>
-              <Text style={styles.name} numberOfLines={2}>{item.nombre}</Text>
-              <View style={[styles.aisleBadge, { backgroundColor: aisle.bg }]}>
-                <View style={[styles.aisleDot, { backgroundColor: aisle.dot }]} />
-                <Text style={[styles.aisleText, { color: aisle.text }]} numberOfLines={1}>{catName}</Text>
+            <TouchableOpacity
+              style={styles.rowMain}
+              disabled={!canCreate}
+              onPress={() => openEdit(item)}
+              accessibilityRole={canCreate ? 'button' : undefined}
+              accessibilityLabel={canCreate ? `Editar ${item.nombre}` : undefined}
+            >
+              <View style={styles.rowInfo}>
+                <Text style={styles.name} numberOfLines={2}>{item.nombre}</Text>
+                <View style={[styles.aisleBadge, { backgroundColor: aisle.bg }]}>
+                  <View style={[styles.aisleDot, { backgroundColor: aisle.dot }]} />
+                  <Text style={[styles.aisleText, { color: aisle.text }]} numberOfLines={1}>{catName}</Text>
+                </View>
+                <Text style={styles.ean}>EAN {item.codigoBarras}</Text>
               </View>
-              <Text style={styles.ean}>EAN {item.codigoBarras}</Text>
-            </View>
-            <View style={styles.priceBox}>
-              <Text style={styles.price}>${Number(item.precioVenta).toFixed(2)}</Text>
-              <Text style={styles.tax}>IVA {Number(item.impuestoPorcentaje || 0).toFixed(0)}%</Text>
-            </View>
+              <View style={styles.priceBox}>
+                <Text style={styles.price}>${Number(item.precioVenta).toFixed(2)}</Text>
+                <Text style={styles.tax}>IVA {Number(item.impuestoPorcentaje || 0).toFixed(0)}%</Text>
+                {canCreate ? <Ionicons name="create-outline" size={18} color={colors.inkMuted} style={styles.editIcon} /> : null}
+              </View>
+            </TouchableOpacity>
           </View>
         );
       }}
@@ -267,16 +345,23 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
 
     <Modal visible={formOpen} transparent animationType="slide" onRequestClose={() => setFormOpen(false)}>
       <KeyboardAvoidingView style={styles.sheetBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, sheetFrame]}>
           <ScrollView keyboardShouldPersistTaps="handled">
             <View style={styles.sheetHead}>
-              <Text style={styles.sheetTitle}>Nuevo producto</Text>
+              <Text style={styles.sheetTitle}>{editing ? 'Editar producto' : 'Nuevo producto'}</Text>
               <TouchableOpacity onPress={() => setFormOpen(false)} accessibilityLabel="Cerrar" style={styles.close}>
                 <Ionicons name="close" size={26} color={colors.inkMuted} />
               </TouchableOpacity>
             </View>
             {formError && <Notice tone="error" text={formError} />}
-            <Field label="Código EAN" value={barcode} keyboardType="number-pad" onChangeText={value => setBarcode(normalizeBarcode(value))} />
+            <Field
+              label="Código EAN"
+              value={barcode}
+              keyboardType="number-pad"
+              editable={!editing}
+              hint={editing ? 'El código de barras no se puede cambiar.' : undefined}
+              onChangeText={value => setBarcode(normalizeBarcode(value))}
+            />
             <Text style={styles.label}>Pasillo</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
               {categories.map(category => (
@@ -299,7 +384,28 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
               </View>
             </View>
             <Field label="Avisar con menos de (unidades)" keyboardType="number-pad" value={form.minStockAlerta} onChangeText={value => setForm(current => ({ ...current, minStockAlerta: value }))} />
-            <Button label="Guardar producto" variant="danger" loading={saving} onPress={() => void saveProduct()} />
+            <Text style={styles.label}>Foto (opcional)</Text>
+            <View style={styles.formPhoto}>
+              <View style={styles.formPhotoBox}>
+                {formPhotoPreview
+                  ? <Image source={{ uri: formPhotoPreview }} style={styles.formPhotoImage} resizeMode="contain" accessibilityIgnoresInvertColors />
+                  : <Ionicons name="image-outline" size={30} color={colors.inkFaint} />}
+              </View>
+              <View style={styles.flex}>
+                <Button label="Tomar foto" icon="camera" variant="outline" compact onPress={() => void pickFormPhoto('camera')} />
+                <View style={styles.photoGap} />
+                <Button label="Elegir de la galería" icon="images-outline" variant="outline" compact onPress={() => void pickFormPhoto('library')} />
+              </View>
+            </View>
+            {formPhoto ? (
+              <View style={styles.formPhotoNote}>
+                <Text style={styles.photoHint}>La foto se sube al guardar.</Text>
+                <TouchableOpacity onPress={() => setFormPhoto(null)} accessibilityLabel="Quitar la foto elegida" style={styles.formPhotoRemove}>
+                  <Text style={styles.formPhotoRemoveText}>Quitar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            <Button label={editing ? 'Guardar cambios' : 'Guardar producto'} variant="danger" loading={saving} onPress={() => void saveProduct()} />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -360,11 +466,24 @@ const styles = themed(() => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card,
     borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule, padding: 10, marginBottom: 8,
   },
+  columns: { gap: 8 },
+  rowColumn: { flex: 1, minWidth: 0, maxWidth: '50%' },
   thumb: { width: 60, height: 60, borderRadius: radius.tag, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   thumbImage: { width: 60, height: 60 },
   cameraBadge: { position: 'absolute', right: 2, bottom: 2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   photoHint: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.inkSoft, marginBottom: 14 },
   photoGap: { height: 10 },
+  formPhoto: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, marginBottom: 6 },
+  formPhotoBox: {
+    width: 96, height: 96, borderRadius: radius.tag, borderWidth: 1, borderColor: colors.rule,
+    backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
+  formPhotoImage: { width: 96, height: 96 },
+  formPhotoNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  formPhotoRemove: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
+  formPhotoRemoveText: { fontFamily: fonts.bold, fontSize: 14, color: colors.karenText },
+  rowMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  editIcon: { marginTop: 4 },
   rowInfo: { flex: 1, minWidth: 0 },
   name: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
   aisleBadge: {
