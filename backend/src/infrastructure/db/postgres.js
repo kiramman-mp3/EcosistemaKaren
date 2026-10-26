@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { Pool, types } = require('pg');
+const { Client, Pool, types } = require('pg');
 const { businessTimezone } = require('../../domain/policies/BusinessDates');
 
 // DATE (OID 1082) llega como 'AAAA-MM-DD': es un día calendario y no debe convertirse
@@ -47,6 +47,19 @@ function poolKey(settings) {
   return `${settings.host}:${settings.port}/${settings.database}@${settings.user}`;
 }
 
+// Los poolers (Supabase) descartan el parámetro `options` del arranque, así que la zona horaria del
+// negocio se fija también al abrir cada conexión, antes de que el pool la entregue.
+class BusinessTimezoneClient extends Client {
+  connect(callback) {
+    const applyTimezone = () => this.query('SELECT set_config($1, $2, false)', ['TimeZone', businessTimezone()]);
+    if (!callback) return super.connect().then(applyTimezone);
+    return super.connect((err) => {
+      if (err) return callback(err);
+      return applyTimezone().then(() => callback(), callback);
+    });
+  }
+}
+
 function getPool(role = 'store') {
   const settings = connectionSettings(role);
   const key = poolKey(settings);
@@ -54,6 +67,7 @@ function getPool(role = 'store') {
     const pool = new Pool({
       ...settings,
       ssl: sslSettings(role),
+      Client: BusinessTimezoneClient,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 3000,
