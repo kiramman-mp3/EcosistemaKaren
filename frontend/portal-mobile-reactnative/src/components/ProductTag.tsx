@@ -24,7 +24,7 @@ export const ProductTag: React.FC<ProductTagProps> = ({ product, inCart, onAdd }
   return (
     <View style={styles.card}>
       <View>
-        <ProductImage uri={product.image} tone={categoryTone(product.category)} style={[styles.image, soldOut && styles.faded]} />
+        <ProductImage uri={product.image} width={640} tone={categoryTone(product.category)} style={[styles.image, soldOut && styles.faded]} />
         {/* Insignias con datos reales: ventas de 30 días y fecha de alta (config/catalogRules). */}
         {(product.isBestSeller || product.isNew) && (
           <View style={styles.badges} pointerEvents="none">
