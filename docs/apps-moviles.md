@@ -70,14 +70,6 @@ repasar la lista de [verificación en un teléfono](verificacion-telefono.md).
 
 ## Android (.apk)
 
-### En GitHub Actions (sin instalar nada en el PC)
-
-El workflow **Build Android APK** (`.github/workflows/build-android-apk.yml`) compila los dos APK en un runner de Linux, que ya trae el
-SDK de Android. Se lanza a mano en GitHub: **Actions > Build Android APK > Run workflow**, sobre la rama que se quiera compilar (el
-código tiene que estar en GitHub). La casilla de la red local (marcada por defecto) equivale a `KAREN_ALLOW_CLEARTEXT=1` y
-`EXPO_PUBLIC_SERVER_CONFIG=1`. Al terminar, `SupermercadoKaren-portal-apk` y `SupermercadoKaren-bodega-apk` quedan como artefactos
-de la ejecución durante 14 días: se descargan como `.zip` con el `.apk` dentro.
-
 ### En el PC
 
 Hace falta Android Studio (trae el JDK y el SDK). Desde la carpeta de cada app:
@@ -118,7 +110,5 @@ EAS solo sube lo que está **commiteado**. La regla `build/` del `.gitignore` ra
 por eso hay una excepción `!**/.eas/build/`. Si el build falla en `PARSE_CUSTOM_WORKFLOW_CONFIG` con
 "ENOENT … ios-altstore.yml", el archivo no llegó a EAS.
 
-Alternativa sin cuenta de EAS: el workflow de GitHub Actions **Build iOS IPA**
-(`.github/workflows/build-ios-ipa.yml`, se lanza a mano en Actions > Run workflow) hace lo mismo en un runner
-de macOS. Para publicar en App Store/TestFlight haría falta una cuenta de pago del Apple Developer Program y un
+Para publicar en App Store/TestFlight haría falta una cuenta de pago del Apple Developer Program y un
 `eas build -p ios` normal, que gestiona los certificados.
