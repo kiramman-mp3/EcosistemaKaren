@@ -1,6 +1,7 @@
 import React, { forwardRef, useState } from 'react';
 import { formatDate } from '../../utils/dates';
 import { Tone, TONE_BG } from '../../lib/categoryTone';
+import { thumbSrcSet, thumbUrl } from '../../lib/mediaUrl';
 
 const SIZES = {
   sm: { whole: 'text-2xl', cents: 'text-xs', sign: 'text-sm' },
@@ -66,14 +67,23 @@ interface ProductImageProps {
   className?: string;
   /** Color del pasillo sobre el que se apoya la foto. */
   tone?: Tone;
+  /**
+   * Ancho con el que se muestra la foto, para que el navegador elija la miniatura justa (atributo
+   * `sizes`). Por defecto, las columnas de la grilla del catálogo.
+   */
+  sizes?: string;
+  /** Foto visible al abrir la página: se descarga ya y con prioridad en vez de esperar al scroll. */
+  priority?: boolean;
 }
+
+const CATALOG_GRID_SIZES = '(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 50vw';
 
 /**
  * Foto de producto sobre un bloque de color. Las fotos vienen con fondo blanco:
  * en modo claro se mezclan con `multiply` para que el blanco desaparezca y en
  * modo oscuro se apoyan sobre una placa clara para no apagar los colores.
  */
-export const ProductImage = forwardRef<HTMLImageElement, ProductImageProps>(({ src, alt, className = '', tone }, ref) => {
+export const ProductImage = forwardRef<HTMLImageElement, ProductImageProps>(({ src, alt, className = '', tone, sizes = CATALOG_GRID_SIZES, priority = false }, ref) => {
   const [failed, setFailed] = useState(false);
   const bg = tone ? TONE_BG[tone] : 'bg-surface';
   return (
@@ -83,9 +93,14 @@ export const ProductImage = forwardRef<HTMLImageElement, ProductImageProps>(({ s
       ) : (
         <img
           ref={ref}
-          src={src}
+          src={thumbUrl(src, 320)}
+          srcSet={thumbSrcSet(src)}
+          sizes={thumbSrcSet(src) ? sizes : undefined}
           alt={alt}
-          loading="lazy"
+          loading={priority ? 'eager' : 'lazy'}
+          // React 18 no conoce `fetchPriority` en camelCase; en minúsculas pasa tal cual al DOM.
+          {...(priority ? { fetchpriority: 'high' } : {})}
+          decoding="async"
           onError={() => setFailed(true)}
           className="max-h-full max-w-full object-contain mix-blend-multiply"
         />

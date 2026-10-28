@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator, Image, StyleProp, StyleSheet, Text, TextInput, TextInputProps,
+  ActivityIndicator, StyleProp, StyleSheet, Text, TextInput, TextInputProps,
   TouchableOpacity, View, ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { thumbUrl, ThumbnailWidth } from '../api/thumbUrl';
 import { colors, fonts, radius, themed } from '../theme/tokens';
 import { Tone, toneTint } from '../theme/categoryTone';
 import { formatDate } from '../utils/dates';
@@ -122,13 +124,13 @@ export const ExpiryStamp: React.FC<{ date?: string | null; label?: string; color
 );
 
 /** Foto del producto sobre una placa blanca apoyada en el color de su pasillo. */
-export const ProductImage: React.FC<{ uri: string | null; size?: number; tone?: Tone; style?: StyleProp<ViewStyle> }> = ({ uri, size, tone, style }) => {
+export const ProductImage: React.FC<{ uri: string | null; size?: number; tone?: Tone; style?: StyleProp<ViewStyle>; width?: ThumbnailWidth }> = ({ uri, size, tone, style, width = 320 }) => {
   const [failed, setFailed] = useState(false);
   return (
     <View style={[styles.imageBox, tone ? { backgroundColor: toneTint(tone) } : null, size ? { width: size, height: size } : null, style]}>
       <View style={styles.imagePlate}>
         {uri && !failed
-          ? <Image source={{ uri }} style={styles.image} resizeMode="contain" onError={() => setFailed(true)} accessibilityIgnoresInvertColors />
+          ? <Image source={{ uri: thumbUrl(uri, width) }} style={styles.image} contentFit="contain" cachePolicy="memory-disk" transition={150} recyclingKey={uri} onError={() => setFailed(true)} accessibilityIgnoresInvertColors />
           : <Ionicons name="image-outline" size={28} color={colors.inkFaint} />}
       </View>
     </View>

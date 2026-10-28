@@ -24,6 +24,20 @@ const CONTENT_TYPES = {
 // productos/<nombre>.<ext>, con un nombre de archivo simple: sin barras, sin puntos iniciales ni `..`.
 const MEDIA_PATH_PATTERN = /^\/api\/v1\/media\/productos\/[A-Za-z0-9][A-Za-z0-9._-]{0,119}\.(jpg|jpeg|png|webp)$/i;
 
+// Las fotos que sube la app se guardan como `<código>-<hash de contenido>.jpg` (ProductUseCases): si la foto
+// cambia, cambia el nombre. Esas URLs nunca cambian de contenido y pueden cachearse un año sin revalidar.
+const CONTENT_HASHED_PATTERN = /-[0-9a-f]{10}\.(jpg|jpeg|png|webp)$/i;
+const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
+function isContentHashed(value) {
+  return typeof value === 'string' && CONTENT_HASHED_PATTERN.test(value);
+}
+
+/** `setHeaders` de express.static: caché inmutable para fotos con hash; el resto conserva su `maxAge`. */
+function setMediaCacheHeaders(res, file) {
+  if (isContentHashed(file)) res.setHeader('Cache-Control', IMMUTABLE_CACHE_CONTROL);
+}
+
 function isMediaPath(value) {
   return typeof value === 'string' && MEDIA_PATH_PATTERN.test(value) && !value.includes('..');
 }
@@ -44,5 +58,5 @@ function localFileFor(mediaDir, mediaPath) {
 
 module.exports = {
   MEDIA_URL_PREFIX, MAX_MEDIA_BYTES, MAX_UPLOAD_BYTES, UPLOAD_CONTENT_TYPES, MEDIA_PATH_PATTERN,
-  isMediaPath, contentTypeFor, localFileFor, resolveMediaDir
+  IMMUTABLE_CACHE_CONTROL, isMediaPath, isContentHashed, setMediaCacheHeaders, contentTypeFor, localFileFor, resolveMediaDir
 };

@@ -92,6 +92,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         src={offer.image}
                         alt={offer.productName || offer.title}
                         tone={categoryTone(offer.category)}
+                        sizes="(min-width: 640px) 112px, 96px"
+                        priority
                         className="w-24 sm:w-28 aspect-square rounded-photo shrink-0 p-2"
                       />
                       <div className="min-w-0 flex-1">

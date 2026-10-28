@@ -80,6 +80,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         src={product.image}
                         alt=""
                         tone={categoryTone(product.category)}
+                        sizes="64px"
                         className="w-16 h-16 shrink-0 rounded-photo"
                       />
                       <div className="flex-1 min-w-0">

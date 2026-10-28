@@ -7,7 +7,9 @@ const { testConnection, getPool } = require('../../infrastructure/db/postgres');
 const { runMigrations } = require('../../infrastructure/db/migrations');
 const { createSecurityMiddlewares, validateProductionSecurity, cookieCsrfProtection } = require('../../infrastructure/http/middlewares/security');
 const { assertNoDefaultAccounts } = require('../../infrastructure/security/defaultAccounts');
-const { resolveMediaDir } = require('../../infrastructure/media/mediaPaths');
+const { resolveMediaDir, setMediaCacheHeaders } = require('../../infrastructure/media/mediaPaths');
+const { ThumbnailService } = require('../../infrastructure/media/ThumbnailService');
+const createStoreThumbnailHandler = require('../../infrastructure/media/storeThumbnailHandler');
 const { createHealthRouter } = require('../../infrastructure/http/health');
 const { createAccessLog, isEnabled: accessLogEnabled } = require('../../infrastructure/http/middlewares/accessLog');
 
@@ -66,7 +68,9 @@ async function createBaseApp({ database = 'store', migrations = ['store'] } = {}
   if (database === 'portal') {
     app.use('/api/v1/media', (req, res, next) => (app.locals.serveMedia ? app.locals.serveMedia(req, res, next) : next()));
   } else {
-    app.use('/api/v1/media', express.static(resolveMediaDir(process.env.MEDIA_DIR), { maxAge: '7d', fallthrough: false }));
+    const mediaDir = resolveMediaDir(process.env.MEDIA_DIR);
+    app.use('/api/v1/media', createStoreThumbnailHandler({ mediaDir, service: new ThumbnailService() }));
+    app.use('/api/v1/media', express.static(mediaDir, { maxAge: '7d', fallthrough: false, setHeaders: setMediaCacheHeaders }));
   }
   app.use('/api/v1', httpSecurity.general);
   app.use('/api/v1/auth', httpSecurity.auth);

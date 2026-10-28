@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform,
+  ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform,
   RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { api, mediaUrl } from '../api/client';
+import { thumbUrl } from '../api/thumbUrl';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { BackendCategory, BackendProduct } from '../types';
 import { normalizeBarcode, validateScannedBarcode } from '../utils/barcode';
@@ -307,7 +309,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
               {uploadingId === item.id
                 ? <ActivityIndicator color={colors.ink} />
                 : image
-                  ? <Image source={{ uri: image }} style={styles.thumbImage} resizeMode="contain" accessibilityIgnoresInvertColors />
+                  ? <Image source={{ uri: thumbUrl(image, 320) }} style={styles.thumbImage} contentFit="contain" cachePolicy="memory-disk" transition={150} recyclingKey={image} accessibilityIgnoresInvertColors />
                   : <Ionicons name={canEditPhoto ? 'camera-outline' : 'image-outline'} size={24} color={colors.inkFaint} />}
               {canEditPhoto && uploadingId !== item.id && image ? <View style={styles.cameraBadge}><Ionicons name="camera" size={11} color="#FFFFFF" /></View> : null}
             </TouchableOpacity>
@@ -388,7 +390,7 @@ export const CatalogoProductosScreen: React.FC<Props> = ({ role, onCatalogChange
             <View style={styles.formPhoto}>
               <View style={styles.formPhotoBox}>
                 {formPhotoPreview
-                  ? <Image source={{ uri: formPhotoPreview }} style={styles.formPhotoImage} resizeMode="contain" accessibilityIgnoresInvertColors />
+                  ? <Image source={{ uri: thumbUrl(formPhotoPreview, 640) }} style={styles.formPhotoImage} contentFit="contain" accessibilityIgnoresInvertColors />
                   : <Ionicons name="image-outline" size={30} color={colors.inkFaint} />}
               </View>
               <View style={styles.flex}>
