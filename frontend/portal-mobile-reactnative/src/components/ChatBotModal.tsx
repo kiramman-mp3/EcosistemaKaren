@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FAQ_CHIPS, WELCOME_TEXT, replyTo } from '../utils/karenBot';
 import { notify } from '../utils/dialogs';
@@ -57,84 +57,86 @@ export const ChatBotModal: React.FC<ChatBotModalProps> = ({ visible, onClose }) 
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
-        <KeyboardAvoidingView style={styles.column} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.head}>
-            <View style={styles.avatar}><Ionicons name="chatbubbles" size={20} color="#FFFFFF" /></View>
-            <View style={styles.flex}>
-              <Text style={styles.title}>KarenBot</Text>
-              <Text style={styles.subtitle}>Te respondo al instante</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel="Cerrar chat de ayuda">
-              <Ionicons name="close" size={26} color={colors.mora} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            ref={scrollRef}
-            style={styles.flex}
-            contentContainerStyle={styles.messages}
-            keyboardShouldPersistTaps="handled"
-            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
-          >
-            {messages.map(message => (
-              <View key={message.id} style={[styles.row, message.sender === 'user' && styles.rowUser]}>
-                <View style={[styles.bubble, message.sender === 'user' ? styles.bubbleUser : styles.bubbleBot]}>
-                  <Text style={[styles.text, message.sender === 'user' && styles.textUser]}>{message.text}</Text>
-                  {message.actionUrl ? (
-                    <TouchableOpacity
-                      style={styles.action}
-                      onPress={() => openLink(message.actionUrl as string)}
-                      accessibilityRole="link"
-                    >
-                      <Text style={styles.actionText}>{message.actionLabel || 'Abrir enlace'}</Text>
-                      <Ionicons name="open-outline" size={14} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  ) : null}
-                  <Text style={[styles.time, message.sender === 'user' && styles.timeUser]}>{message.time}</Text>
-                </View>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
+          <KeyboardAvoidingView style={styles.column} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={styles.head}>
+              <View style={styles.avatar}><Ionicons name="chatbubbles" size={20} color="#FFFFFF" /></View>
+              <View style={styles.flex}>
+                <Text style={styles.title}>KarenBot</Text>
+                <Text style={styles.subtitle}>Te respondo al instante</Text>
               </View>
-            ))}
-            {typing && (
-              <View style={styles.row}>
-                <View style={[styles.bubble, styles.bubbleBot]} accessibilityLabel="KarenBot está escribiendo" accessibilityLiveRegion="polite">
-                  <Text style={styles.text}>···</Text>
-                </View>
-              </View>
-            )}
-          </ScrollView>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsBar} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
-            {FAQ_CHIPS.map(chip => (
-              <TouchableOpacity key={chip.label} style={styles.chip} onPress={() => send(chip.label)} accessibilityRole="button">
-                <Text style={styles.chipText}>{chip.label}</Text>
+              <TouchableOpacity onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel="Cerrar chat de ayuda">
+                <Ionicons name="close" size={26} color={colors.mora} />
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            </View>
 
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={input}
-              onChangeText={setInput}
-              placeholder="Escribe tu consulta aquí…"
-              placeholderTextColor={colors.inkFaint}
-              returnKeyType="send"
-              onSubmitEditing={() => send()}
-              accessibilityLabel="Mensaje para KarenBot"
-            />
-            <TouchableOpacity
-              style={[styles.send, (!input.trim() || typing) && styles.sendDisabled]}
-              onPress={() => send()}
-              disabled={!input.trim() || typing}
-              accessibilityRole="button"
-              accessibilityLabel="Enviar mensaje"
+            <ScrollView
+              ref={scrollRef}
+              style={styles.flex}
+              contentContainerStyle={styles.messages}
+              keyboardShouldPersistTaps="handled"
+              onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
             >
-              <Ionicons name="send" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+              {messages.map(message => (
+                <View key={message.id} style={[styles.row, message.sender === 'user' && styles.rowUser]}>
+                  <View style={[styles.bubble, message.sender === 'user' ? styles.bubbleUser : styles.bubbleBot]}>
+                    <Text style={[styles.text, message.sender === 'user' && styles.textUser]}>{message.text}</Text>
+                    {message.actionUrl ? (
+                      <TouchableOpacity
+                        style={styles.action}
+                        onPress={() => openLink(message.actionUrl as string)}
+                        accessibilityRole="link"
+                      >
+                        <Text style={styles.actionText}>{message.actionLabel || 'Abrir enlace'}</Text>
+                        <Ionicons name="open-outline" size={14} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    ) : null}
+                    <Text style={[styles.time, message.sender === 'user' && styles.timeUser]}>{message.time}</Text>
+                  </View>
+                </View>
+              ))}
+              {typing && (
+                <View style={styles.row}>
+                  <View style={[styles.bubble, styles.bubbleBot]} accessibilityLabel="KarenBot está escribiendo" accessibilityLiveRegion="polite">
+                    <Text style={styles.text}>···</Text>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsBar} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
+              {FAQ_CHIPS.map(chip => (
+                <TouchableOpacity key={chip.label} style={styles.chip} onPress={() => send(chip.label)} accessibilityRole="button">
+                  <Text style={styles.chipText}>{chip.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={input}
+                onChangeText={setInput}
+                placeholder="Escribe tu consulta aquí…"
+                placeholderTextColor={colors.inkFaint}
+                returnKeyType="send"
+                onSubmitEditing={() => send()}
+                accessibilityLabel="Mensaje para KarenBot"
+              />
+              <TouchableOpacity
+                style={[styles.send, (!input.trim() || typing) && styles.sendDisabled]}
+                onPress={() => send()}
+                disabled={!input.trim() || typing}
+                accessibilityRole="button"
+                accessibilityLabel="Enviar mensaje"
+              >
+                <Ionicons name="send" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 };

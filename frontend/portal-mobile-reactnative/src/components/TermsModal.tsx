@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Chip } from './ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
@@ -24,49 +24,51 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose, catego
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
-        <View style={styles.centerWrapper}>
-          <View style={styles.cardContainer}>
-            <View style={styles.head}>
-              <View style={styles.flex}>
-                <Text style={styles.title} accessibilityRole="header">Términos y condiciones</Text>
-                <Text style={styles.subtitle}>{STORE_INFO.tradeName} · {STORE_INFO.legalName} · RUC {STORE_INFO.ruc} · {STORE_INFO.city} · LOPDP 2026</Text>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
+          <View style={styles.centerWrapper}>
+            <View style={styles.cardContainer}>
+              <View style={styles.head}>
+                <View style={styles.flex}>
+                  <Text style={styles.title} accessibilityRole="header">Términos y condiciones</Text>
+                  <Text style={styles.subtitle}>{STORE_INFO.tradeName} · {STORE_INFO.legalName} · RUC {STORE_INFO.ruc} · {STORE_INFO.city} · LOPDP 2026</Text>
+                </View>
+                <TouchableOpacity onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel="Cerrar términos y condiciones">
+                  <Ionicons name="close" size={26} color={colors.mora} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel="Cerrar términos y condiciones">
-                <Ionicons name="close" size={26} color={colors.mora} />
-              </TouchableOpacity>
-            </View>
 
-            <View style={styles.tabsBar}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-                {TERMS_TABS.map(tab => (
-                  <Chip key={tab.id} label={tab.label} active={active === tab.id} onPress={() => setActive(tab.id)} />
+              <View style={styles.tabsBar}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
+                  {TERMS_TABS.map(tab => (
+                    <Chip key={tab.id} label={tab.label} active={active === tab.id} onPress={() => setActive(tab.id)} />
+                  ))}
+                </ScrollView>
+              </View>
+
+              <ScrollView style={styles.flex} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <Text style={styles.intro}>{TERMS_INTRO}</Text>
+                {clausesFor(active).map(clause => (
+                  <View key={clause.title} style={styles.section}>
+                    <Text style={styles.sectionTitle}>{clause.title}</Text>
+                    <Text style={styles.sectionText}>{clause.intro}</Text>
+                    {clause.bullets.map(bullet => (
+                      <View key={bullet} style={styles.bullet}>
+                        <Text style={styles.bulletMark}>•</Text>
+                        <Text style={[styles.sectionText, styles.flex]}>{bullet}</Text>
+                      </View>
+                    ))}
+                  </View>
                 ))}
               </ScrollView>
-            </View>
 
-            <ScrollView style={styles.flex} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-              <Text style={styles.intro}>{TERMS_INTRO}</Text>
-              {clausesFor(active).map(clause => (
-                <View key={clause.title} style={styles.section}>
-                  <Text style={styles.sectionTitle}>{clause.title}</Text>
-                  <Text style={styles.sectionText}>{clause.intro}</Text>
-                  {clause.bullets.map(bullet => (
-                    <View key={bullet} style={styles.bullet}>
-                      <Text style={styles.bulletMark}>•</Text>
-                      <Text style={[styles.sectionText, styles.flex]}>{bullet}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </ScrollView>
-
-            <View style={styles.footer}>
-              <Button label="Entendido" variant="sticker" onPress={onClose} />
+              <View style={styles.footer}>
+                <Button label="Entendido" variant="sticker" onPress={onClose} />
+              </View>
             </View>
           </View>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 };
