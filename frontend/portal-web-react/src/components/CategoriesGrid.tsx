@@ -58,7 +58,7 @@ export const CategoriesGrid: React.FC<CategoriesGridProps> = ({ categories, prod
                   <span className="mt-3 grid grid-cols-3 grid-rows-1 gap-1.5 h-20 sm:h-24 overflow-hidden" aria-hidden="true">
                     {aisle.samples.map((product, index) => (
                       <span key={product.id} className="block h-full min-h-0 transition-transform duration-200 group-hover:-translate-y-1" style={{ transitionDelay: `${index * 40}ms` }}>
-                        <ProductImage src={product.image} alt="" className="h-full rounded-tag bg-white p-1" />
+                        <ProductImage src={product.image} alt="" sizes="120px" className="h-full rounded-tag bg-white p-1" />
                       </span>
                     ))}
                   </span>
