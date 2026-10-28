@@ -4,6 +4,7 @@ import { FlashOffer } from '../types';
 import { Button } from './ui/Button';
 import { Sticker } from './ui/Sticker';
 import { TONE_SOLID, Tone } from '../lib/categoryTone';
+import { thumbSrcSet, thumbUrl } from '../lib/mediaUrl';
 import { PromotionGraphicBackground, PromotionThemeGraphic } from './ui/PromotionGraphicBackground';
 
 export interface SpecialEventOffer {
@@ -194,8 +195,11 @@ export const SpecialOffersSlider: React.FC<SpecialOffersSliderProps> = ({
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 rounded-photo bg-white flex items-center justify-center p-2 shrink-0 border-2 border-aisle-rule">
                   <img
-                    src={currentSlide.imageUrl}
+                    src={thumbUrl(currentSlide.imageUrl, 160)}
+                    srcSet={thumbSrcSet(currentSlide.imageUrl)}
+                    sizes="64px"
                     alt={currentSlide.eventName}
+                    decoding="async"
                     className="max-h-full max-w-full object-contain"
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
                   />
