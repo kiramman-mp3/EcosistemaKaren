@@ -1,6 +1,7 @@
 {
   "name": "ecosistema-karen-backend",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Backend comercial y logístico para Supermercado Karen (Fase 1: Inventario Maestro, FEFO, Anti-Overbooking, SSE, Gemini IA, Swagger)",
   "main": "index.js",
   "type": "commonjs",
