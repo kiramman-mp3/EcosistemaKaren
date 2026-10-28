@@ -1,6 +1,7 @@
 {
   "name": "ecosistema-karen",
   "private": true,
+  "license": "MIT",
   "description": "Orquestador de desarrollo del Ecosistema Karen",
   "scripts": {
     "start": "node start.js",
