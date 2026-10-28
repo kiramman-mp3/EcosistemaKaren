@@ -8,6 +8,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com)
 [![Azure](https://img.shields.io/badge/Azure-Container%20Apps-0078D4?style=flat-square&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/container-apps)
+[![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=flat-square)](LICENSE)
 
 **Ecosistema Karen** es un sistema de inventario por lotes y reservas para **Supermercado Karen**. Controla el stock por lote y fecha de caducidad (principio **FEFO**: primero en vencer, primero en salir), avisa de los productos próximos a caducar, genera promociones con inteligencia artificial y deja que los clientes aparten productos desde la web o el móvil con un código de retiro para pagar en caja. Está pensado para el personal de bodega y caja de la tienda y para sus clientes.
 
@@ -141,6 +142,7 @@ EcosistemaKaren/
 ├── docs/                           # operación, Azure, apps móviles, ADR, sistema visual y capturas/
 ├── screenshots/                    # capturas anteriores de la bodega y su script
 ├── .github/workflows/ci.yml        # integración continua
+├── LICENSE                         # licencia MIT
 ├── docker-compose.prod.example.yml # despliegue de producción de store y portal
 ├── start.js                        # levanta todo el entorno de desarrollo con un comando
 ├── architecture.md                 # arquitectura limpia del backend
@@ -392,7 +394,6 @@ El aspecto visual (colores, tipografía, radios y movimiento) está en [docs/sis
 
 ### Lo que queda por confirmar
 
-- La **licencia** del proyecto: el repositorio no incluye un archivo `LICENSE`, por lo que todavía no se declara ninguna.
 - Las **apps móviles** se compilan como builds de prueba (permiten HTTP en la red local y elegir el servidor desde la app); publicarlas en Google Play o en la App Store requiere cuentas de pago y builds de tienda.
 - Las dos apps móviles conservan 4 avisos de severidad alta de `npm audit` sin versión corregida, todos por `node-forge`; el detalle y su alcance están en [docs/dependencias.md](docs/dependencias.md).
 - Una prueba del backend (`reservation-extension-db.test.js`) falló una vez dentro de la suite completa contra PostgreSQL real y pasa sola: otra prueba ejecuta el barrido global de expiración sobre la misma base mientras corren en paralelo.
@@ -411,7 +412,7 @@ El aspecto visual (colores, tipografía, radios y movimiento) está en [docs/sis
 - [x] Fotos comprimidas, miniaturas y caché de larga duración
 - [x] Integración continua con pruebas, lint, auditoría, migraciones y comprobación de la imagen Docker
 - [x] Despliegue del portal en Azure y de la tienda en una PC con Docker
-- [ ] Declarar una licencia para el proyecto
+- [x] Licencia MIT
 - [ ] Publicar las apps móviles en Google Play y en la App Store
 - [ ] Aislar la prueba intermitente `reservation-extension-db.test.js` cuando corre en paralelo con otras
 - [ ] Resolver los avisos de `node-forge` cuando exista una versión corregida
@@ -422,7 +423,7 @@ El aspecto visual (colores, tipografía, radios y movimiento) está en [docs/sis
 
 | Contribuidor | Commits |
 |---|---:|
-| kiramman-mp3 | 355 |
+| kiramman-mp3 | 362 |
 | JoseM151 | 76 |
 | Johan Rodríguez | 44 |
 | carol104 | 18 |
@@ -446,6 +447,12 @@ Datos de `git shortlog -sn` al editar este README (incluyen los commits de integ
 - [Expo](https://docs.expo.dev), [React Native](https://reactnative.dev), [Express](https://expressjs.com), [PostgreSQL](https://www.postgresql.org/docs/14/), [OpenRouter](https://openrouter.ai/docs) y [Gemini API](https://ai.google.dev/gemini-api/docs): documentación de las tecnologías usadas.
 
 </details>
+
+---
+
+## 📄 Licencia
+
+Este proyecto se distribuye bajo la licencia MIT. Consulta el archivo [LICENSE](LICENSE) para ver el texto completo.
 
 ---
 
