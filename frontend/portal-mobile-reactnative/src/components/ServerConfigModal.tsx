@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Field, Notice } from './ui';
@@ -77,40 +77,42 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
-        <View style={styles.head}>
-          <View style={styles.flex}>
-            <Text style={styles.title} accessibilityRole="header">Servidor</Text>
-            <Text style={styles.subtitle}>Dirección del backend al que se conecta la app</Text>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
+          <View style={styles.head}>
+            <View style={styles.flex}>
+              <Text style={styles.title} accessibilityRole="header">Servidor</Text>
+              <Text style={styles.subtitle}>Dirección del backend al que se conecta la app</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel="Cerrar configuración del servidor">
+              <Ionicons name="close" size={26} color={colors.mora} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel="Cerrar configuración del servidor">
-            <Ionicons name="close" size={26} color={colors.mora} />
-          </TouchableOpacity>
-        </View>
 
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.content}>
-            <Field
-              label="IP o dirección"
-              hint={`Sin puerto se usa el ${DEFAULT_PORT}. Ejemplo: 192.168.1.20`}
-              value={value}
-              onChangeText={text => { setValue(text); setResult(null); }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              placeholder="192.168.1.20"
-            />
-            {normalized ? <Text style={styles.preview}>Se usará {normalized}</Text> : null}
-            {result ? <Notice tone={result.tone} text={result.text} /> : null}
-            <Button label="Probar conexión" icon="wifi" variant="outline" loading={testing} onPress={() => void test()} />
+          <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={styles.content}>
+              <Field
+                label="IP o dirección"
+                hint={`Sin puerto se usa el ${DEFAULT_PORT}. Ejemplo: 192.168.1.20`}
+                value={value}
+                onChangeText={text => { setValue(text); setResult(null); }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder="192.168.1.20"
+              />
+              {normalized ? <Text style={styles.preview}>Se usará {normalized}</Text> : null}
+              {result ? <Notice tone={result.tone} text={result.text} /> : null}
+              <Button label="Probar conexión" icon="wifi" variant="outline" loading={testing} onPress={() => void test()} />
+            </View>
+          </KeyboardAvoidingView>
+
+          <View style={styles.footer}>
+            <Button label="Guardar" variant="sticker" onPress={() => void save()} />
+            <Button label="Restablecer valor de la app" variant="ghost" onPress={() => void reset()} />
           </View>
-        </KeyboardAvoidingView>
-
-        <View style={styles.footer}>
-          <Button label="Guardar" variant="sticker" onPress={() => void save()} />
-          <Button label="Restablecer valor de la app" variant="ghost" onPress={() => void reset()} />
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 };
