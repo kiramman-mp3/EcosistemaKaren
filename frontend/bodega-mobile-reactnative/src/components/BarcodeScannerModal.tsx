@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Button } from './ui';
 import { colors, fonts, radius, themed } from '../theme/tokens';
@@ -23,33 +23,35 @@ export const BarcodeScannerModal: React.FC<Props> = ({ visible, title = 'Escanea
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={close}>
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>{title}</Text>
-        {!permission?.granted ? (
-          <View style={styles.permission}>
-            <Text style={styles.help}>La cámara solo se usa para leer el código. No se guardan fotos.</Text>
-            <Button label="Permitir cámara" variant="sticker" onPress={() => void requestPermission()} />
-          </View>
-        ) : (
-          <View style={styles.camera}>
-            <CameraView
-              style={StyleSheet.absoluteFill}
-              facing="back"
-              barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] }}
-              onBarcodeScanned={locked ? undefined : ({ data }) => {
-                setLocked(true);
-                onScanned(data);
-                close();
-              }}
-            />
-            <View pointerEvents="none" style={styles.overlay}>
-              <View style={styles.frame} />
-              <Text style={styles.frameText}>Centra el código en el recuadro</Text>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.container}>
+          <Text style={styles.title}>{title}</Text>
+          {!permission?.granted ? (
+            <View style={styles.permission}>
+              <Text style={styles.help}>La cámara solo se usa para leer el código. No se guardan fotos.</Text>
+              <Button label="Permitir cámara" variant="sticker" onPress={() => void requestPermission()} />
             </View>
-          </View>
-        )}
-        <Button label="Cancelar" variant="ghost" onPress={close} style={styles.cancel} />
-      </SafeAreaView>
+          ) : (
+            <View style={styles.camera}>
+              <CameraView
+                style={StyleSheet.absoluteFill}
+                facing="back"
+                barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] }}
+                onBarcodeScanned={locked ? undefined : ({ data }) => {
+                  setLocked(true);
+                  onScanned(data);
+                  close();
+                }}
+              />
+              <View pointerEvents="none" style={styles.overlay}>
+                <View style={styles.frame} />
+                <Text style={styles.frameText}>Centra el código en el recuadro</Text>
+              </View>
+            </View>
+          )}
+          <Button label="Cancelar" variant="ghost" onPress={close} style={styles.cancel} />
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 };
