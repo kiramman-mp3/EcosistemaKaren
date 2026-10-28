@@ -1,4 +1,4 @@
-const { MEDIA_URL_PREFIX } = require('../../infrastructure/media/mediaPaths');
+const { MEDIA_URL_PREFIX, IMMUTABLE_CACHE_CONTROL, isContentHashed } = require('../../infrastructure/media/mediaPaths');
 const { ThumbnailService, parseThumbnailWidth } = require('../../infrastructure/media/ThumbnailService');
 
 // portal-api: recibe las fotos de la tienda por el canal interno y las sirve a los clientes.
@@ -44,7 +44,7 @@ class MediaSyncController {
       const width = parseThumbnailWidth(req.query.w);
       const etag = width ? `"${file.sha256}-w${width}"` : `"${file.sha256}"`;
       res.set({
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': isContentHashed(req.path) ? IMMUTABLE_CACHE_CONTROL : 'public, max-age=86400',
         ETag: etag,
         'Last-Modified': new Date(file.updatedAt).toUTCString()
       });

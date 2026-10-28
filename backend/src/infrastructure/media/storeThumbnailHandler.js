@@ -1,5 +1,5 @@
 const fs = require('node:fs/promises');
-const { MEDIA_URL_PREFIX, isMediaPath, localFileFor } = require('./mediaPaths');
+const { MEDIA_URL_PREFIX, IMMUTABLE_CACHE_CONTROL, isMediaPath, isContentHashed, localFileFor } = require('./mediaPaths');
 const { parseThumbnailWidth } = require('./ThumbnailService');
 
 const THUMBNAIL_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
@@ -22,7 +22,8 @@ function createStoreThumbnailHandler({ mediaDir, service }) {
       if (!stat || !stat.isFile()) return next();
 
       const etag = `"${stat.size}-${Math.trunc(stat.mtimeMs)}-w${width}"`;
-      res.set({ 'Cache-Control': `public, max-age=${THUMBNAIL_MAX_AGE_SECONDS}`, ETag: etag });
+      const cacheControl = isContentHashed(ruta) ? IMMUTABLE_CACHE_CONTROL : `public, max-age=${THUMBNAIL_MAX_AGE_SECONDS}`;
+      res.set({ 'Cache-Control': cacheControl, ETag: etag });
       if (req.get('if-none-match') === etag) return res.status(304).end();
 
       const data = await service.render(ruta, etag, width, () => fs.readFile(file));
