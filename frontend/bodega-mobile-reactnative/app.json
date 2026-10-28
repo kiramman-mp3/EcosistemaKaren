@@ -35,5 +35,11 @@
     ],
     "expo-secure-store",
     "expo-font"
-  ]
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "af31ddae-27c7-4803-a1ea-5f48e389de29"
+    }
+  },
+  "owner": "kiramman"
 }

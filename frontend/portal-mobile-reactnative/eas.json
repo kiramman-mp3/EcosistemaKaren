@@ -14,6 +14,16 @@
         "KAREN_ALLOW_CLEARTEXT": "1",
         "EXPO_PUBLIC_SERVER_CONFIG": "1"
       }
+    },
+    "android-apk": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "KAREN_ALLOW_CLEARTEXT": "1",
+        "EXPO_PUBLIC_SERVER_CONFIG": "1"
+      }
     }
   }
 }
