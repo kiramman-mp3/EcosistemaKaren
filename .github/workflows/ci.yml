@@ -103,6 +103,7 @@ jobs:
           PORTAL_URL: https://portal.example
           STORE_CORS_ORIGINS: http://tienda.local
           STORE_BIND: 127.0.0.1
+          STORE_TRUST_PROXY_HOPS: 1
           PORTAL_DB_NAME: karen_portal
           PORTAL_DB_USER: karen_portal
           PORTAL_DB_PASSWORD: ci
