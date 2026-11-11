@@ -79,6 +79,40 @@ Con la tienda accesible desde internet (ADR-004):
 El límite general de tasa se lleva en memoria de cada instancia (con N réplicas, el tope efectivo
 por IP es N veces el configurado); autenticación, reservas e IA se comparten vía PostgreSQL.
 
+## Homelab: tienda y portal en el mismo servidor
+
+`docker-compose.homelab.yml` se combina con el compose de producción cuando las dos APIs corren en un
+mismo servidor y se publican con Tailscale Funnel. En el `.env` del servidor:
+
+```
+COMPOSE_FILE=docker-compose.prod.example.yml:docker-compose.homelab.yml
+```
+
+Con eso, `docker compose --profile store --profile portal up -d --build` carga los dos archivos. El
+motivo: `PORTAL_URL` debe ser https, así que la tienda llama al portal por su URL pública, y los
+puertos de Funnel solo aceptan conexiones por la interfaz `tailscale0`. Con el DNS de Tailscale un
+contenedor resuelve el nombre a la IP `100.x` y recibe `ECONNREFUSED`; con DNS públicos entra por Funnel.
+
+Funnel solo admite los puertos 443, 8443 y 10000: por ejemplo, portal en 8443 y tienda en 10000.
+`PORTAL_URL` apunta a la URL del portal y `PORTAL_CORS_ORIGINS` incluye el dominio del frontend.
+
+## Datos de demostración
+
+Con la base vacía no hay productos. `scripts/seed.js` carga el catálogo de Ecuador (`seed/`), lotes,
+reservas y 120 días de historial en la base de la tienda y copia los clientes demo al portal. Es
+repetible: solo borra lo que generó antes (lotes `SEED-%` y cuentas `@demo.karen.ec`).
+
+En producción exige `KAREN_DEMO_PASSWORD` (la contraseña pública del repositorio no se siembra) y las
+variables `PORTAL_DB_*` para copiar los clientes al portal:
+
+```bash
+docker compose exec   -e KAREN_DEMO_PASSWORD='<una contraseña larga>'   -e PORTAL_DB_HOST=portal_db -e PORTAL_DB_PORT=5432   -e PORTAL_DB_NAME=<PORTAL_DB_NAME> -e PORTAL_DB_USER=<PORTAL_DB_USER> -e PORTAL_DB_PASSWORD=<PORTAL_DB_PASSWORD>   store_api node scripts/seed.js
+```
+
+`--skip-images` evita descargar las fotos. Las cuentas son `admin@`, `bodega@`, `percha@` y
+`cliente@demo.karen.ec`. Son datos ficticios: bórralos (`DELETE` de `@demo.karen.ec` y lotes `SEED-%`)
+antes de operar con datos reales.
+
 ## Sondas y logs
 
 | Ruta | Uso | Falla cuando |
