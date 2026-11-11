@@ -19,7 +19,7 @@ const { createAccessLog, isEnabled: accessLogEnabled } = require('../../infrastr
 // `database` indica a qué base se conecta el servicio (`store` o `portal`) y `migrations`
 // qué conjuntos de migraciones aplica sobre ella (el monolito aplica ambos a una sola base).
 async function createBaseApp({ database = 'store', migrations = ['store'] } = {}) {
-  validateProductionSecurity(process.env);
+  validateProductionSecurity(process.env, database);
   const app = express();
 
   // Probar conexión PostgreSQL
