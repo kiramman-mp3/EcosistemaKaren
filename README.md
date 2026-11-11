@@ -7,15 +7,19 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com)
-[![Azure](https://img.shields.io/badge/Azure-Container%20Apps-0078D4?style=flat-square&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/container-apps)
+[![Vercel](https://img.shields.io/badge/Vercel-portal%20web-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
+[![Tailscale](https://img.shields.io/badge/Tailscale-Funnel-242424?style=flat-square&logo=tailscale&logoColor=white)](https://tailscale.com/kb/1223/funnel)
+[![Versión](https://img.shields.io/github/v/release/kiramman-mp3/EcosistemaKaren?style=flat-square&label=versi%C3%B3n)](https://github.com/kiramman-mp3/EcosistemaKaren/releases/latest)
 [![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=flat-square)](LICENSE)
 
 **Ecosistema Karen** es un sistema de inventario por lotes y reservas para **Supermercado Karen**. Controla el stock por lote y fecha de caducidad (principio **FEFO**: primero en vencer, primero en salir), avisa de los productos próximos a caducar, genera promociones con inteligencia artificial y deja que los clientes aparten productos desde la web o el móvil con un código de retiro para pagar en caja. Está pensado para el personal de bodega y caja de la tienda y para sus clientes.
 
-El repositorio se desarrolló en equipo a partir del 15 de septiembre de 2026 (fecha del primer commit) e incluye el backend, el portal web, la app móvil de clientes y la app móvil de bodega. Los datos de ejemplo corresponden a un catálogo de productos que se comercializan en Ecuador.
+El repositorio se desarrolló en equipo a partir del 15 de septiembre de 2026 (fecha del primer commit) e incluye el backend, el portal web, la app móvil de clientes y la app móvil de bodega. La versión **1.0.0** está desplegada: el portal web en Vercel y las dos APIs con sus bases de datos en un servidor propio (homelab). Los datos de ejemplo corresponden a un catálogo de productos que se comercializan en Ecuador.
 
 > [!TIP]
-> La forma más rápida de verlo funcionando es tener Node.js ≥ 20 y Docker instalados y ejecutar `node start.js` en la raíz: instala las dependencias, crea el `.env`, levanta PostgreSQL con datos de demostración, el backend, el portal web y Expo. Las cuentas de demostración están en la sección «Uso y Ejecución».
+> La forma más rápida de verlo es el portal en producción: <https://karen-portal.vercel.app>. Las apps de Android (y la de iPhone, sin firmar) se descargan de la [versión 1.0.0](https://github.com/kiramman-mp3/EcosistemaKaren/releases/tag/v1.0.0).
+>
+> Para correrlo en local hacen falta Node.js ≥ 20 y Docker: `node start.js` en la raíz instala las dependencias, crea el `.env`, levanta PostgreSQL con datos de demostración, el backend, el portal web y Expo. Las cuentas de demostración están en la sección «Uso y Ejecución».
 
 ---
 
@@ -63,7 +67,7 @@ Capturas tomadas con el proyecto corriendo en local, con la base de datos de eje
 - **Reservas con código de retiro**: el cliente aparta productos y recibe un código `KR-XXXXXX` y un pase con QR; el tiempo de retención se elige entre 30 minutos y 2 horas y se puede ampliar de 30 en 30 hasta 4 horas en total.
 - **Protección contra sobreventa**: el stock se reserva con bloqueo en la base de datos y los límites de cada oferta se aplican con el lote bloqueado, de modo que reservas simultáneas nunca superan lo disponible.
 - **Promociones con IA y aprobación humana**: el sistema propone el descuento y el texto de la oferta; un administrador la edita, le pone límites (por pedido, unidades y fecha de fin) y la aprueba. Usa OpenRouter como proveedor principal y Gemini como respaldo.
-- **Tienda y portal independientes**: `store-api` corre en la PC de la tienda y sigue funcionando sin internet; `portal-api` corre en la nube y atiende a los clientes. La tienda siempre inicia la comunicación.
+- **Tienda y portal independientes**: `store-api` (inventario y reservas) y `portal-api` (clientes) son dos servicios con base de datos propia; pueden correr en equipos distintos o en el mismo servidor, como en el despliegue actual. La tienda siempre inicia la comunicación.
 - **Tres interfaces**: portal web (PWA instalable), app móvil de clientes y app móvil de bodega, con modo claro y oscuro y diseño adaptado a tabletas.
 - **Reportes**: movimientos, mermas y resumen del inventario, exportables a PDF y CSV con escape contra inyección de HTML y de fórmulas.
 - **Fotos de producto optimizadas**: se comprimen al subirlas y se sirven como miniaturas de 160, 320 o 640 px con caché de larga duración.
@@ -84,7 +88,7 @@ Capturas tomadas con el proyecto corriendo en local, con la base de datos de eje
 - **Pruebas**
   - Backend: `node:test` con `supertest`; portal web: Vitest y Testing Library; apps móviles: Jest con `jest-expo`; ESLint y comprobación de tipos con `tsc`.
 - **Despliegue**
-  - Docker y Docker Compose, Azure Container Apps para el portal, GitHub Actions para la integración continua y EAS para compilar las apps móviles.
+  - Vercel para el portal web, Docker y Docker Compose en un homelab para las APIs y las bases de datos, Tailscale Funnel para exponerlas por HTTPS sin dominio propio, GitHub Actions para la integración continua y EAS para compilar las apps móviles. Azure Container Apps queda documentado como alternativa para el portal.
 
 ---
 
@@ -92,22 +96,29 @@ Capturas tomadas con el proyecto corriendo en local, con la base de datos de eje
 
 ```mermaid
 graph TD
-    Cliente["Clientes<br/>portal web y app móvil"] -->|"HTTPS /api/v1"| Portal["portal-api<br/>+ portal web"]
-    Portal --> DBPortal[("PostgreSQL<br/>del portal")]
-    Bodega["App de bodega<br/>(Wi-Fi de la tienda)"] -->|"HTTP /api/v1"| Store["store-api"]
-    Store --> DBStore[("PostgreSQL<br/>de la tienda")]
-    Store -->|"HTTPS saliente: latido, catálogo,<br/>fotos, comandos y eventos"| Portal
+    Web["Navegador<br/>portal web"] -->|"HTTPS"| Vercel["Vercel<br/>portal web estático"]
+    Vercel -->|"rewrite /api/*"| FunnelP["Tailscale Funnel :8443"]
+    Movil["App móvil del portal"] -->|"HTTPS /api/v1"| FunnelP
+    Bodega["App de bodega"] -->|"HTTPS /api/v1"| FunnelS["Tailscale Funnel :10000"]
+    subgraph Homelab["Homelab (Docker Compose)"]
+        Portal["portal-api"] --> DBPortal[("PostgreSQL<br/>del portal")]
+        Store["store-api"] --> DBStore[("PostgreSQL<br/>de la tienda")]
+    end
+    FunnelP --> Portal
+    FunnelS --> Store
+    Store -->|"HTTPS saliente: latido, catálogo,<br/>fotos, comandos y eventos"| FunnelP
     Store -.->|"promociones"| IA["OpenRouter / Gemini"]
 ```
 
-La tienda es la única autoridad sobre inventario y reservas; el portal guarda una copia de lectura del catálogo y una cola de reservas. Como la tienda siempre inicia la conexión (solo tráfico saliente), no se abre ningún puerto hacia la PC de la tienda. El diseño completo está en el [ADR-003](docs/decisions/ADR-003-split-store-portal.md).
+La tienda es la única autoridad sobre inventario y reservas; el portal guarda una copia de lectura del catálogo y una cola de reservas. La tienda siempre inicia la comunicación hacia el portal, que nunca la llama. Las dos APIs son públicas por HTTPS ([ADR-004](docs/decisions/ADR-004-store-api-publica.md)) y el diseño completo está en el [ADR-003](docs/decisions/ADR-003-split-store-portal.md).
 
 | Pieza | Dónde corre | Habla con |
 |---|---|---|
-| `store-api` + su PostgreSQL | PC de la tienda (Docker) | el portal, saliendo por HTTPS |
-| `portal-api` + portal web | Azure Container Apps | su PostgreSQL (Supabase) |
-| App de bodega | Teléfonos del personal, en el Wi-Fi de la tienda | solo `store-api` |
-| Portal móvil y portal web | Clientes, por internet | solo `portal-api` |
+| Portal web | Vercel (`karen-portal`) | `portal-api`, mediante el rewrite de `vercel.json` |
+| `portal-api` + su PostgreSQL | Homelab (Docker), Funnel `:8443` | la tienda y los clientes |
+| `store-api` + su PostgreSQL | Homelab (Docker), Funnel `:10000` | el portal, saliendo por HTTPS |
+| App de bodega | Teléfonos del personal | solo `store-api` |
+| App móvil del portal | Clientes, por internet | solo `portal-api` |
 
 ---
 
@@ -132,18 +143,20 @@ EcosistemaKaren/
 │   ├── scripts/                    # create-user, seed y pruebas de humo, de errores y de extremo a extremo
 │   └── test/                       # pruebas con node:test
 ├── frontend/
-│   ├── portal-web-react/           # portal web de clientes (React + Vite + Tailwind, PWA)
+│   ├── portal-web-react/           # portal web de clientes (React + Vite + Tailwind, PWA); vercel.json para Vercel
 │   ├── portal-mobile-reactnative/  # app móvil de clientes (Expo)
 │   └── bodega-mobile-reactnative/  # app móvil del personal (Expo)
 ├── deploy/
-│   ├── azure/                      # Dockerfile.portal y deploy.ps1 para Azure
+│   ├── azure/                      # Dockerfile.portal y deploy.ps1 para Azure (alternativa)
 │   └── tienda/                     # plantilla .env.store y scripts .bat de la PC de la tienda
 ├── dev/                            # splitEnv.js: variables del modo --split de start.js, con sus pruebas
-├── docs/                           # operación, Azure, apps móviles, ADR, sistema visual y capturas/
+├── docs/                           # operación, Azure, apps móviles, ADR (001 a 004), sistema visual y capturas/
 ├── screenshots/                    # capturas anteriores de la bodega y su script
 ├── .github/workflows/ci.yml        # integración continua
 ├── LICENSE                         # licencia MIT
+├── CHANGELOG.md                    # historial de versiones
 ├── docker-compose.prod.example.yml # despliegue de producción de store y portal
+├── docker-compose.homelab.yml      # ajuste para correr store y portal en un mismo servidor
 ├── start.js                        # levanta todo el entorno de desarrollo con un comando
 ├── architecture.md                 # arquitectura limpia del backend
 ├── database.md                     # esquema de la base de datos
@@ -161,8 +174,8 @@ EcosistemaKaren/
 | Desarrollo | Node.js ≥ 20 y npm; Docker (para PostgreSQL) |
 | Apps móviles | Expo (se instala con `npm install`) y un teléfono o un emulador |
 | Compilar las apps | Una cuenta de Expo para EAS (ver [docs/apps-moviles.md](docs/apps-moviles.md)) |
-| Producción: portal | Cuenta de Azure con Container Apps y una base PostgreSQL (por ejemplo Supabase) |
-| Producción: tienda | Una PC con Docker Desktop, IP fija en la red local y acceso saliente a internet |
+| Producción: portal web | Una cuenta de Vercel enlazada al repositorio |
+| Producción: APIs | Un servidor con Docker Compose y Tailscale con Funnel activado (ver [docs/operacion.md](docs/operacion.md)); alternativa: Azure Container Apps con una base en Supabase |
 | IA (opcional) | Una clave de OpenRouter o de Gemini para generar promociones |
 
 ---
@@ -220,7 +233,7 @@ node start.js --down             # detiene PostgreSQL y pgAdmin
 
 `--backend-tienda` imprime la URL que deben usar las apps de bodega (`http://<IP de la PC>:4000/api/v1`) y, con `--portal-url=https://<portal>`, conecta además la tienda a ese portal. Usa la base de desarrollo con cuentas de contraseña conocida: **no es el despliegue de la tienda real** (ese es `deploy/tienda/`).
 
-Cuentas de demostración (solo desarrollo): `cliente@karen.com`, `bodega@karen.com` y `admin@karen.com`, todas con la contraseña `demo123`. El seed masivo (`npm run db:seed` en `backend/`) crea otras con `@demo.karen.ec` y la contraseña `Karen2026*`.
+Cuentas de demostración (solo desarrollo): `cliente@karen.com`, `bodega@karen.com` y `admin@karen.com`, todas con la contraseña `demo123`. El seed masivo (`npm run db:seed` en `backend/`) crea otras con `@demo.karen.ec` y la contraseña `Karen2026*`; con `NODE_ENV=production` exige definir `KAREN_DEMO_PASSWORD` y usa esa contraseña, porque en producción el servidor se niega a arrancar con las contraseñas conocidas.
 
 Puertos por defecto: `store-api` 4000, `portal-api` 4001, portal web 5175, PostgreSQL de desarrollo 5433 (portal 5434) y pgAdmin 5051.
 
@@ -256,7 +269,7 @@ npm run start:portal                 # solo portal-api
 
 ### Pruebas
 
-El proyecto tiene 571 pruebas automáticas: 363 en el backend, 74 en el portal web, 63 en el portal móvil, 57 en la app de bodega y 14 en el orquestador. Las del backend que usan la base de datos se omiten si no hay PostgreSQL disponible.
+El proyecto tiene 566 pruebas automáticas: 365 en el backend, 77 en el portal web, 58 en el portal móvil, 52 en la app de bodega y 14 en el orquestador. Las del backend que usan la base de datos se omiten si no hay PostgreSQL disponible.
 
 ```bash
 cd backend && npm test && npm run lint
@@ -270,25 +283,68 @@ npm test    # en la raíz
 
 ## 🚀 Despliegue
 
-| Qué | Dónde |
+La versión 1.0.0 corre así:
+
+| Qué | Dónde | Dirección |
+|---|---|---|
+| Portal web | Vercel, proyecto `karen-portal`, publicado desde `main` | <https://karen-portal.vercel.app> |
+| `portal-api` | Homelab, Docker Compose, Tailscale Funnel `:8443` | `https://servidor-homelab.tail13541c.ts.net:8443/api/v1` |
+| `store-api` | Homelab, Docker Compose, Tailscale Funnel `:10000` | `https://servidor-homelab.tail13541c.ts.net:10000/api/v1` |
+| Bases de datos | PostgreSQL de cada servicio, en el mismo servidor | solo la red interna de Docker |
+
+| Documento | Contenido |
 |---|---|
-| Portal (API + web) en Azure Container Apps, con la base en Supabase | [docs/azure.md](docs/azure.md) y `deploy/azure/deploy.ps1` |
-| PC de la tienda: variables, arranque y respaldos | `deploy/tienda/` y [docs/azure.md](docs/azure.md) |
-| Operación: secretos, proxy, sondas y respaldos | [docs/operacion.md](docs/operacion.md) |
-| Compilar las apps móviles con EAS | [docs/apps-moviles.md](docs/apps-moviles.md) |
+| [docs/operacion.md](docs/operacion.md) | Secretos, proxy, `store-api` pública, homelab, datos de demostración, sondas y respaldos |
+| [docs/decisions/ADR-004-store-api-publica.md](docs/decisions/ADR-004-store-api-publica.md) | Por qué las dos APIs son públicas |
+| [docs/apps-moviles.md](docs/apps-moviles.md) | Compilar con EAS, instalar los APK y probarlos en Windows |
+| [docs/azure.md](docs/azure.md) | Alternativa: portal en Azure Container Apps con Supabase |
 
-El portal se publica con `deploy/azure/deploy.ps1`; la tienda se levanta con `deploy/tienda/Iniciar-Karen.bat` a partir de `deploy/tienda/.env.store.example`. El compose de ejemplo (`docker-compose.prod.example.yml`) se valida en el CI.
+### Servidor (homelab)
 
-Variables que hay que definir en la plataforma:
+Los dos servicios se levantan con `docker-compose.prod.example.yml` y el ajuste `docker-compose.homelab.yml`, que se combinan con `COMPOSE_FILE` en el `.env` del servidor. Cada API se publica con un Funnel en su propio puerto:
+
+```bash
+COMPOSE_FILE=docker-compose.prod.example.yml:docker-compose.homelab.yml
+docker compose --profile store --profile portal up -d --build
+tailscale funnel --bg --https=8443 http://127.0.0.1:4001    # portal-api
+tailscale funnel --bg --https=10000 http://127.0.0.1:4000   # store-api
+```
+
+Tailscale Funnel solo admite los puertos 443, 8443 y 10000. `docker-compose.homelab.yml` fija DNS públicos en `store_api` para que el contenedor alcance el nombre público del portal. El CI valida el compose combinado.
+
+Variables que hay que definir en el `.env` del servidor (nunca se versionan):
 
 | Servicio | Variables |
 |---|---|
 | Portal | `PORTAL_DB_HOST`, `PORTAL_DB_PORT`, `PORTAL_DB_NAME`, `PORTAL_DB_USER`, `PORTAL_DB_PASSWORD`, `PORTAL_JWT_SECRET`, `PORTAL_CORS_ORIGINS`, `PORTAL_TRUST_PROXY_HOPS`, `STORE_SERVICE_KEY` |
 | Tienda | `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `STORE_JWT_SECRET`, `STORE_SERVICE_KEY`, `PORTAL_URL`, `STORE_BIND`, `STORE_CORS_ORIGINS`, `STORE_TRUST_PROXY_HOPS` y, para la IA, `GEMINI_API_KEY` |
 
-Con una base en la nube, activa `DB_SSL=true` y, si el proveedor firma con su propia CA (Supabase), define `DB_SSL_CA`. Con un pooler usa el modo de sesión (puerto 5432), no el de transacción.
+Con una base en la nube, activa `DB_SSL=true` y, si el proveedor firma con su propia CA (Supabase), define `DB_SSL_CA`. Con un pooler usa el modo de sesión (puerto 5432), no el de transacción. Con la base vacía no hay cuentas: se crean con `npm run user:create` o se cargan datos de demostración con `npm run db:seed` (ver «Uso y Ejecución»).
 
-Las apps móviles se compilan con EAS (`npx eas-cli build -p android --profile android-apk` y `npx eas-cli build -p ios -e ios-altstore`); son builds de prueba, no de tienda de aplicaciones.
+### Portal web (Vercel)
+
+El proyecto de Vercel está enlazado a este repositorio con raíz en `frontend/portal-web-react`; cada push a `main` publica una versión nueva. `vercel.json` reenvía `/api/*` a `portal-api`, de modo que el navegador solo habla con Vercel y la cookie de sesión (`SameSite=Strict`) sigue siendo del mismo origen. Para cambiar el servidor de destino se edita ese archivo.
+
+### Apps móviles
+
+Cada app lleva fija la dirección de su servidor en `src/api/serverConfig.ts`. Se compilan con EAS desde la carpeta de cada app:
+
+```bash
+npx eas-cli build -p android --profile android-apk    # portal y bodega: .apk
+npx eas-cli build -p ios -e ios-altstore              # portal: .ipa sin firmar (AltStore o Sideloadly)
+```
+
+Son builds de prueba, no de tienda de aplicaciones. La guía completa está en [docs/apps-moviles.md](docs/apps-moviles.md).
+
+### Descargas y versiones
+
+Los instaladores de cada versión están en [Releases](https://github.com/kiramman-mp3/EcosistemaKaren/releases), con su suma SHA-256; las versiones llevan etiqueta `vX.Y.Z` y su historial está en [CHANGELOG.md](CHANGELOG.md).
+
+| Archivo de la versión 1.0.0 | Para qué |
+|---|---|
+| `SupermercadoKaren-portal-v1.0.0.apk` | App de clientes (Android) |
+| `SupermercadoKaren-bodega-v1.0.0.apk` | App de bodega, uso interno del personal (Android) |
+| `SupermercadoKaren-portal-v1.0.0-sin-firmar.ipa` | App de clientes (iPhone), sin firmar: requiere AltStore o Sideloadly |
 
 ---
 
@@ -339,7 +395,8 @@ Prefijo `/api/v1`. La especificación completa, con cuerpos y respuestas, está 
 |---|---|---|
 | Autenticación | `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` | Público y sesión |
 | Catálogo | `GET /categories`, `GET /products`, `GET /products/barcode/:barcode`, `GET /availability`, `GET /catalog/status` | Público |
-| Productos | `POST /categories`, `POST /products`, `PUT` y `PATCH /products/:id`, `GET /products/:id/price-history`, `PUT /products/:id/image` | `ADMIN` |
+| Productos | `POST /categories`, `POST /products`, `PUT` y `PATCH /products/:id`, `GET /products/:id/price-history` | `ADMIN` |
+| Foto de producto | `PUT /products/:id/image` (cuerpo binario, sin importar el `Content-Type`) | `ADMIN`, `BODEGUERO` |
 | Lotes e inventario | `GET` y `POST /lots`, `PATCH /lots/:id/location`, `POST /lots/:id/merma`, `GET /inventory/movements`, `/inventory/wastes`, `/inventory/summary` | `BODEGUERO`, `PERCHERO`, `ADMIN` (ingresar lotes: `BODEGUERO`, `ADMIN`) |
 | Reservas | `POST /reservations`, `GET /reservations/user/:userId`, `POST /reservations/:id/extend`, `POST /reservations/:id/cancel` | `CLIENTE` y propietario |
 | Caja | `GET /reservations/code/:code`, `POST /reservations/:id/confirm` | `BODEGUERO`, `ADMIN` |
@@ -394,7 +451,9 @@ El aspecto visual (colores, tipografía, radios y movimiento) está en [docs/sis
 
 ### Lo que queda por confirmar
 
-- Las **apps móviles** se compilan como builds de prueba (permiten HTTP en la red local y elegir el servidor desde la app); publicarlas en Google Play o en la App Store requiere cuentas de pago y builds de tienda.
+- Las **apps móviles** son builds de prueba con la dirección del homelab fija en el código: si cambia el nombre del servidor hay que editarla y recompilar. Publicarlas en Google Play o en la App Store requiere cuentas de pago y builds de tienda.
+- Los datos del despliegue son de **demostración** (catálogo de Ecuador con fotos de Open Food Facts). Antes de usar la tienda de verdad hay que borrarlos y crear un `ADMIN` propio con `npm run user:create`.
+- La miniatura de producto de la app de bodega todavía no muestra la animación de carga que sí tienen el portal web y la app del portal.
 - Las dos apps móviles conservan 4 avisos de severidad alta de `npm audit` sin versión corregida, todos por `node-forge`; el detalle y su alcance están en [docs/dependencias.md](docs/dependencias.md).
 - Una prueba del backend (`reservation-extension-db.test.js`) falló una vez dentro de la suite completa contra PostgreSQL real y pasa sola: otra prueba ejecuta el barrido global de expiración sobre la misma base mientras corren en paralelo.
 
@@ -409,13 +468,18 @@ El aspecto visual (colores, tipografía, radios y movimiento) está en [docs/sis
 - [x] Separación en `store-api` y `portal-api`, con sincronización de catálogo y fotos
 - [x] Portal web instalable (PWA), app móvil de clientes y app móvil de bodega
 - [x] Reportes de movimientos y mermas en PDF y CSV
+- [x] Foto de producto desde la cámara de la app de bodega
 - [x] Fotos comprimidas, miniaturas y caché de larga duración
 - [x] Integración continua con pruebas, lint, auditoría, migraciones y comprobación de la imagen Docker
 - [x] Despliegue del portal en Azure y de la tienda en una PC con Docker
+- [x] `store-api` pública por HTTPS ([ADR-004](docs/decisions/ADR-004-store-api-publica.md))
+- [x] Despliegue de la versión 1.0.0: portal en Vercel y APIs con sus bases de datos en un homelab con Tailscale Funnel
+- [x] Apps móviles con la dirección del servidor fija, compiladas con EAS y publicadas como release
 - [x] Licencia MIT
 - [ ] Publicar las apps móviles en Google Play y en la App Store
 - [ ] Aislar la prueba intermitente `reservation-extension-db.test.js` cuando corre en paralelo con otras
 - [ ] Resolver los avisos de `node-forge` cuando exista una versión corregida
+- [ ] Animación de carga en las miniaturas de la app de bodega
 
 ---
 
@@ -423,7 +487,7 @@ El aspecto visual (colores, tipografía, radios y movimiento) está en [docs/sis
 
 | Contribuidor | Commits |
 |---|---:|
-| kiramman-mp3 | 362 |
+| kiramman-mp3 | 407 |
 | JoseM151 | 76 |
 | Johan Rodríguez | 44 |
 | carol104 | 18 |
@@ -440,11 +504,12 @@ Datos de `git shortlog -sn` al editar este README (incluyen los commits de integ
 <details>
 <summary>Ver fuentes</summary>
 
-- [ADR-001](docs/decisions/ADR-001-politica-reservas-caducidad.md), [ADR-002](docs/decisions/ADR-002-ttl-reservas-30-minutos.md) y [ADR-003](docs/decisions/ADR-003-split-store-portal.md): decisiones de arquitectura.
+- [ADR-001](docs/decisions/ADR-001-politica-reservas-caducidad.md), [ADR-002](docs/decisions/ADR-002-ttl-reservas-30-minutos.md), [ADR-003](docs/decisions/ADR-003-split-store-portal.md) y [ADR-004](docs/decisions/ADR-004-store-api-publica.md): decisiones de arquitectura.
+- [CHANGELOG.md](CHANGELOG.md): historial de versiones.
 - [architecture.md](architecture.md), [database.md](database.md), [api-spec.md](api-spec.md) y [diseno_interfaces.md](diseno_interfaces.md): diseño del sistema.
 - [docs/operacion.md](docs/operacion.md), [docs/azure.md](docs/azure.md) y [docs/apps-moviles.md](docs/apps-moviles.md): operación, despliegue y compilación.
 - [Open Food Facts](https://world.openfoodfacts.org): origen de las imágenes del catálogo de demostración.
-- [Expo](https://docs.expo.dev), [React Native](https://reactnative.dev), [Express](https://expressjs.com), [PostgreSQL](https://www.postgresql.org/docs/14/), [OpenRouter](https://openrouter.ai/docs) y [Gemini API](https://ai.google.dev/gemini-api/docs): documentación de las tecnologías usadas.
+- [Tailscale Funnel](https://tailscale.com/kb/1223/funnel), [Vercel](https://vercel.com/docs), [Expo](https://docs.expo.dev), [React Native](https://reactnative.dev), [Express](https://expressjs.com), [PostgreSQL](https://www.postgresql.org/docs/14/), [OpenRouter](https://openrouter.ai/docs) y [Gemini API](https://ai.google.dev/gemini-api/docs): documentación de las tecnologías usadas.
 
 </details>
 
