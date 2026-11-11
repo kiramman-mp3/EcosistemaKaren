@@ -1,6 +1,6 @@
 # ADR-003: Separar el backend en store-api (tienda) y portal-api (nube)
 
-- Estado: Aceptada e implementada
+- Estado: Aceptada e implementada (la exposición de store-api cambió en [ADR-004](ADR-004-store-api-publica.md))
 - Fecha: 2026-10-24
 - Alcance: Ecosistema Karen (backend, portal web, portal móvil, bodega móvil)
 

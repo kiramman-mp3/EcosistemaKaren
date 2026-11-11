@@ -97,7 +97,7 @@ El backend está separado en dos servicios con base de datos propia, según [ADR
 ```mermaid
 graph LR
     Cliente["Portal web / móvil (CLIENTE)"] -->|HTTPS| Portal
-    Trabajador["Bodega móvil (BODEGUERO, PERCHERO, ADMIN)"] -->|LAN| Store
+    Trabajador["Bodega móvil (BODEGUERO, PERCHERO, ADMIN)"] -->|"HTTPS (o LAN)"| Store
 
     subgraph Nube
         Portal["portal-api"] --- PortalDB[("PostgreSQL portal")]

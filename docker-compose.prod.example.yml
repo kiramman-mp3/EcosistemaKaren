@@ -1,7 +1,9 @@
-# Ejemplo de despliegue (ADR-003). Cada servicio va en su propio equipo, con su propia base de datos:
+# Ejemplo de despliegue (ADR-003, ADR-004). Cada servicio lleva su propia base de datos y puede ir en
+# su propio equipo o, como en un homelab, en el mismo. Las dos APIs son públicas por HTTPS detrás de
+# un proxy o túnel (ver docs/operacion.md):
 #
-#   en la tienda (red local):  docker compose -f docker-compose.prod.example.yml --env-file .env.store  --profile store  up -d
-#   en la nube (portal):       docker compose -f docker-compose.prod.example.yml --env-file .env.portal --profile portal up -d
+#   store-api  (pública, HTTPS): docker compose -f docker-compose.prod.example.yml --env-file .env.store  --profile store  up -d
+#   portal-api (pública, HTTPS): docker compose -f docker-compose.prod.example.yml --env-file .env.portal --profile portal up -d
 #
 # Diferencias con docker-compose.yml de desarrollo: sin pgAdmin, sin datos de demostración (las
 # cuentas se crean con `npm run user:create`), sin puertos de Postgres publicados y todos los
@@ -58,12 +60,14 @@ services:
       STORE_SERVICE_KEY: ${STORE_SERVICE_KEY:?}
       PORTAL_URL: ${PORTAL_URL:?}
       CORS_ORIGINS: ${STORE_CORS_ORIGINS:?}
-      TRUST_PROXY_HOPS: ${STORE_TRUST_PROXY_HOPS:-0}
+      # Cuántos proxies (túnel, balanceador, CDN) hay delante; ver docs/operacion.md.
+      TRUST_PROXY_HOPS: ${STORE_TRUST_PROXY_HOPS:?}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
       - store_media:/app/public/media
     ports:
-      # IP de la tienda en la red local; nunca 0.0.0.0 si el equipo tiene salida pública.
+      # Detrás de un proxy o túnel con TLS: 127.0.0.1. Si las apps de bodega también entran por la
+      # LAN, la IP de la tienda en la red local; nunca 0.0.0.0 si el equipo tiene salida pública.
       - "${STORE_BIND:?}:4000:4000"
 
   portal_db:

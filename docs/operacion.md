@@ -6,12 +6,13 @@ Guía para desplegar y mantener store-api (tienda) y portal-api (nube) según
 
 ## Despliegue
 
-Cada servicio va en su equipo con su propia base de datos:
+Cada servicio lleva su propia base de datos y puede ir en su equipo o en el mismo (homelab). Las dos
+APIs son públicas por HTTPS ([ADR-004](decisions/ADR-004-store-api-publica.md)):
 
 ```bash
-# Tienda (red local)
+# store-api (pública, HTTPS)
 docker compose -f docker-compose.prod.example.yml --env-file .env.store --profile store up -d --build
-# Portal (nube)
+# portal-api (pública, HTTPS)
 docker compose -f docker-compose.prod.example.yml --env-file .env.portal --profile portal up -d --build
 ```
 
@@ -59,8 +60,21 @@ CDN, Express solo la ve si sabe cuántos proxies confiar:
 - `2`: por ejemplo CDN + balanceador.
 
 No poner más saltos de los reales: un valor alto permite que un cliente falsee su IP con la
-cabecera. El compose exige definirlo en el portal; en la tienda, que atiende solo a la red local,
-suele ser `0`.
+cabecera. El compose exige definirlo en los dos servicios; con un túnel o proxy delante, `1`.
+
+## store-api pública
+
+Con la tienda accesible desde internet (ADR-004):
+
+- Solo por HTTPS, siempre detrás de un proxy o túnel que termine TLS. `STORE_BIND=127.0.0.1`
+  y `STORE_TRUST_PROXY_HOPS=1`. Si las apps de bodega también entran por la LAN, `STORE_BIND` es
+  la IP de la tienda; nunca `0.0.0.0`.
+- `STORE_CORS_ORIGINS` lleva solo la URL pública de la tienda (y la de la LAN si se usa), sin `*`.
+- `SWAGGER_ENABLED=false` (el valor por defecto en producción).
+- No hay registro público en la tienda: las cuentas del personal las crea el ADMIN o
+  `npm run user:create`. Contraseñas largas y únicas, porque ahora el login es alcanzable desde fuera.
+- Las apps de bodega apuntan a la URL `https://` de la tienda.
+- `GEMINI_API_KEY` genera costo: vigilar el consumo; la generación con IA ya tiene límite de tasa.
 
 El límite general de tasa se lleva en memoria de cada instancia (con N réplicas, el tope efectivo
 por IP es N veces el configurado); autenticación, reservas e IA se comparten vía PostgreSQL.
