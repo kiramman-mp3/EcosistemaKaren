@@ -210,6 +210,24 @@ test('PUT /products/:id/image acepta la foto original de la cámara (JPEG de var
   }
 });
 
+test('PUT /products/:id/image acepta la foto aunque el cliente declare image/jpg o application/octet-stream', async () => {
+  const { app, media } = await buildApp();
+  try {
+    const photo = await cameraPhoto({ width: 640, height: 480, orientation: 1 });
+    const url = `/api/v1/products/${PRODUCT_ID}/image`;
+    for (const type of ['image/jpg', 'application/octet-stream']) {
+      const response = await request(app).put(url).set('x-test-role', 'BODEGUERO').set('content-type', type).send(photo);
+      assert.equal(response.status, 200, `${type}: ${JSON.stringify(response.body)}`);
+    }
+    // El tipo genérico no deja pasar contenido que no es una imagen.
+    const fake = await request(app).put(url).set('x-test-role', 'BODEGUERO')
+      .set('content-type', 'application/octet-stream').send(Buffer.from('no soy un jpeg'));
+    assert.equal(fake.status, 400);
+  } finally {
+    await media.cleanup();
+  }
+});
+
 test('PUT /products/:id/image exige sesión y rol de ADMIN o BODEGUERO, y no lee el cuerpo antes de autenticar', async () => {
   const { app, media } = await buildApp();
   try {
