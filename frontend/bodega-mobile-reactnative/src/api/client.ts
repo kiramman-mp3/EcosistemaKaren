@@ -172,7 +172,9 @@ export const api = {
     try {
       const response = await fetch(`${getServerUrl()}/products/${encodeURIComponent(productId)}/image`, {
         method: 'PUT',
-        headers: { 'Content-Type': photo.type || 'image/jpeg', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+        // Siempre JPEG (compressPhoto lo recomprime): el tipo del Blob de un archivo local suele ser
+        // application/octet-stream y el servidor lo rechazaba.
+        headers: { 'Content-Type': 'image/jpeg', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
         body: photo,
         signal: controller.signal,
       });

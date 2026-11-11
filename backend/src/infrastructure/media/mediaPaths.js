@@ -12,7 +12,11 @@ const MAX_MEDIA_BYTES = 2 * 1024 * 1024;
 // Tamaño máximo de la foto original que se sube: una foto de cámara de 12-50 MP pesa entre 3 y 15 MB.
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 // Tipos con los que se sube una foto de producto (la app puede enviar la original de la cámara).
-const UPLOAD_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+// `image/jpg` y `application/octet-stream` son los que declaran algunos clientes al leer un archivo local
+// (React Native pone octet-stream al convertirlo en Blob): el tipo no decide nada, porque el procesador
+// reconoce el formato por el contenido y rechaza lo que no es una imagen. Solo rige en la ruta autenticada
+// de fotos (`PUT /products/:id/image`).
+const UPLOAD_CONTENT_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/octet-stream'];
 
 const CONTENT_TYPES = {
   '.jpg': 'image/jpeg',
