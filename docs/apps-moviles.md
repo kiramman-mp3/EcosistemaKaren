@@ -4,22 +4,20 @@ Dos apps Expo: **portal** (`frontend/portal-mobile-reactnative`, clientes, habla
 puerto 4001) y **bodega** (`frontend/bodega-mobile-reactnative`, personal, habla con store-api en el
 4000, por la URL pública HTTPS de la tienda o, en builds de prueba, por la red local).
 
-## Builds de prueba en red local (cambian de wifi sin recompilar)
+## Dirección del servidor
 
-Dos variables de compilación activan el modo de pruebas:
+Cada app lleva **fija en el código** la dirección del homelab (`src/api/serverConfig.ts`, `HOMELAB_API_URL`):
 
-| Variable | Efecto |
+| App | Dirección |
 |---|---|
-| `KAREN_ALLOW_CLEARTEXT=1` | Permite HTTP sin cifrar (Android `usesCleartextTraffic`; iOS `NSAllowsLocalNetworking`, solo hacia IPs de red local). Lo aplica `app.config.js`. Sin la variable, el build queda con el bloqueo por defecto. |
-| `EXPO_PUBLIC_SERVER_CONFIG=1` | Muestra una franja "Servidor: … · cambiar" arriba de la app. Al tocarla se escribe la IP (`192.168.1.20`, `192.168.1.20:4001` o una URL `https://…`), se prueba la conexión y se guarda en el teléfono. |
+| Portal | `https://servidor-homelab.tail13541c.ts.net:8443/api/v1` (portal-api) |
+| Bodega | `https://servidor-homelab.tail13541c.ts.net:10000/api/v1` (store-api) |
 
-Cambiar de casa a la universidad es tocar la franja y escribir la IP nueva. Al cambiar de servidor se
-cierra la sesión (otro servidor es otra base de usuarios). Sin `EXPO_PUBLIC_SERVER_CONFIG`, la dirección
-queda fija en `EXPO_PUBLIC_API_URL` y no hay forma de cambiarla desde la app: es lo que corresponde a un
-build de tienda.
-
-La IP del PC se ve con `ipconfig`. El backend debe escuchar en la red (no solo en `localhost`) y el
-firewall de Windows debe permitir los puertos 4000/4001.
+No hay pantalla ni almacenamiento para cambiarla: un teléfono solo habla con ese servidor, y por ser HTTPS no
+hace falta permitir tráfico sin cifrar. Para desarrollar con `node start.js`, `EXPO_PUBLIC_API_URL` apunta Metro
+al backend local, pero solo se lee cuando la app corre en desarrollo (`__DEV__`): un APK o IPA la ignora,
+aunque exista un `.env` con otra dirección. Si cambia el nombre del servidor, se edita `HOMELAB_API_URL` en
+las dos apps y se recompilan.
 
 ## Fotos de productos desde la app de bodega
 
@@ -78,7 +76,6 @@ Hace falta Android Studio (trae el JDK y el SDK). Desde la carpeta de cada app:
 export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
 # El JDK de Android Studio (25) imprime un aviso que el plugin de Android toma por un error.
 export JAVA_TOOL_OPTIONS="--enable-native-access=ALL-UNNAMED"
-export KAREN_ALLOW_CLEARTEXT=1 EXPO_PUBLIC_SERVER_CONFIG=1
 npx expo prebuild --platform android --no-install
 cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 ```
@@ -104,7 +101,7 @@ npx eas-cli build -p ios -e ios-altstore
 ```
 
 El enlace del `.ipa` aparece en la salida y en expo.dev (proyecto `portal-mobile-karen`). El perfil
-`ios-altstore` de `eas.json` fija `KAREN_ALLOW_CLEARTEXT=1` y `EXPO_PUBLIC_SERVER_CONFIG=1`.
+`ios-altstore` de `eas.json` ya no fija variables: la dirección del servidor va en el código.
 
 EAS solo sube lo que está **commiteado**. La regla `build/` del `.gitignore` raíz ocultaba `.eas/build/`;
 por eso hay una excepción `!**/.eas/build/`. Si el build falla en `PARSE_CUSTOM_WORKFLOW_CONFIG` con
