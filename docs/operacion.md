@@ -106,7 +106,11 @@ En producción exige `KAREN_DEMO_PASSWORD` (la contraseña pública del reposito
 variables `PORTAL_DB_*` para copiar los clientes al portal:
 
 ```bash
-docker compose exec   -e KAREN_DEMO_PASSWORD='<una contraseña larga>'   -e PORTAL_DB_HOST=portal_db -e PORTAL_DB_PORT=5432   -e PORTAL_DB_NAME=<PORTAL_DB_NAME> -e PORTAL_DB_USER=<PORTAL_DB_USER> -e PORTAL_DB_PASSWORD=<PORTAL_DB_PASSWORD>   store_api node scripts/seed.js
+docker compose exec \
+  -e KAREN_DEMO_PASSWORD='<una contraseña larga>' \
+  -e PORTAL_DB_HOST=portal_db -e PORTAL_DB_PORT=5432 \
+  -e PORTAL_DB_NAME=<PORTAL_DB_NAME> -e PORTAL_DB_USER=<PORTAL_DB_USER> -e PORTAL_DB_PASSWORD=<PORTAL_DB_PASSWORD> \
+  store_api node scripts/seed.js
 ```
 
 `--skip-images` evita descargar las fotos. Las cuentas son `admin@`, `bodega@`, `percha@` y
