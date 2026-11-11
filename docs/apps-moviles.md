@@ -1,8 +1,23 @@
 # Compilar las apps móviles
 
-Dos apps Expo: **portal** (`frontend/portal-mobile-reactnative`, clientes, habla con portal-api en el
-puerto 4001) y **bodega** (`frontend/bodega-mobile-reactnative`, personal, habla con store-api en el
-4000, por la URL pública HTTPS de la tienda o, en builds de prueba, por la red local).
+Dos apps Expo: **portal** (`frontend/portal-mobile-reactnative`, clientes, habla con portal-api) y
+**bodega** (`frontend/bodega-mobile-reactnative`, personal, habla con store-api), las dos por la URL
+pública HTTPS del homelab (ver abajo). La versión **1.0.0** se compiló con EAS y se publica como
+[release de GitHub](https://github.com/kiramman-mp3/EcosistemaKaren/releases/tag/v1.0.0).
+
+## Versión 1.0.0 y distribución
+
+| Archivo | App | Plataforma | Cómo se compila |
+|---|---|---|---|
+| `SupermercadoKaren-portal-v1.0.0.apk` | Portal (clientes) | Android | `eas build -p android --profile android-apk` |
+| `SupermercadoKaren-bodega-v1.0.0.apk` | Bodega (personal) | Android | `eas build -p android --profile android-apk` |
+| `SupermercadoKaren-portal-v1.0.0-sin-firmar.ipa` | Portal (clientes) | iPhone | `eas build -p ios -e ios-altstore` |
+
+La versión de las apps es `1.0.0` en `app.json` y `package.json`, igual que la etiqueta `v1.0.0` del repositorio.
+Los instaladores se guardan en `dist-mobile/` (carpeta ignorada por git: pesan más de 200 MB) y se suben como
+archivos del release con sus sumas SHA-256. Al compilar una versión nueva se vacía esa carpeta y se dejan solo los
+instaladores nuevos. Los APK de EAS son universales (arm64, armeabi-v7a, x86 y x86_64): sirven en teléfonos,
+tabletas y emuladores, incluido Windows Subsystem for Android.
 
 ## Dirección del servidor
 
@@ -60,13 +75,28 @@ Las apps no se actualizan solas: todo lo que cambia en su código llega al telé
 
 | App | Cambios |
 |---|---|
-| Bodega | Datos reales de la tienda; encabezado y métricas compactos en pantallas angostas; resumen de reportes por período; el ADMIN puede cambiar el PVP al ingresar un lote; el ADMIN fija en cada oferta el máximo por pedido, el stock de oferta y la fecha y hora de fin; el ADMIN registra y edita productos desde el catálogo, con foto opcional. |
-| Portal | Datos reales de la tienda; filtros "Más vendidos" y "Nuevos" con datos reales; las ofertas muestran su hora real de fin, el máximo por pedido y las unidades que quedan; el pase de retiro dice "Supermercado Karen"; el cliente elige cuánto tiempo apartar (30 minutos a 2 horas) y puede sumar 30 minutos desde Mis reservas o desde el pase, hasta 4 horas; el catálogo se ordena por precio y filtra "En oferta"; aviso cuando el stock puede no estar al día; términos y condiciones por pestañas; datos de la tienda con teléfono, correo, WhatsApp, Facebook y "Cómo llegar"; copiar el código y guardar el pase como imagen. |
+| Bodega | Dirección fija del homelab (sin pantalla para cambiarla); la foto de un producto se guarda aunque el teléfono declare otro tipo de archivo; datos reales de la tienda; encabezado y métricas compactos en pantallas angostas; resumen de reportes por período; el ADMIN puede cambiar el PVP al ingresar un lote; el ADMIN fija en cada oferta el máximo por pedido, el stock de oferta y la fecha y hora de fin; el ADMIN registra y edita productos desde el catálogo, con foto opcional. |
+| Portal | Dirección fija del homelab (sin pantalla para cambiarla); animación de carga en las fotos de producto; datos reales de la tienda; filtros "Más vendidos" y "Nuevos" con datos reales; las ofertas muestran su hora real de fin, el máximo por pedido y las unidades que quedan; el pase de retiro dice "Supermercado Karen"; el cliente elige cuánto tiempo apartar (30 minutos a 2 horas) y puede sumar 30 minutos desde Mis reservas o desde el pase, hasta 4 horas; el catálogo se ordena por precio y filtra "En oferta"; aviso cuando el stock puede no estar al día; términos y condiciones por pestañas; datos de la tienda con teléfono, correo, WhatsApp, Facebook y "Cómo llegar"; copiar el código y guardar el pase como imagen. |
 
 Los cambios de la bodega no agregan módulos nativos: basta recompilar con los mismos pasos. El portal sí: suma `expo-clipboard`, `expo-sharing` y `react-native-view-shot` (copiar el código y guardar el pase como imagen), así que hay que recompilarlo y no sirve actualizar solo el JavaScript de un APK anterior. Después de instalar, conviene
 repasar la lista de [verificación en un teléfono](verificacion-telefono.md).
 
 ## Android (.apk)
+
+### Con EAS (la vía de la versión 1.0.0)
+
+Compila en la nube de Expo y no necesita Android Studio. Hace falta una cuenta de Expo (`npx eas-cli login`) y
+que los cambios estén **commiteados**, porque EAS solo sube lo que está en git. Desde la carpeta de cada app:
+
+```bash
+cd frontend/portal-mobile-reactnative      # o frontend/bodega-mobile-reactnative
+npx eas-cli build -p android --profile android-apk
+```
+
+El perfil `android-apk` de `eas.json` genera un `.apk` (no un `.aab`) firmado con la clave que EAS guarda en
+la cuenta, así que las versiones siguientes se instalan encima de las anteriores. El enlace de descarga sale en la
+terminal y en expo.dev; en el plan gratuito el build puede esperar varios minutos en cola. Para lanzarlo sin
+esperar y bajarlo después: `--no-wait` y luego `npx eas-cli build:view <id>`.
 
 ### En el PC
 
@@ -85,6 +115,23 @@ depuración que genera Expo: sirve para instalar en tus teléfonos, **no** para 
 `-PreactNativeArchitectures=arm64-v8a` compila solo para teléfonos de 64 bits (casi todos); quítalo para
 incluir también 32 bits y emuladores x86.
 
+
+## Instalar el APK en Windows (Windows Subsystem for Android)
+
+Sirve para probar las apps sin un teléfono. WSA corre Android x86_64 y el APK universal lo cubre. Con WSA en
+marcha y el **modo de desarrollador** activado en su configuración, desde PowerShell:
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb connect 127.0.0.1:58526
+& $adb -s 127.0.0.1:58526 install -r dist-mobile\SupermercadoKaren-portal-v1.0.0.apk
+& $adb -s 127.0.0.1:58526 install -r dist-mobile\SupermercadoKaren-bodega-v1.0.0.apk
+```
+
+Si Android responde `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, ya hay una versión firmada con otra clave: se desinstala
+(`adb -s 127.0.0.1:58526 uninstall com.ecosistemakaren.portal` o `.bodega`; se pierden sus datos locales, como la
+sesión) y se instala de nuevo. Las apps llegan al servidor del homelab por internet, así que el PC necesita conexión.
+Paquetes: `com.ecosistemakaren.portal` y `com.ecosistemakaren.bodega`.
 
 ## iOS (.ipa)
 
