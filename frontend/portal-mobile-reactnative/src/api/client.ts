@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { clearSession, loadSession, saveSession, StoredUser } from '../auth/secureSession';
-import { getServerUrl, onServerUrlChange } from './serverConfig';
+import { getServerUrl } from './serverConfig';
 
 /** Las imágenes llegan como rutas del backend (/api/v1/media/...); la app necesita la URL completa. */
 export function mediaUrl(path?: string | null): string | null {
@@ -16,9 +16,6 @@ export const apiClient = axios.create({
   },
   timeout: 6000,
 });
-
-// La dirección puede cambiarse desde la app (ver ServerConfigModal): las peticiones siguientes usan la nueva.
-onServerUrlChange(url => { apiClient.defaults.baseURL = url; });
 
 let inMemoryToken: string | null = null;
 let inMemoryUser: StoredUser | null = null;

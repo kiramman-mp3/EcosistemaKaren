@@ -13,7 +13,6 @@ import { LoginModalMobile } from './src/components/LoginModalMobile';
 import { ChatBotModal } from './src/components/ChatBotModal';
 import { TermsModal } from './src/components/TermsModal';
 import type { TermsCategory } from './src/config/terms';
-import { ServerConfigModal } from './src/components/ServerConfigModal';
 import { PopPressable } from './src/components/motion';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -22,8 +21,6 @@ import { OffersScreen } from './src/screens/OffersScreen';
 import { ReservationsScreen } from './src/screens/ReservationsScreen';
 import { NavTab, ProductCategory, Product, FlashOffer, CartItem, ReservationPass, DataLoadState } from './src/types';
 import { api, BackendReservation, mediaUrl } from './src/api/client';
-import { getServerUrl, loadServerUrl, onServerUrlChange, SERVER_CONFIG_ENABLED } from './src/api/serverConfig';
-import { describeServerUrl } from './src/api/serverUrl';
 import { reservationToPass, selectActiveReservation } from './src/reservations/recovery';
 import { isAwaitingStore, waitForStoreResolution } from './src/reservations/awaitStore';
 import { formatDate } from './src/utils/dates';
@@ -82,8 +79,6 @@ function PortalAppContent() {
   const [termsCategory, setTermsCategory] = useState<TermsCategory | null>(null);
   const lastTermsCategory = useRef<TermsCategory>('todos');
   const openTerms = (category: TermsCategory) => { lastTermsCategory.current = category; setTermsCategory(category); };
-  const [isServerOpen, setIsServerOpen] = useState(false);
-  const [serverUrl, setServerUrl] = useState(getServerUrl());
 
   const syncReservations = useCallback(async (user: { id: string; nombre: string }) => {
     setSyncingReservations(true);
@@ -189,29 +184,23 @@ function PortalAppContent() {
 
   useEffect(() => {
     let cancelled = false;
-    // Primero la dirección guardada del servidor: la sesión y los datos se piden a ese servidor.
-    void loadServerUrl().then(() => {
-      if (cancelled) return;
-      void api.restoreSession().then(user => {
-        if (user && !cancelled) {
-          setCurrentUser(user);
-          void syncReservations(user);
-        }
-      });
-      void loadBackendData();
+    void api.restoreSession().then(user => {
+      if (user && !cancelled) {
+        setCurrentUser(user);
+        void syncReservations(user);
+      }
     });
+    void loadBackendData();
     const unsubscribe = api.onSessionExpired(() => {
       setCurrentUser(null);
       setPass(null);
       setReservations([]);
     });
-    const unsubscribeServer = onServerUrlChange(setServerUrl);
     const interval = setInterval(checkHeartbeat, 15000);
     return () => {
       cancelled = true;
       clearInterval(interval);
       unsubscribe();
-      unsubscribeServer();
     };
   }, [loadBackendData, checkHeartbeat, syncReservations]);
 
@@ -385,17 +374,6 @@ function PortalAppContent() {
     if (tab === 'reservas' && currentUser) void syncReservations(currentUser);
   };
 
-  // Otro servidor es otra base de clientes: la sesión, el carrito y los datos cargados ya no valen.
-  const handleServerChanged = () => {
-    void api.logout();
-    setCurrentUser(null);
-    setPass(null);
-    setReservations([]);
-    setCart([]);
-    setDataState('loading');
-    void loadBackendData();
-  };
-
   const { isDark } = useTheme();
 
   if (!fontsLoaded && !fontError) {
@@ -427,17 +405,6 @@ function PortalAppContent() {
           <Ionicons name="warning-outline" size={16} color={colors.mora} />
           <Text style={styles.staleText}>El stock que ves puede no estar al día. Si algo ya no está, te avisaremos al apartar.</Text>
         </View>
-      )}
-
-      {SERVER_CONFIG_ENABLED && (
-        <TouchableOpacity
-          style={styles.serverBar}
-          onPress={() => setIsServerOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={`Servidor ${describeServerUrl(serverUrl)}. Cambiar`}
-        >
-          <Text style={styles.serverBarText} numberOfLines={1}>Servidor: {describeServerUrl(serverUrl)}  ·  cambiar</Text>
-        </TouchableOpacity>
       )}
 
       <View style={styles.body}>
@@ -557,9 +524,6 @@ function PortalAppContent() {
 
         <ChatBotModal visible={isChatOpen} onClose={() => setIsChatOpen(false)} />
         <TermsModal visible={termsCategory !== null} category={termsCategory ?? lastTermsCategory.current} onClose={() => setTermsCategory(null)} />
-        {SERVER_CONFIG_ENABLED && (
-          <ServerConfigModal visible={isServerOpen} onClose={() => setIsServerOpen(false)} onChanged={handleServerChanged} />
-        )}
       </SafeAreaView>
   );
 }
@@ -581,10 +545,8 @@ const styles = themed(() => StyleSheet.create({
   // En tabletas anchas el contenido queda centrado en vez de estirarse de borde a borde.
   bodyInner: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
   tabs: { backgroundColor: colors.card },
-  serverBar: { backgroundColor: colors.mora, paddingVertical: 5, paddingHorizontal: 12, alignItems: 'center' },
   staleBar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.sticker, paddingVertical: 6, paddingHorizontal: 14, borderBottomWidth: 2, borderBottomColor: colors.mora },
   staleText: { flex: 1, fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16, color: colors.mora },
-  serverBarText: { fontFamily: fonts.medium, fontSize: 11, color: '#FFFFFF' },
   chatFab: { position: 'absolute', right: 14, bottom: 14 },
   chatFabBody: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
 }));
