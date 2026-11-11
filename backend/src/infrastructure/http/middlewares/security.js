@@ -54,7 +54,7 @@ function normalizeJsonBody(req, res, next) {
 // Contraseñas de base de datos de los archivos de ejemplo y del valor que se asumía si faltaba.
 const WEAK_DB_PASSWORDS = new Set(['karen_pass', 'karen_portal_pass', 'postgres', 'password', 'admin']);
 
-function validateProductionSecurity(env = process.env) {
+function validateProductionSecurity(env = process.env, database = 'store') {
   if (env.NODE_ENV !== 'production') return;
   const origins = (env.CORS_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
   if (origins.length === 0 || origins.includes('*')) {
@@ -67,11 +67,15 @@ function validateProductionSecurity(env = process.env) {
     throw new Error('SWAGGER_PASSWORD debe tener al menos 16 caracteres en producción.');
   }
   // La base de datos no puede usar las credenciales de ejemplo (ni las que se asumen si faltan).
+  // La contraseña que usa el servicio: el portal prefiere PORTAL_DB_PASSWORD y cae en DB_PASSWORD
+  // (igual que connectionSettings); la tienda siempre usa DB_PASSWORD.
+  if (database === 'portal' ? !(env.PORTAL_DB_PASSWORD || env.DB_PASSWORD) : !env.DB_PASSWORD) {
+    throw new Error(database === 'portal'
+      ? 'PORTAL_DB_PASSWORD (o DB_PASSWORD) es obligatoria en producción.'
+      : 'DB_PASSWORD es obligatoria en producción.');
+  }
   for (const name of ['DB_PASSWORD', 'PORTAL_DB_PASSWORD']) {
     const value = env[name];
-    if (name === 'DB_PASSWORD' && !value) {
-      throw new Error('DB_PASSWORD es obligatoria en producción.');
-    }
     if (value !== undefined && value !== '' && (WEAK_DB_PASSWORDS.has(value) || value.includes('change_me'))) {
       throw new Error(`${name} no puede ser una contraseña de ejemplo en producción.`);
     }

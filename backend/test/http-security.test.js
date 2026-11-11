@@ -115,6 +115,16 @@ test('producción rechaza credenciales de base de datos de ejemplo o ausentes', 
   assert.throws(() => validateProductionSecurity({ ...valid, PORTAL_DB_PASSWORD: 'karen_portal_pass' }), /PORTAL_DB_PASSWORD no puede ser/);
 });
 
+test('el portal solo con PORTAL_DB_PASSWORD arranca; sin ninguna contraseña no', () => {
+  const portalOnly = {
+    NODE_ENV: 'production', JWT_SECRET: 'un-secreto-aleatorio-de-mas-de-32-caracteres',
+    CORS_ORIGINS: 'https://portal.example', PORTAL_DB_PASSWORD: 'una-clave-de-base-de-datos-real', TRUST_PROXY_HOPS: '1'
+  };
+  assert.doesNotThrow(() => validateProductionSecurity(portalOnly, 'portal'));
+  assert.throws(() => validateProductionSecurity(portalOnly, 'store'), /DB_PASSWORD es obligatoria/);
+  assert.throws(() => validateProductionSecurity({ ...portalOnly, PORTAL_DB_PASSWORD: undefined }, 'portal'), /PORTAL_DB_PASSWORD \(o DB_PASSWORD\) es obligatoria/);
+});
+
 test('producción exige que la clave del canal tienda-portal y la firma de sesiones sean distintas', () => {
   const secret = 'un-secreto-aleatorio-de-mas-de-32-caracteres';
   const env = {
