@@ -1,0 +1,13 @@
+# Ajuste para desplegar tienda y portal en el MISMO servidor detrás de Tailscale Funnel
+# (docs/operacion.md, sección «Homelab»). Se combina con docker-compose.prod.example.yml; en el
+# `.env` del servidor:
+#
+#   COMPOSE_FILE=docker-compose.prod.example.yml:docker-compose.homelab.yml
+#
+# store-api llama al portal por su URL pública (PORTAL_URL debe ser https en producción). Los puertos
+# de Funnel quedan atados a la interfaz tailscale0: desde un contenedor, el nombre ts.net que resuelve
+# el DNS de Tailscale (100.x) rechaza la conexión (ECONNREFUSED). Con DNS públicos el nombre se
+# resuelve a las IP de Funnel y la llamada entra por internet.
+services:
+  store_api:
+    dns: [1.1.1.1, 8.8.8.8]

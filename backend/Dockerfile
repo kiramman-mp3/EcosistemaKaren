@@ -16,6 +16,8 @@ COPY index.js index.store.js index.portal.js ./
 COPY src ./src
 COPY init-db ./init-db
 COPY scripts ./scripts
+# Catálogo que carga `node scripts/seed.js` (datos de demostración; ver docs/operacion.md).
+COPY seed ./seed
 # backend/public/media/productos no se versiona (lo genera el seed): se crea vacío y escribible por `node`;
 # en producción se monta como volumen para conservar las fotos entre despliegues.
 RUN mkdir -p public/media/productos && chown -R node:node public

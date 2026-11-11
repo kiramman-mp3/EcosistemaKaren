@@ -13,6 +13,10 @@
  *   npm run db:seed -- --scale=3          # 3x usuarios y reservas
  *   npm run db:seed -- --skip-images      # no descarga imágenes (usa URL remota)
  *
+ * KAREN_DEMO_PASSWORD fija la contraseña de las cuentas demo (por defecto la conocida del repositorio).
+ * Con NODE_ENV=production es obligatoria: una contraseña pública en una API expuesta sería un acceso
+ * abierto, y el arranque de producción se niega a iniciar con cuentas demo de contraseña conocida.
+ *
  * Es re-ejecutable: elimina únicamente los datos generados por una corrida anterior
  * (lotes 'SEED-%' y usuarios '@demo.karen.ec') y actualiza el catálogo por código de barras.
  *
@@ -43,7 +47,7 @@ const SKIP_IMAGES = Boolean(args['skip-images']);
 const RANDOM_SEED = Number(args.seed || 20261011);
 
 const DEMO_EMAIL_DOMAIN = 'demo.karen.ec';
-const DEMO_PASSWORD = 'Karen2026*';
+const DEMO_PASSWORD = process.env.KAREN_DEMO_PASSWORD || 'Karen2026*';
 const LOT_PREFIX = 'SEED-';
 const MEDIA_DIR = path.resolve(__dirname, '../public/media/productos');
 const MEDIA_URL = '/api/v1/media/productos';
@@ -866,6 +870,9 @@ async function upsertCatalog(client, catalog) {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' && !process.env.KAREN_DEMO_PASSWORD) {
+    throw new Error('En producción define KAREN_DEMO_PASSWORD: no se siembran cuentas con la contraseña pública del repositorio.');
+  }
   const started = Date.now();
   const catalog = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../seed/catalogo-ecuador.json'), 'utf8'));
   const products = catalog.productos;
@@ -980,7 +987,7 @@ async function main() {
     console.log(`Ofertas con límites: ${offerStats.ended} vencidas, ${offerStats.soldOut} agotadas, `
       + `${offerStats.lines} líneas de reserva en ${offerStats.offers} ofertas`);
     console.log(`Ventas confirmadas simuladas: $${round2(revenue).toLocaleString('es-EC')}`);
-    console.log(`\n🔑 Accesos demo (contraseña: ${DEMO_PASSWORD}):`);
+    console.log(`\n🔑 Accesos demo (${process.env.KAREN_DEMO_PASSWORD ? 'contraseña de KAREN_DEMO_PASSWORD' : `contraseña: ${DEMO_PASSWORD}`}):`);
     console.log(`   admin@${DEMO_EMAIL_DOMAIN} · bodega@${DEMO_EMAIL_DOMAIN} · percha@${DEMO_EMAIL_DOMAIN} · cliente@${DEMO_EMAIL_DOMAIN}`);
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});

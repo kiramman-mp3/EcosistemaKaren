@@ -110,7 +110,9 @@ jobs:
           PORTAL_JWT_SECRET: ci
           PORTAL_CORS_ORIGINS: https://portal.example
           PORTAL_TRUST_PROXY_HOPS: 1
-        run: docker compose -f docker-compose.prod.example.yml --profile store --profile portal config -q
+        run: |
+          docker compose -f docker-compose.prod.example.yml --profile store --profile portal config -q
+          docker compose -f docker-compose.prod.example.yml -f docker-compose.homelab.yml --profile store --profile portal config -q
 
   portal-web:
     runs-on: ubuntu-latest
