@@ -210,12 +210,12 @@ test('PUT /products/:id/image acepta la foto original de la cámara (JPEG de var
   }
 });
 
-test('PUT /products/:id/image acepta la foto aunque el cliente declare image/jpg o application/octet-stream', async () => {
+test('PUT /products/:id/image acepta la foto sea cual sea el Content-Type que declare el cliente', async () => {
   const { app, media } = await buildApp();
   try {
     const photo = await cameraPhoto({ width: 640, height: 480, orientation: 1 });
     const url = `/api/v1/products/${PRODUCT_ID}/image`;
-    for (const type of ['image/jpg', 'application/octet-stream']) {
+    for (const type of ['image/jpg', 'application/octet-stream', 'multipart/form-data', 'text/plain', 'image/jpeg; charset=binary']) {
       const response = await request(app).put(url).set('x-test-role', 'BODEGUERO').set('content-type', type).send(photo);
       assert.equal(response.status, 200, `${type}: ${JSON.stringify(response.body)}`);
     }
@@ -245,16 +245,16 @@ test('PUT /products/:id/image exige sesión y rol de ADMIN o BODEGUERO, y no lee
   }
 });
 
-test('PUT /products/:id/image rechaza tipos que no son imagen, contenido falso, id inválido y fotos de más de 15 MB', async () => {
+test('PUT /products/:id/image rechaza contenido que no es imagen, contenido falso, id inválido y fotos de más de 15 MB', async () => {
   const { app, media } = await buildApp();
   try {
     const url = `/api/v1/products/${PRODUCT_ID}/image`;
     const as = (type, body, target = url) => request(app).put(target).set('x-test-role', 'ADMIN').set('content-type', type).send(body);
 
     assert.equal((await as('application/json', { a: 1 })).status, 400, 'JSON sin foto');
-    assert.equal((await as('text/plain', 'hola')).status, 415, 'tipo no admitido');
+    assert.equal((await as('text/plain', 'hola')).status, 400, 'texto que no es imagen');
     assert.equal((await as('image/jpeg', Buffer.from('no soy un jpeg'))).status, 400, 'contenido que no es imagen');
-    assert.equal((await as('image/svg+xml', '<svg/>')).status, 415, 'SVG no se admite');
+    assert.equal((await as('image/svg+xml', '<svg/>')).status, 400, 'SVG no se admite');
     assert.equal((await as('image/jpeg', Buffer.from([1, 2, 3]), '/api/v1/products/no-es-uuid/image')).status, 400, 'id inválido');
     assert.equal((await as('image/jpeg', Buffer.alloc(16 * 1024 * 1024, 1))).status, 413, 'más de 15 MB');
   } finally {
