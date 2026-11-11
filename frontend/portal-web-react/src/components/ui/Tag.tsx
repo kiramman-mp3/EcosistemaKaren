@@ -1,4 +1,4 @@
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useCallback, useState } from 'react';
 import { formatDate } from '../../utils/dates';
 import { Tone, TONE_BG } from '../../lib/categoryTone';
 import { thumbSrcSet, thumbUrl } from '../../lib/mediaUrl';
@@ -81,29 +81,44 @@ const CATALOG_GRID_SIZES = '(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 5
 /**
  * Foto de producto sobre un bloque de color. Las fotos vienen con fondo blanco:
  * en modo claro se mezclan con `multiply` para que el blanco desaparezca y en
- * modo oscuro se apoyan sobre una placa clara para no apagar los colores.
+ * modo oscuro se apoyan sobre una placa clara para no apagar los colores. Mientras la foto
+ * carga muestra un esqueleto animado y al llegar aparece con un fundido.
  */
 export const ProductImage = forwardRef<HTMLImageElement, ProductImageProps>(({ src, alt, className = '', tone, sizes = CATALOG_GRID_SIZES, priority = false }, ref) => {
   const [failed, setFailed] = useState(false);
+  // Se guarda la foto ya cargada (no un booleano) para que, si el componente se reutiliza con otra
+  // `src`, vuelva a mostrar el esqueleto.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const loaded = loadedSrc === src;
   const bg = tone ? TONE_BG[tone] : 'bg-surface';
+  const setImgRef = useCallback((node: HTMLImageElement | null) => {
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+    // Una foto en caché ya está completa cuando React enlaza el nodo y puede no disparar `onLoad`.
+    if (node?.complete && node.naturalWidth > 0) setLoadedSrc(src);
+  }, [ref, src]);
   return (
     <div className={`relative flex items-center justify-center overflow-hidden ${bg} dark:bg-white ${className}`}>
       {failed ? (
         <span className="font-display font-extrabold text-ink-faint dark:text-mora text-sm px-4 text-center">{alt}</span>
       ) : (
-        <img
-          ref={ref}
-          src={thumbUrl(src, 320)}
-          srcSet={thumbSrcSet(src)}
-          sizes={thumbSrcSet(src) ? sizes : undefined}
-          alt={alt}
-          loading={priority ? 'eager' : 'lazy'}
-          // React 18 no conoce `fetchPriority` en camelCase; en minúsculas pasa tal cual al DOM.
-          {...(priority ? { fetchpriority: 'high' } : {})}
-          decoding="async"
-          onError={() => setFailed(true)}
-          className="max-h-full max-w-full object-contain mix-blend-multiply"
-        />
+        <>
+          {!loaded && <span aria-hidden="true" data-testid="image-skeleton" className="skeleton absolute inset-0" />}
+          <img
+            ref={setImgRef}
+            src={thumbUrl(src, 320)}
+            srcSet={thumbSrcSet(src)}
+            sizes={thumbSrcSet(src) ? sizes : undefined}
+            alt={alt}
+            loading={priority ? 'eager' : 'lazy'}
+            // React 18 no conoce `fetchPriority` en camelCase; en minúsculas pasa tal cual al DOM.
+            {...(priority ? { fetchpriority: 'high' } : {})}
+            decoding="async"
+            onLoad={() => setLoadedSrc(src)}
+            onError={() => setFailed(true)}
+            className={`relative max-h-full max-w-full object-contain mix-blend-multiply transition-opacity duration-300 motion-reduce:transition-none ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          />
+        </>
       )}
     </div>
   );

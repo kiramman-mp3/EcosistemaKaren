@@ -10,7 +10,7 @@ import { colors, fonts, radius, themed } from '../theme/tokens';
 import { Tone, toneTint } from '../theme/categoryTone';
 import { formatDate } from '../utils/dates';
 import { Illustration, IllustrationName } from './Illustration';
-import { PopPressable } from './motion';
+import { PopPressable, Skeleton } from './motion';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 type ButtonVariant = 'primary' | 'danger' | 'outline' | 'ghost' | 'sticker';
@@ -126,12 +126,16 @@ export const ExpiryStamp: React.FC<{ date?: string | null; label?: string; color
 /** Foto del producto sobre una placa blanca apoyada en el color de su pasillo. */
 export const ProductImage: React.FC<{ uri: string | null; size?: number; tone?: Tone; style?: StyleProp<ViewStyle>; width?: ThumbnailWidth }> = ({ uri, size, tone, style, width = 320 }) => {
   const [failed, setFailed] = useState(false);
+  // La foto ya cargada (no un booleano): si el componente se reutiliza con otra, vuelve el esqueleto.
+  const [loadedUri, setLoadedUri] = useState<string | null>(null);
+  const loading = Boolean(uri) && !failed && loadedUri !== uri;
   return (
     <View style={[styles.imageBox, tone ? { backgroundColor: toneTint(tone) } : null, size ? { width: size, height: size } : null, style]}>
       <View style={styles.imagePlate}>
         {uri && !failed
-          ? <Image source={{ uri: thumbUrl(uri, width) }} style={styles.image} contentFit="contain" cachePolicy="memory-disk" transition={150} recyclingKey={uri} onError={() => setFailed(true)} accessibilityIgnoresInvertColors />
+          ? <Image source={{ uri: thumbUrl(uri, width) }} style={styles.image} contentFit="contain" cachePolicy="memory-disk" transition={150} recyclingKey={uri} onLoad={() => setLoadedUri(uri)} onError={() => setFailed(true)} accessibilityIgnoresInvertColors />
           : <Ionicons name="image-outline" size={28} color={colors.inkFaint} />}
+        {loading ? <Skeleton style={styles.imageSkeleton} /> : null}
       </View>
     </View>
   );
@@ -195,6 +199,7 @@ const styles = themed(() => StyleSheet.create({
   imageBox: { backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: radius.photo, padding: 8 },
   imagePlate: { flex: 1, width: '100%', backgroundColor: '#FFFFFF', borderRadius: radius.tag, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   image: { width: '100%', height: '100%' },
+  imageSkeleton: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius.tag },
   empty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 24, gap: 8 },
   emptyTitle: { fontFamily: fonts.tag, fontSize: 24, color: colors.ink, textAlign: 'center' },
   emptyText: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21, color: colors.inkSoft, textAlign: 'center' },
