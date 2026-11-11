@@ -2,7 +2,7 @@
 
 Dos apps Expo: **portal** (`frontend/portal-mobile-reactnative`, clientes, habla con portal-api en el
 puerto 4001) y **bodega** (`frontend/bodega-mobile-reactnative`, personal, habla con store-api en el
-4000, solo por la red local).
+4000, por la URL pública HTTPS de la tienda o, en builds de prueba, por la red local).
 
 ## Builds de prueba en red local (cambian de wifi sin recompilar)
 
