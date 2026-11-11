@@ -487,7 +487,7 @@ El aspecto visual (colores, tipografía, radios y movimiento) está en [docs/sis
 
 | Contribuidor | Commits |
 |---|---:|
-| kiramman-mp3 | 362 |
+| kiramman-mp3 | 407 |
 | JoseM151 | 76 |
 | Johan Rodríguez | 44 |
 | carol104 | 18 |
