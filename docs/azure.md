@@ -15,7 +15,7 @@ Guía para publicar el portal (API + web) en Azure y conectar la PC de la tienda
   de sesión es `SameSite=Strict` en producción, así que web y API deben estar en el mismo sitio; de
   este modo no hace falta dominio propio ni CORS entre ambos.
 - La tienda es quien llama al portal (`PORTAL_URL`): la PC no necesita puertos abiertos a internet.
-- La app de portal mobile debe apuntar a la URL del portal; las de bodega, solo a la IP de la tienda.
+- La app de portal mobile debe apuntar a la URL del portal; las de bodega, a la IP de la tienda o a su URL pública ([ADR-004](decisions/ADR-004-store-api-publica.md)).
 
 ## Requisitos
 
